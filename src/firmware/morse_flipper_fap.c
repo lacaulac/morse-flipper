@@ -4,7 +4,6 @@
 #include <gui/gui.h>
 #include <input/input.h>
 
-#define MORSE_FLIPPER_TONE 440.0f
 #define MORSE_FLIPPER_VOLUME 0.7f
 #define MORSE_FLIPPER_POLL_MS 20
 
@@ -15,6 +14,45 @@ static const GpioPin* morse_flipper_key_pins[] = {
 };
 
 typedef struct {
+    const char* name;
+    float hz;
+} MorseFlipperTone;
+
+static const MorseFlipperTone morse_flipper_tones[] = {
+    {"G2", 98.00f},
+    {"A2", 110.00f},
+    {"B2", 123.47f},
+    {"C3", 130.81f},
+    {"D3", 146.83f},
+    {"E3", 164.81f},
+    {"F3", 174.61f},
+    {"G3", 196.00f},
+    {"A3", 220.00f},
+    {"B3", 246.94f},
+    {"C4", 261.63f},
+    {"D4", 293.66f},
+    {"E4", 329.63f},
+    {"F4", 349.23f},
+    {"G4", 392.00f},
+    {"A4", 440.00f},
+    {"B4", 493.88f},
+    {"C5", 523.25f},
+    {"D5", 587.33f},
+    {"E5", 659.25f},
+    {"F5", 698.46f},
+    {"G5", 783.99f},
+    {"A5", 880.00f},
+    {"B5", 987.77f},
+    {"C6", 1046.50f},
+    {"D6", 1174.66f},
+    {"E6", 1318.51f},
+    {"F6", 1396.91f},
+    {"G6", 1567.98f},
+    {"A6", 1760.00f},
+    {"B6", 1975.53f},
+};
+
+typedef struct {
     FuriMessageQueue* q;
     ViewPort* view_port;
     Gui* gui;
@@ -22,7 +60,12 @@ typedef struct {
     bool speaker_owned;
     bool speaker_busy;
     bool ok_down;
+    uint8_t tone_idx;
 } MorseFlipperApp;
+
+static const MorseFlipperTone* morse_flipper_current_tone(MorseFlipperApp* app) {
+    return &morse_flipper_tones[app->tone_idx];
+}
 
 static void morse_flipper_gpio_init(void) {
     for(size_t i = 0; i < COUNT_OF(morse_flipper_key_pins); i++) {
@@ -78,7 +121,7 @@ static void morse_flipper_tone_start(MorseFlipperApp* app) {
         return;
     }
 
-    furi_hal_speaker_start(MORSE_FLIPPER_TONE, MORSE_FLIPPER_VOLUME);
+    furi_hal_speaker_start(morse_flipper_current_tone(app)->hz, MORSE_FLIPPER_VOLUME);
     app->tone_on = true;
     app->speaker_busy = false;
 }
@@ -106,7 +149,7 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
 
     canvas_set_font(canvas, FontSecondary);
     canvas_draw_str(canvas, 8, 30, app->tone_on ? "tone on" : "tone off");
-    canvas_draw_str(canvas, 8, 42, "ok p3 p6 p7 buzz");
+    canvas_draw_str(canvas, 8, 42, morse_flipper_current_tone(app)->name);
     canvas_draw_str(canvas, 8, 52, app->speaker_busy ? "speaker busy" : "");
     canvas_draw_str(canvas, 8, 62, "back exits");
 }
@@ -129,6 +172,7 @@ int32_t morse_flipper_fap(void* p) {
         .speaker_owned = false,
         .speaker_busy = false,
         .ok_down = false,
+        .tone_idx = 0,
     };
 
     morse_flipper_gpio_init();
