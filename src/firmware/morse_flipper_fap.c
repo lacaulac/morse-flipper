@@ -3,10 +3,13 @@
 
 #include <gui/gui.h>
 #include <input/input.h>
+#include <storage/storage.h>
 
 #define MORSE_FLIPPER_VOLUME 0.7f
 #define MORSE_FLIPPER_POLL_MS 20
 #define MORSE_FLIPPER_PREVIEW_TICKS 8
+#define MORSE_FLIPPER_CONFIG_PATH APP_DATA_PATH("config.bin")
+#define MORSE_FLIPPER_CONFIG_VERSION 1
 
 static const GpioPin* morse_flipper_key_pins[] = {
     &gpio_ext_pa6,
@@ -18,6 +21,18 @@ typedef struct {
     const char* name;
     float hz;
 } MorseFlipperTone;
+
+typedef enum {
+    MorseFlipperModeStraight = 1,
+} MorseFlipperMode;
+
+typedef struct {
+    uint32_t version;
+    uint8_t tone_idx;
+    uint8_t keyer_mode;
+    uint8_t spare0;
+    uint8_t spare1;
+} MorseFlipperConfig;
 
 static const MorseFlipperTone morse_flipper_tones[] = {
     {"G2", 98.00f},
@@ -62,6 +77,7 @@ typedef struct {
     bool speaker_owned;
     bool speaker_busy;
     bool ok_down;
+    uint8_t keyer_mode;
     uint8_t tone_idx;
     uint8_t preview_ticks;
     uint8_t input_mask;
@@ -69,6 +85,49 @@ typedef struct {
 
 static const MorseFlipperTone* morse_flipper_current_tone(MorseFlipperApp* app) {
     return &morse_flipper_tones[app->tone_idx];
+}
+
+static void morse_flipper_load_config(MorseFlipperApp* app) {
+    Storage* storage = furi_record_open(RECORD_STORAGE);
+    File* file = storage_file_alloc(storage);
+    MorseFlipperConfig config;
+
+    if(storage_file_open(file, MORSE_FLIPPER_CONFIG_PATH, FSAM_READ, FSOM_OPEN_EXISTING)) {
+        if(storage_file_read(file, &config, sizeof(config)) == sizeof(config) &&
+           config.version == MORSE_FLIPPER_CONFIG_VERSION) {
+            if(config.tone_idx < COUNT_OF(morse_flipper_tones)) {
+                app->tone_idx = config.tone_idx;
+            }
+
+            if(config.keyer_mode >= MorseFlipperModeStraight) {
+                app->keyer_mode = config.keyer_mode;
+            }
+        }
+    }
+
+    storage_file_close(file);
+    storage_file_free(file);
+    furi_record_close(RECORD_STORAGE);
+}
+
+static void morse_flipper_save_config(MorseFlipperApp* app) {
+    Storage* storage = furi_record_open(RECORD_STORAGE);
+    File* file = storage_file_alloc(storage);
+    MorseFlipperConfig config = {
+        .version = MORSE_FLIPPER_CONFIG_VERSION,
+        .tone_idx = app->tone_idx,
+        .keyer_mode = app->keyer_mode,
+        .spare0 = 0,
+        .spare1 = 0,
+    };
+
+    if(storage_file_open(file, MORSE_FLIPPER_CONFIG_PATH, FSAM_WRITE, FSOM_CREATE_ALWAYS)) {
+        storage_file_write(file, &config, sizeof(config));
+    }
+
+    storage_file_close(file);
+    storage_file_free(file);
+    furi_record_close(RECORD_STORAGE);
 }
 
 static void morse_flipper_gpio_init(void) {
@@ -168,6 +227,7 @@ static void morse_flipper_tone_nudge(MorseFlipperApp* app, int dir) {
         furi_hal_speaker_start(morse_flipper_current_tone(app)->hz, MORSE_FLIPPER_VOLUME);
     }
 
+    morse_flipper_save_config(app);
     view_port_update(app->view_port);
 }
 
@@ -239,11 +299,13 @@ int32_t morse_flipper_fap(void* p) {
         .speaker_owned = false,
         .speaker_busy = false,
         .ok_down = false,
+        .keyer_mode = MorseFlipperModeStraight,
         .tone_idx = 0,
         .preview_ticks = 0,
         .input_mask = 0,
     };
 
+    morse_flipper_load_config(&app);
     morse_flipper_gpio_init();
     furi_thread_set_signal_callback(
         furi_thread_get_current(), morse_flipper_signal_callback, &app);
@@ -280,6 +342,7 @@ int32_t morse_flipper_fap(void* p) {
     }
 
     morse_flipper_tone_stop(&app);
+    morse_flipper_save_config(&app);
     furi_thread_set_signal_callback(furi_thread_get_current(), NULL, NULL);
 
     morse_flipper_gpio_deinit();
