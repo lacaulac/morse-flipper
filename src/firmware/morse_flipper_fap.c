@@ -6,10 +6,11 @@
 
 #define MORSE_FLIPPER_VOLUME 0.7f
 #define MORSE_FLIPPER_POLL_MS 20
+#define MORSE_FLIPPER_PREVIEW_TICKS 8
 
 static const GpioPin* morse_flipper_key_pins[] = {
     &gpio_ext_pa6,
-    &gpio_ext_pb2,
+    &gpio_ext_pb3,
     &gpio_ext_pc3,
 };
 
@@ -56,11 +57,14 @@ typedef struct {
     FuriMessageQueue* q;
     ViewPort* view_port;
     Gui* gui;
+    volatile bool exit_requested;
     bool tone_on;
     bool speaker_owned;
     bool speaker_busy;
     bool ok_down;
     uint8_t tone_idx;
+    uint8_t preview_ticks;
+    uint8_t input_mask;
 } MorseFlipperApp;
 
 static const MorseFlipperTone* morse_flipper_current_tone(MorseFlipperApp* app) {
@@ -87,6 +91,30 @@ static bool morse_flipper_gpio_down(void) {
     }
 
     return false;
+}
+
+static uint8_t morse_flipper_read_input_mask(MorseFlipperApp* app) {
+    uint8_t mask = 0;
+
+    if(app->ok_down) mask |= 1 << 0;
+    if(!furi_hal_gpio_read(&gpio_ext_pa6)) mask |= 1 << 1;
+    if(!furi_hal_gpio_read(&gpio_ext_pb3)) mask |= 1 << 2;
+    if(!furi_hal_gpio_read(&gpio_ext_pc3)) mask |= 1 << 3;
+
+    return mask;
+}
+
+static const char* morse_flipper_input_line(MorseFlipperApp* app, char* buf, size_t buf_sz) {
+    size_t n = 0;
+
+    if(app->input_mask & (1 << 0)) n += snprintf(buf + n, buf_sz - n, "ok ");
+    if(app->input_mask & (1 << 1)) n += snprintf(buf + n, buf_sz - n, "p3 ");
+    if(app->input_mask & (1 << 2)) n += snprintf(buf + n, buf_sz - n, "p5 ");
+    if(app->input_mask & (1 << 3)) n += snprintf(buf + n, buf_sz - n, "p7 ");
+
+    if(n == 0) snprintf(buf, buf_sz, "-");
+
+    return buf;
 }
 
 static void morse_flipper_tone_stop(MorseFlipperApp* app) {
@@ -126,10 +154,30 @@ static void morse_flipper_tone_start(MorseFlipperApp* app) {
     app->speaker_busy = false;
 }
 
+static void morse_flipper_tone_nudge(MorseFlipperApp* app, int dir) {
+    int idx = (int)app->tone_idx + dir;
+
+    if(idx < 0) idx = 0;
+    if(idx >= (int)COUNT_OF(morse_flipper_tones)) idx = COUNT_OF(morse_flipper_tones) - 1;
+    if(idx == (int)app->tone_idx) return;
+
+    app->tone_idx = idx;
+    app->preview_ticks = MORSE_FLIPPER_PREVIEW_TICKS;
+
+    if(app->tone_on && app->speaker_owned && furi_hal_speaker_is_mine()) {
+        furi_hal_speaker_start(morse_flipper_current_tone(app)->hz, MORSE_FLIPPER_VOLUME);
+    }
+
+    view_port_update(app->view_port);
+}
+
 static void morse_flipper_sync_tone(MorseFlipperApp* app) {
-    bool want_tone = app->ok_down || morse_flipper_gpio_down();
+    bool want_tone = app->ok_down || morse_flipper_gpio_down() || (app->preview_ticks > 0);
     bool old_tone = app->tone_on;
     bool old_busy = app->speaker_busy;
+    uint8_t old_mask = app->input_mask;
+
+    app->input_mask = morse_flipper_read_input_mask(app);
 
     if(want_tone && !app->tone_on) {
         morse_flipper_tone_start(app);
@@ -137,21 +185,27 @@ static void morse_flipper_sync_tone(MorseFlipperApp* app) {
         morse_flipper_tone_stop(app);
     }
 
-    if(old_tone != app->tone_on || old_busy != app->speaker_busy) view_port_update(app->view_port);
+    if(old_tone != app->tone_on || old_busy != app->speaker_busy || old_mask != app->input_mask) {
+        view_port_update(app->view_port);
+    }
 }
 
 static void morse_flipper_draw(Canvas* canvas, void* ctx) {
     MorseFlipperApp* app = ctx;
+    char tone_line[16];
+    char input_line[24];
 
     canvas_clear(canvas);
     canvas_set_font(canvas, FontPrimary);
     canvas_draw_str(canvas, 8, 14, "Morse Flipper");
 
+    snprintf(tone_line, sizeof(tone_line), "< %s >", morse_flipper_current_tone(app)->name);
+
     canvas_set_font(canvas, FontSecondary);
     canvas_draw_str(canvas, 8, 30, app->tone_on ? "tone on" : "tone off");
-    canvas_draw_str(canvas, 8, 42, morse_flipper_current_tone(app)->name);
-    canvas_draw_str(canvas, 8, 52, app->speaker_busy ? "speaker busy" : "");
-    canvas_draw_str(canvas, 8, 62, "back exits");
+    canvas_draw_str(canvas, 8, 42, tone_line);
+    canvas_draw_str(canvas, 8, 52, morse_flipper_input_line(app, input_line, sizeof(input_line)));
+    canvas_draw_str(canvas, 8, 62, app->speaker_busy ? "speaker busy" : "back exits");
 }
 
 static void morse_flipper_input(InputEvent* input_event, void* ctx) {
@@ -161,6 +215,18 @@ static void morse_flipper_input(InputEvent* input_event, void* ctx) {
     furi_message_queue_put(q, input_event, FuriWaitForever);
 }
 
+static bool morse_flipper_signal_callback(uint32_t signal, void* arg, void* ctx) {
+    UNUSED(arg);
+    MorseFlipperApp* app = ctx;
+
+    if(signal == FuriSignalExit) {
+        app->exit_requested = true;
+        return true;
+    }
+
+    return false;
+}
+
 int32_t morse_flipper_fap(void* p) {
     UNUSED(p);
 
@@ -168,14 +234,19 @@ int32_t morse_flipper_fap(void* p) {
         .q = furi_message_queue_alloc(8, sizeof(InputEvent)),
         .view_port = view_port_alloc(),
         .gui = furi_record_open(RECORD_GUI),
+        .exit_requested = false,
         .tone_on = false,
         .speaker_owned = false,
         .speaker_busy = false,
         .ok_down = false,
         .tone_idx = 0,
+        .preview_ticks = 0,
+        .input_mask = 0,
     };
 
     morse_flipper_gpio_init();
+    furi_thread_set_signal_callback(
+        furi_thread_get_current(), morse_flipper_signal_callback, &app);
     view_port_draw_callback_set(app.view_port, morse_flipper_draw, &app);
     view_port_input_callback_set(app.view_port, morse_flipper_input, app.q);
     gui_add_view_port(app.gui, app.view_port, GuiLayerFullscreen);
@@ -183,11 +254,16 @@ int32_t morse_flipper_fap(void* p) {
     bool running = true;
     InputEvent event;
 
-    while(running) {
+    while(running && !app.exit_requested) {
         if(furi_message_queue_get(app.q, &event, MORSE_FLIPPER_POLL_MS) == FuriStatusOk) {
             if(event.key == InputKeyOk) {
                 if(event.type == InputTypePress) app.ok_down = true;
                 else if(event.type == InputTypeRelease) app.ok_down = false;
+            }
+
+            if(event.type == InputTypePress) {
+                if(event.key == InputKeyLeft) morse_flipper_tone_nudge(&app, -1);
+                else if(event.key == InputKeyRight) morse_flipper_tone_nudge(&app, 1);
             }
 
             if(event.key == InputKeyBack) {
@@ -200,9 +276,11 @@ int32_t morse_flipper_fap(void* p) {
         }
 
         morse_flipper_sync_tone(&app);
+        if(app.preview_ticks > 0) app.preview_ticks--;
     }
 
     morse_flipper_tone_stop(&app);
+    furi_thread_set_signal_callback(furi_thread_get_current(), NULL, NULL);
 
     morse_flipper_gpio_deinit();
     view_port_enabled_set(app.view_port, false);
