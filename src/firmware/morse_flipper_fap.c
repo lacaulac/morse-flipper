@@ -156,14 +156,14 @@ static uint8_t morse_flipper_read_input_mask(MorseFlipperApp* app) {
 }
 
 static const char* morse_flipper_input_line(MorseFlipperApp* app, char* buf, size_t buf_sz) {
-    size_t n = 0;
+    size_t n = snprintf(buf, buf_sz, "raw ");
 
     if(app->input_mask & (1 << 0)) n += snprintf(buf + n, buf_sz - n, "ok ");
     if(app->input_mask & (1 << 1)) n += snprintf(buf + n, buf_sz - n, "p3 ");
     if(app->input_mask & (1 << 2)) n += snprintf(buf + n, buf_sz - n, "p5 ");
     if(app->input_mask & (1 << 3)) n += snprintf(buf + n, buf_sz - n, "p7 ");
 
-    if(n == 0) snprintf(buf, buf_sz, "-");
+    if(n == 4) snprintf(buf, buf_sz, "raw -");
 
     return buf;
 }
@@ -257,7 +257,7 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
     canvas_draw_str(canvas, 8, 30, app->tone_on ? "tone on" : "tone off");
     canvas_draw_str(canvas, 8, 42, tone_line);
     canvas_draw_str(canvas, 8, 52, morse_flipper_input_line(app, input_line, sizeof(input_line)));
-    canvas_draw_str(canvas, 8, 62, app->speaker_busy ? "speaker busy" : "back exits");
+    canvas_draw_str(canvas, 8, 62, app->speaker_busy ? "speaker busy" : "p3 straight");
 }
 
 static void morse_flipper_input(InputEvent* input_event, void* ctx) {
