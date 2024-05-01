@@ -144,13 +144,21 @@ static bool morse_flipper_straight_down(void) {
     return !furi_hal_gpio_read(morse_flipper_straight_pin);
 }
 
+static bool morse_flipper_dit_down(void) {
+    return !furi_hal_gpio_read(morse_flipper_dit_pin);
+}
+
+static bool morse_flipper_dah_down(void) {
+    return !furi_hal_gpio_read(morse_flipper_dah_pin);
+}
+
 static uint8_t morse_flipper_read_input_mask(MorseFlipperApp* app) {
     uint8_t mask = 0;
 
     if(app->ok_down) mask |= 1 << 0;
-    if(!furi_hal_gpio_read(morse_flipper_straight_pin)) mask |= 1 << 1;
-    if(!furi_hal_gpio_read(morse_flipper_dit_pin)) mask |= 1 << 2;
-    if(!furi_hal_gpio_read(morse_flipper_dah_pin)) mask |= 1 << 3;
+    if(morse_flipper_straight_down()) mask |= 1 << 1;
+    if(morse_flipper_dit_down()) mask |= 1 << 2;
+    if(morse_flipper_dah_down()) mask |= 1 << 3;
 
     return mask;
 }
@@ -224,7 +232,8 @@ static void morse_flipper_tone_nudge(MorseFlipperApp* app, int dir) {
 }
 
 static void morse_flipper_sync_tone(MorseFlipperApp* app) {
-    bool want_tone = app->ok_down || morse_flipper_straight_down() || (app->preview_ticks > 0);
+    bool want_tone = app->ok_down || morse_flipper_straight_down() || morse_flipper_dit_down() ||
+                     morse_flipper_dah_down() || (app->preview_ticks > 0);
     bool old_tone = app->tone_on;
     bool old_busy = app->speaker_busy;
     uint8_t old_mask = app->input_mask;
@@ -257,7 +266,7 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
     canvas_draw_str(canvas, 8, 30, app->tone_on ? "tone on" : "tone off");
     canvas_draw_str(canvas, 8, 42, tone_line);
     canvas_draw_str(canvas, 8, 52, morse_flipper_input_line(app, input_line, sizeof(input_line)));
-    canvas_draw_str(canvas, 8, 62, app->speaker_busy ? "speaker busy" : "p3 straight");
+    canvas_draw_str(canvas, 8, 62, app->speaker_busy ? "speaker busy" : "p5 dit p7 dah");
 }
 
 static void morse_flipper_input(InputEvent* input_event, void* ctx) {
