@@ -29,6 +29,11 @@ typedef enum {
     MorseFlipperHandednessSwapped = 1,
 } MorseFlipperHandedness;
 
+typedef enum {
+    MorseFlipperInputSourceStraight = 0,
+    MorseFlipperInputSourcePaddle = 1,
+} MorseFlipperInputSource;
+
 typedef struct {
     uint32_t version;
     uint8_t tone_idx;
@@ -81,6 +86,7 @@ typedef struct {
     bool speaker_busy;
     bool ok_down;
     uint8_t handedness;
+    uint8_t input_source;
     uint8_t keyer_mode;
     uint8_t tone_idx;
     uint8_t preview_ticks;
@@ -91,12 +97,16 @@ static const MorseFlipperTone* morse_flipper_current_tone(MorseFlipperApp* app) 
     return &morse_flipper_tones[app->tone_idx];
 }
 
-static const char* morse_flipper_handedness_line(MorseFlipperApp* app) {
-    if(app->handedness == MorseFlipperHandednessSwapped) {
-        return "p5 dah p7 dit";
+static const char* morse_flipper_status_line(MorseFlipperApp* app) {
+    if(app->speaker_busy) return "speaker busy";
+
+    if(app->input_source == MorseFlipperInputSourcePaddle) {
+        if(app->handedness == MorseFlipperHandednessSwapped) return "src pad hand swp";
+        return "src pad hand norm";
     }
 
-    return "p5 dit p7 dah";
+    if(app->handedness == MorseFlipperHandednessSwapped) return "src str hand swp";
+    return "src str hand norm";
 }
 
 static void morse_flipper_load_config(MorseFlipperApp* app) {
@@ -164,6 +174,11 @@ static bool morse_flipper_dit_down(void) {
 
 static bool morse_flipper_dah_down(void) {
     return !furi_hal_gpio_read(morse_flipper_dah_pin);
+}
+
+static bool morse_flipper_paddles_down(MorseFlipperApp* app) {
+    UNUSED(app);
+    return morse_flipper_dit_down() || morse_flipper_dah_down();
 }
 
 static uint8_t morse_flipper_read_input_mask(MorseFlipperApp* app) {
@@ -246,11 +261,14 @@ static void morse_flipper_tone_nudge(MorseFlipperApp* app, int dir) {
 }
 
 static void morse_flipper_sync_tone(MorseFlipperApp* app) {
-    bool want_tone = app->ok_down || morse_flipper_straight_down() || morse_flipper_dit_down() ||
-                     morse_flipper_dah_down() || (app->preview_ticks > 0);
+    bool want_tone = app->ok_down || morse_flipper_straight_down() || (app->preview_ticks > 0);
     bool old_tone = app->tone_on;
     bool old_busy = app->speaker_busy;
     uint8_t old_mask = app->input_mask;
+
+    if(app->input_source == MorseFlipperInputSourcePaddle && morse_flipper_paddles_down(app)) {
+        want_tone = true;
+    }
 
     app->input_mask = morse_flipper_read_input_mask(app);
 
@@ -280,11 +298,7 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
     canvas_draw_str(canvas, 8, 30, app->tone_on ? "tone on" : "tone off");
     canvas_draw_str(canvas, 8, 42, tone_line);
     canvas_draw_str(canvas, 8, 52, morse_flipper_input_line(app, input_line, sizeof(input_line)));
-    canvas_draw_str(
-        canvas,
-        8,
-        62,
-        app->speaker_busy ? "speaker busy" : morse_flipper_handedness_line(app));
+    canvas_draw_str(canvas, 8, 62, morse_flipper_status_line(app));
 }
 
 static void morse_flipper_input(InputEvent* input_event, void* ctx) {
@@ -319,6 +333,7 @@ int32_t morse_flipper_fap(void* p) {
         .speaker_busy = false,
         .ok_down = false,
         .handedness = MorseFlipperHandednessNormal,
+        .input_source = MorseFlipperInputSourceStraight,
         .keyer_mode = MorseFlipperModeStraight,
         .tone_idx = 0,
         .preview_ticks = 0,
@@ -346,6 +361,16 @@ int32_t morse_flipper_fap(void* p) {
             if(event.type == InputTypePress) {
                 if(event.key == InputKeyLeft) morse_flipper_tone_nudge(&app, -1);
                 else if(event.key == InputKeyRight) morse_flipper_tone_nudge(&app, 1);
+            }
+
+            if(event.key == InputKeyUp && event.type == InputTypeShort) {
+                if(app.input_source == MorseFlipperInputSourceStraight) {
+                    app.input_source = MorseFlipperInputSourcePaddle;
+                } else {
+                    app.input_source = MorseFlipperInputSourceStraight;
+                }
+
+                view_port_update(app.view_port);
             }
 
             if(event.key == InputKeyDown && event.type == InputTypeShort) {
