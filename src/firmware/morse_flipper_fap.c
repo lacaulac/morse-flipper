@@ -5,6 +5,8 @@
 #include <input/input.h>
 #include <storage/storage.h>
 
+#include "keyer.h"
+
 #define MORSE_FLIPPER_VOLUME 0.7f
 #define MORSE_FLIPPER_POLL_MS 20
 #define MORSE_FLIPPER_PREVIEW_TICKS 8
@@ -19,10 +21,6 @@ typedef struct {
     const char* name;
     float hz;
 } MorseFlipperTone;
-
-typedef enum {
-    MorseFlipperModeStraight = 1,
-} MorseFlipperMode;
 
 typedef enum {
     MorseFlipperHandednessNormal = 0,
@@ -88,6 +86,7 @@ typedef struct {
     uint8_t handedness;
     uint8_t input_source;
     uint8_t keyer_mode;
+    MorseKeyer keyer;
     uint8_t tone_idx;
     uint8_t preview_ticks;
     uint8_t input_mask;
@@ -121,7 +120,8 @@ static void morse_flipper_load_config(MorseFlipperApp* app) {
                 app->tone_idx = config.tone_idx;
             }
 
-            if(config.keyer_mode >= MorseFlipperModeStraight) {
+            if(config.keyer_mode >= MorseKeyerModeStraight &&
+               config.keyer_mode <= MorseKeyerModeKeyahead) {
                 app->keyer_mode = config.keyer_mode;
             }
         }
@@ -196,16 +196,18 @@ static bool morse_flipper_logical_dah_down(MorseFlipperApp* app) {
     return morse_flipper_dah_down();
 }
 
-static bool morse_flipper_selected_input_down(MorseFlipperApp* app) {
-    if(morse_flipper_manual_down(app)) {
-        return true;
-    }
+static void morse_flipper_keyer_sync(MorseFlipperApp* app) {
+    bool dit_down = false;
+    bool dah_down = false;
 
     if(app->input_source == MorseFlipperInputSourcePaddle) {
-        return morse_flipper_logical_dit_down(app) || morse_flipper_logical_dah_down(app);
+        dit_down = morse_flipper_logical_dit_down(app);
+        dah_down = morse_flipper_logical_dah_down(app);
     }
 
-    return false;
+    morse_keyer_set_mode(&app->keyer, app->keyer_mode);
+    morse_keyer_set_paddles(&app->keyer, dit_down, dah_down);
+    morse_keyer_tick(&app->keyer);
 }
 
 static uint8_t morse_flipper_read_input_mask(MorseFlipperApp* app) {
@@ -288,12 +290,17 @@ static void morse_flipper_tone_nudge(MorseFlipperApp* app, int dir) {
 }
 
 static void morse_flipper_sync_tone(MorseFlipperApp* app) {
-    bool want_tone = morse_flipper_selected_input_down(app) || (app->preview_ticks > 0);
+    bool want_tone = morse_flipper_manual_down(app) || (app->preview_ticks > 0);
     bool old_tone = app->tone_on;
     bool old_busy = app->speaker_busy;
     uint8_t old_mask = app->input_mask;
 
     app->input_mask = morse_flipper_read_input_mask(app);
+    morse_flipper_keyer_sync(app);
+
+    if(morse_keyer_tone(&app->keyer)) {
+        want_tone = true;
+    }
 
     if(want_tone && !app->tone_on) {
         morse_flipper_tone_start(app);
@@ -357,13 +364,15 @@ int32_t morse_flipper_fap(void* p) {
         .ok_down = false,
         .handedness = MorseFlipperHandednessNormal,
         .input_source = MorseFlipperInputSourceStraight,
-        .keyer_mode = MorseFlipperModeStraight,
+        .keyer_mode = MorseKeyerModeStraight,
+        .keyer = {0},
         .tone_idx = 0,
         .preview_ticks = 0,
         .input_mask = 0,
     };
 
     morse_flipper_load_config(&app);
+    morse_keyer_init(&app.keyer);
     morse_flipper_gpio_init();
     furi_thread_set_signal_callback(
         furi_thread_get_current(), morse_flipper_signal_callback, &app);

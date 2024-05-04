@@ -8,8 +8,7 @@ App(
     requires=["gui"],
     stack_size=2 * 1024,
     cdefines=["MORSE_FLIPPER_FAP=1"],
-    sources=["src/firmware/morse_flipper_fap.c"],
+    sources=["src/firmware/morse_flipper_fap.c", "src/firmware/keyer.c"],
     targets=["f7"],
     fap_category="Tools",
 )
-
