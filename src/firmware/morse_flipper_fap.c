@@ -315,14 +315,19 @@ static void morse_flipper_sync_tone(MorseFlipperApp* app) {
 
 static void morse_flipper_draw(Canvas* canvas, void* ctx) {
     MorseFlipperApp* app = ctx;
-    char tone_line[16];
+    char tone_line[24];
     char input_line[24];
 
     canvas_clear(canvas);
     canvas_set_font(canvas, FontPrimary);
     canvas_draw_str(canvas, 8, 14, "Morse Flipper");
 
-    snprintf(tone_line, sizeof(tone_line), "< %s >", morse_flipper_current_tone(app)->name);
+    snprintf(
+        tone_line,
+        sizeof(tone_line),
+        "< %s > %s",
+        morse_flipper_current_tone(app)->name,
+        morse_keyer_mode_name(app->keyer_mode));
 
     canvas_set_font(canvas, FontSecondary);
     canvas_draw_str(canvas, 8, 30, app->tone_on ? "tone on" : "tone off");
@@ -407,6 +412,12 @@ int32_t morse_flipper_fap(void* p) {
             }
 
             if(event.key == InputKeyDown && event.type == InputTypeShort) {
+                app.keyer_mode = morse_keyer_next_ui_mode(app.keyer_mode);
+                morse_flipper_save_config(&app);
+                view_port_update(app.view_port);
+            }
+
+            if(event.key == InputKeyDown && event.type == InputTypeLong) {
                 if(app.handedness == MorseFlipperHandednessNormal) {
                     app.handedness = MorseFlipperHandednessSwapped;
                 } else {
