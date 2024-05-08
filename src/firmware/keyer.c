@@ -229,6 +229,47 @@ static void morse_keyer_tick_iambic_a(MorseKeyer* keyer) {
     }
 }
 
+static void morse_keyer_tick_iambic_b(MorseKeyer* keyer) {
+    bool dit_press = keyer->dit_down && !keyer->prev_dit_down;
+    bool dah_press = keyer->dah_down && !keyer->prev_dah_down;
+
+    if(keyer->phase == MorseKeyerPhaseMark) {
+        if(keyer->dit_down && keyer->dah_down) {
+            keyer->queued_extra = true;
+        }
+
+        if(keyer->current_element == MorseKeyerElementDit && dah_press) {
+            keyer->queued_extra = true;
+        }
+
+        if(keyer->current_element == MorseKeyerElementDah && dit_press) {
+            keyer->queued_extra = true;
+        }
+
+        morse_keyer_tick_mark(keyer);
+        return;
+    }
+
+    if(keyer->phase == MorseKeyerPhaseGap) {
+        morse_keyer_tick_gap(keyer);
+        return;
+    }
+
+    if(keyer->queued_extra) {
+        keyer->queued_extra = false;
+        morse_keyer_start_element(keyer, morse_keyer_opposite_element(keyer->last_element));
+        return;
+    }
+
+    uint8_t element = morse_keyer_pick_iambic_element(keyer);
+
+    if(element != MorseKeyerElementNone) {
+        morse_keyer_start_element(keyer, element);
+    } else {
+        keyer->tone_on = false;
+    }
+}
+
 void morse_keyer_tick(MorseKeyer* keyer) {
     if(keyer->dit_down && !keyer->prev_dit_down) {
         keyer->last_press = MorseKeyerElementDit;
@@ -239,6 +280,9 @@ void morse_keyer_tick(MorseKeyer* keyer) {
     }
 
     switch(keyer->mode) {
+    case MorseKeyerModeIambicB:
+        morse_keyer_tick_iambic_b(keyer);
+        break;
     case MorseKeyerModeIambicA:
         morse_keyer_tick_iambic_a(keyer);
         break;
@@ -281,6 +325,8 @@ const char* morse_keyer_mode_name(uint8_t mode) {
         return "plain";
     case MorseKeyerModeIambicA:
         return "iambic a";
+    case MorseKeyerModeIambicB:
+        return "iambic b";
     case MorseKeyerModeBug:
         return "bug";
     case MorseKeyerModeStraight:
@@ -298,6 +344,8 @@ uint8_t morse_keyer_next_ui_mode(uint8_t mode) {
     case MorseKeyerModePlainIambic:
         return MorseKeyerModeIambicA;
     case MorseKeyerModeIambicA:
+        return MorseKeyerModeIambicB;
+    case MorseKeyerModeIambicB:
     default:
         return MorseKeyerModeStraight;
     }
