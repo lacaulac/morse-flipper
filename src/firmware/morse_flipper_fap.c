@@ -14,8 +14,9 @@
 #define MORSE_FLIPPER_CONFIG_VERSION 1
 
 static const GpioPin* morse_flipper_straight_pin = &gpio_ext_pa6;
-static const GpioPin* morse_flipper_dit_pin = &gpio_ext_pb3;
-static const GpioPin* morse_flipper_dah_pin = &gpio_ext_pc3;
+static const GpioPin* morse_flipper_dit_pin = &gpio_ext_pc3;
+static const GpioPin* morse_flipper_dah_pin = &gpio_ext_pb3;
+static const GpioPin* morse_flipper_ground_pin = &gpio_ext_pa7;
 
 typedef struct {
     const char* name;
@@ -156,12 +157,15 @@ static void morse_flipper_gpio_init(void) {
     furi_hal_gpio_init(morse_flipper_straight_pin, GpioModeInput, GpioPullUp, GpioSpeedLow);
     furi_hal_gpio_init(morse_flipper_dit_pin, GpioModeInput, GpioPullUp, GpioSpeedLow);
     furi_hal_gpio_init(morse_flipper_dah_pin, GpioModeInput, GpioPullUp, GpioSpeedLow);
+    furi_hal_gpio_init(morse_flipper_ground_pin, GpioModeOutputPushPull, GpioPullNo, GpioSpeedLow);
+    furi_hal_gpio_write(morse_flipper_ground_pin, false);
 }
 
 static void morse_flipper_gpio_deinit(void) {
     furi_hal_gpio_init(morse_flipper_straight_pin, GpioModeAnalog, GpioPullNo, GpioSpeedLow);
     furi_hal_gpio_init(morse_flipper_dit_pin, GpioModeAnalog, GpioPullNo, GpioSpeedLow);
     furi_hal_gpio_init(morse_flipper_dah_pin, GpioModeAnalog, GpioPullNo, GpioSpeedLow);
+    furi_hal_gpio_init(morse_flipper_ground_pin, GpioModeAnalog, GpioPullNo, GpioSpeedLow);
 }
 
 static bool morse_flipper_straight_down(void) {
@@ -177,7 +181,8 @@ static bool morse_flipper_dah_down(void) {
 }
 
 static bool morse_flipper_manual_down(MorseFlipperApp* app) {
-    return app->ok_down || morse_flipper_straight_down();
+    return app->ok_down ||
+           (app->input_source == MorseFlipperInputSourceStraight && morse_flipper_straight_down());
 }
 
 static bool morse_flipper_logical_dit_down(MorseFlipperApp* app) {
@@ -215,8 +220,8 @@ static uint8_t morse_flipper_read_input_mask(MorseFlipperApp* app) {
 
     if(app->ok_down) mask |= 1 << 0;
     if(morse_flipper_straight_down()) mask |= 1 << 1;
-    if(morse_flipper_dit_down()) mask |= 1 << 2;
-    if(morse_flipper_dah_down()) mask |= 1 << 3;
+    if(morse_flipper_dah_down()) mask |= 1 << 2;
+    if(morse_flipper_dit_down()) mask |= 1 << 3;
 
     return mask;
 }

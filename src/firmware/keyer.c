@@ -270,6 +270,40 @@ static void morse_keyer_tick_iambic_b(MorseKeyer* keyer) {
     }
 }
 
+static uint8_t morse_keyer_pick_ultimatic_element(MorseKeyer* keyer) {
+    if(keyer->dit_down && keyer->dah_down) {
+        if(keyer->last_press == MorseKeyerElementDah) {
+            return MorseKeyerElementDah;
+        }
+
+        return MorseKeyerElementDit;
+    }
+
+    if(keyer->dit_down) return MorseKeyerElementDit;
+    if(keyer->dah_down) return MorseKeyerElementDah;
+    return MorseKeyerElementNone;
+}
+
+static void morse_keyer_tick_ultimatic(MorseKeyer* keyer) {
+    if(keyer->phase == MorseKeyerPhaseMark) {
+        morse_keyer_tick_mark(keyer);
+        return;
+    }
+
+    if(keyer->phase == MorseKeyerPhaseGap) {
+        morse_keyer_tick_gap(keyer);
+        return;
+    }
+
+    uint8_t element = morse_keyer_pick_ultimatic_element(keyer);
+
+    if(element != MorseKeyerElementNone) {
+        morse_keyer_start_element(keyer, element);
+    } else {
+        keyer->tone_on = false;
+    }
+}
+
 void morse_keyer_tick(MorseKeyer* keyer) {
     if(keyer->dit_down && !keyer->prev_dit_down) {
         keyer->last_press = MorseKeyerElementDit;
@@ -280,6 +314,9 @@ void morse_keyer_tick(MorseKeyer* keyer) {
     }
 
     switch(keyer->mode) {
+    case MorseKeyerModeUltimatic:
+        morse_keyer_tick_ultimatic(keyer);
+        break;
     case MorseKeyerModeIambicB:
         morse_keyer_tick_iambic_b(keyer);
         break;
@@ -327,6 +364,8 @@ const char* morse_keyer_mode_name(uint8_t mode) {
         return "iambic a";
     case MorseKeyerModeIambicB:
         return "iambic b";
+    case MorseKeyerModeUltimatic:
+        return "ultimatic";
     case MorseKeyerModeBug:
         return "bug";
     case MorseKeyerModeStraight:
@@ -346,6 +385,8 @@ uint8_t morse_keyer_next_ui_mode(uint8_t mode) {
     case MorseKeyerModeIambicA:
         return MorseKeyerModeIambicB;
     case MorseKeyerModeIambicB:
+        return MorseKeyerModeUltimatic;
+    case MorseKeyerModeUltimatic:
     default:
         return MorseKeyerModeStraight;
     }
