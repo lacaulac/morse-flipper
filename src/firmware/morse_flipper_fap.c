@@ -14,6 +14,14 @@
 #define MORSE_FLIPPER_CONFIG_VERSION 1
 #define MORSE_FLIPPER_DEFAULT_DIT_MS 100U
 
+#define MORSE_SOURCE_STRAIGHT_GPIO (1UL << 0)
+#define MORSE_SOURCE_STRAIGHT_OK   (1UL << 1)
+#define MORSE_SOURCE_KEYER_DIT     (1UL << 2)
+#define MORSE_SOURCE_KEYER_DAH     (1UL << 3)
+
+#define MORSE_PADDLE_SOURCE_GPIO_DIT (1UL << 0)
+#define MORSE_PADDLE_SOURCE_GPIO_DAH (1UL << 1)
+
 static const GpioPin* morse_flipper_straight_pin = &gpio_ext_pa6;
 static const GpioPin* morse_flipper_dit_pin = &gpio_ext_pc3;
 static const GpioPin* morse_flipper_dah_pin = &gpio_ext_pb3;
@@ -22,6 +30,7 @@ static const GpioPin* morse_flipper_ground_pin = &gpio_ext_pa7;
 typedef struct {
     const char* name;
     float hz;
+    uint8_t midi_note;
 } MorseFlipperTone;
 
 typedef enum {
@@ -43,37 +52,37 @@ typedef struct {
 } MorseFlipperConfig;
 
 static const MorseFlipperTone morse_flipper_tones[] = {
-    {"G2", 98.00f},
-    {"A2", 110.00f},
-    {"B2", 123.47f},
-    {"C3", 130.81f},
-    {"D3", 146.83f},
-    {"E3", 164.81f},
-    {"F3", 174.61f},
-    {"G3", 196.00f},
-    {"A3", 220.00f},
-    {"B3", 246.94f},
-    {"C4", 261.63f},
-    {"D4", 293.66f},
-    {"E4", 329.63f},
-    {"F4", 349.23f},
-    {"G4", 392.00f},
-    {"A4", 440.00f},
-    {"B4", 493.88f},
-    {"C5", 523.25f},
-    {"D5", 587.33f},
-    {"E5", 659.25f},
-    {"F5", 698.46f},
-    {"G5", 783.99f},
-    {"A5", 880.00f},
-    {"B5", 987.77f},
-    {"C6", 1046.50f},
-    {"D6", 1174.66f},
-    {"E6", 1318.51f},
-    {"F6", 1396.91f},
-    {"G6", 1567.98f},
-    {"A6", 1760.00f},
-    {"B6", 1975.53f},
+    {"G2", 98.00f, 43U},
+    {"A2", 110.00f, 45U},
+    {"B2", 123.47f, 47U},
+    {"C3", 130.81f, 48U},
+    {"D3", 146.83f, 50U},
+    {"E3", 164.81f, 52U},
+    {"F3", 174.61f, 53U},
+    {"G3", 196.00f, 55U},
+    {"A3", 220.00f, 57U},
+    {"B3", 246.94f, 59U},
+    {"C4", 261.63f, 60U},
+    {"D4", 293.66f, 62U},
+    {"E4", 329.63f, 64U},
+    {"F4", 349.23f, 65U},
+    {"G4", 392.00f, 67U},
+    {"A4", 440.00f, 69U},
+    {"B4", 493.88f, 71U},
+    {"C5", 523.25f, 72U},
+    {"D5", 587.33f, 74U},
+    {"E5", 659.25f, 76U},
+    {"F5", 698.46f, 77U},
+    {"G5", 783.99f, 79U},
+    {"A5", 880.00f, 81U},
+    {"B5", 987.77f, 83U},
+    {"C6", 1046.50f, 84U},
+    {"D6", 1174.66f, 86U},
+    {"E6", 1318.51f, 88U},
+    {"F6", 1396.91f, 89U},
+    {"G6", 1567.98f, 91U},
+    {"A6", 1760.00f, 93U},
+    {"B6", 1975.53f, 95U},
 };
 
 typedef struct {
@@ -85,8 +94,6 @@ typedef struct {
     bool speaker_owned;
     bool speaker_busy;
     bool ok_down;
-    bool prev_dit_down;
-    bool prev_dah_down;
     uint8_t handedness;
     uint8_t input_source;
     uint8_t keyer_mode;
@@ -94,21 +101,39 @@ typedef struct {
     uint8_t tone_idx;
     uint8_t preview_ticks;
     uint8_t input_mask;
+    uint32_t paddle_sources[MorseKeyerPaddleCount];
+    uint32_t note_sources[3];
 } MorseFlipperApp;
 
-static const MorseFlipperTone* morse_flipper_current_tone(MorseFlipperApp* app) {
+static const MorseFlipperTone* morse_flipper_current_tone(const MorseFlipperApp* app) {
     return &morse_flipper_tones[app->tone_idx];
 }
 
-static const char* morse_flipper_status_line(MorseFlipperApp* app) {
-    if(app->speaker_busy) return "speaker busy";
+static bool morse_flipper_any_active_notes(const MorseFlipperApp* app) {
+    for(size_t i = 0; i < COUNT_OF(app->note_sources); i++) {
+        if(app->note_sources[i] != 0U) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static const char* morse_flipper_status_line(const MorseFlipperApp* app) {
+    if(app->speaker_busy) {
+        return "speaker busy";
+    }
 
     if(app->input_source == MorseFlipperInputSourcePaddle) {
-        if(app->handedness == MorseFlipperHandednessSwapped) return "src pad hand swp";
+        if(app->handedness == MorseFlipperHandednessSwapped) {
+            return "src pad hand swp";
+        }
         return "src pad hand norm";
     }
 
-    if(app->handedness == MorseFlipperHandednessSwapped) return "src str hand swp";
+    if(app->handedness == MorseFlipperHandednessSwapped) {
+        return "src str hand swp";
+    }
     return "src str hand norm";
 }
 
@@ -136,15 +161,15 @@ static void morse_flipper_load_config(MorseFlipperApp* app) {
     furi_record_close(RECORD_STORAGE);
 }
 
-static void morse_flipper_save_config(MorseFlipperApp* app) {
+static void morse_flipper_save_config(const MorseFlipperApp* app) {
     Storage* storage = furi_record_open(RECORD_STORAGE);
     File* file = storage_file_alloc(storage);
     MorseFlipperConfig config = {
         .version = MORSE_FLIPPER_CONFIG_VERSION,
         .tone_idx = app->tone_idx,
         .keyer_mode = app->keyer_mode,
-        .spare0 = 0,
-        .spare1 = 0,
+        .spare0 = 0U,
+        .spare1 = 0U,
     };
 
     if(storage_file_open(file, MORSE_FLIPPER_CONFIG_PATH, FSAM_WRITE, FSOM_CREATE_ALWAYS)) {
@@ -183,12 +208,7 @@ static bool morse_flipper_dah_down(void) {
     return !furi_hal_gpio_read(morse_flipper_dah_pin);
 }
 
-static bool morse_flipper_manual_down(MorseFlipperApp* app) {
-    return app->ok_down ||
-           (app->input_source == MorseFlipperInputSourceStraight && morse_flipper_straight_down());
-}
-
-static bool morse_flipper_logical_dit_down(MorseFlipperApp* app) {
+static bool morse_flipper_logical_dit_down(const MorseFlipperApp* app) {
     if(app->handedness == MorseFlipperHandednessSwapped) {
         return morse_flipper_dah_down();
     }
@@ -196,7 +216,7 @@ static bool morse_flipper_logical_dit_down(MorseFlipperApp* app) {
     return morse_flipper_dit_down();
 }
 
-static bool morse_flipper_logical_dah_down(MorseFlipperApp* app) {
+static bool morse_flipper_logical_dah_down(const MorseFlipperApp* app) {
     if(app->handedness == MorseFlipperHandednessSwapped) {
         return morse_flipper_dit_down();
     }
@@ -204,57 +224,8 @@ static bool morse_flipper_logical_dah_down(MorseFlipperApp* app) {
     return morse_flipper_dah_down();
 }
 
-static void morse_flipper_keyer_sync(MorseFlipperApp* app, uint32_t now_ms) {
-    bool dit_down = false;
-    bool dah_down = false;
-
-    if(app->input_source == MorseFlipperInputSourcePaddle) {
-        dit_down = morse_flipper_logical_dit_down(app);
-        dah_down = morse_flipper_logical_dah_down(app);
-    }
-
-    if(dit_down != app->prev_dit_down) {
-        morse_keyer_paddle_event(&app->keyer, MorseKeyerPaddleDit, dit_down, now_ms);
-        app->prev_dit_down = dit_down;
-    }
-
-    if(dah_down != app->prev_dah_down) {
-        morse_keyer_paddle_event(&app->keyer, MorseKeyerPaddleDah, dah_down, now_ms);
-        app->prev_dah_down = dah_down;
-    }
-
-    morse_keyer_tick(&app->keyer, now_ms);
-}
-
-static uint8_t morse_flipper_read_input_mask(MorseFlipperApp* app) {
-    uint8_t mask = 0;
-
-    if(app->ok_down) mask |= 1 << 0;
-    if(morse_flipper_straight_down()) mask |= 1 << 1;
-    if(morse_flipper_dah_down()) mask |= 1 << 2;
-    if(morse_flipper_dit_down()) mask |= 1 << 3;
-
-    return mask;
-}
-
-static const char* morse_flipper_input_line(MorseFlipperApp* app, char* buf, size_t buf_sz) {
-    size_t n = snprintf(buf, buf_sz, "raw ");
-
-    if(app->input_mask & (1 << 0)) n += snprintf(buf + n, buf_sz - n, "ok ");
-    if(app->input_mask & (1 << 1)) n += snprintf(buf + n, buf_sz - n, "p3 ");
-    if(app->input_mask & (1 << 2)) n += snprintf(buf + n, buf_sz - n, "p5 ");
-    if(app->input_mask & (1 << 3)) n += snprintf(buf + n, buf_sz - n, "p7 ");
-
-    if(n == 4) snprintf(buf, buf_sz, "raw -");
-
-    return buf;
-}
-
 static void morse_flipper_tone_stop(MorseFlipperApp* app) {
-    if(app->speaker_owned && furi_hal_speaker_is_mine()) {
-        furi_hal_speaker_stop();
-        furi_hal_speaker_release();
-    } else if(furi_hal_speaker_is_mine()) {
+    if(furi_hal_speaker_is_mine()) {
         furi_hal_speaker_stop();
         furi_hal_speaker_release();
     }
@@ -265,11 +236,14 @@ static void morse_flipper_tone_stop(MorseFlipperApp* app) {
 }
 
 static void morse_flipper_tone_start(MorseFlipperApp* app) {
-    if(app->tone_on) return;
+    if(app->tone_on) {
+        return;
+    }
 
     if(!app->speaker_owned) {
-        if(furi_hal_speaker_acquire(30)) app->speaker_owned = true;
-        else {
+        if(furi_hal_speaker_acquire(30U)) {
+            app->speaker_owned = true;
+        } else {
             app->speaker_busy = true;
             return;
         }
@@ -287,14 +261,174 @@ static void morse_flipper_tone_start(MorseFlipperApp* app) {
     app->speaker_busy = false;
 }
 
+static void morse_flipper_update_sidetone(MorseFlipperApp* app) {
+    bool want_tone = morse_flipper_any_active_notes(app) || (app->preview_ticks > 0U);
+
+    if(want_tone) {
+        morse_flipper_tone_start(app);
+    } else {
+        morse_flipper_tone_stop(app);
+    }
+}
+
+static void morse_flipper_set_note_source(
+    MorseFlipperApp* app,
+    uint8_t note,
+    uint32_t source_mask,
+    bool active) {
+    if(note >= COUNT_OF(app->note_sources)) {
+        return;
+    }
+
+    uint32_t before = app->note_sources[note];
+    uint32_t after = active ? (before | source_mask) : (before & ~source_mask);
+
+    if(before == after) {
+        return;
+    }
+
+    app->note_sources[note] = after;
+    morse_flipper_update_sidetone(app);
+}
+
+static void morse_flipper_release_all_notes(MorseFlipperApp* app) {
+    for(size_t note = 0; note < COUNT_OF(app->note_sources); note++) {
+        app->note_sources[note] = 0U;
+    }
+
+    morse_flipper_update_sidetone(app);
+}
+
+static uint32_t morse_flipper_note_source_for_paddle(uint8_t paddle) {
+    return (paddle == MorseKeyerPaddleDit) ? MORSE_SOURCE_KEYER_DIT : MORSE_SOURCE_KEYER_DAH;
+}
+
+static uint8_t morse_flipper_note_for_paddle(uint8_t paddle) {
+    return (paddle == MorseKeyerPaddleDit) ? 1U : 2U;
+}
+
+static void morse_flipper_drain_keyer_events(MorseFlipperApp* app) {
+    MorseKeyerEvent event;
+
+    while(morse_keyer_pop_event(&app->keyer, &event)) {
+        morse_flipper_set_note_source(
+            app,
+            morse_flipper_note_for_paddle(event.paddle),
+            morse_flipper_note_source_for_paddle(event.paddle),
+            event.type == MorseKeyerEventPress);
+    }
+}
+
+static void morse_flipper_set_paddle_source(
+    MorseFlipperApp* app,
+    uint8_t paddle,
+    uint32_t source_mask,
+    bool active,
+    uint32_t now_ms) {
+    if(paddle >= MorseKeyerPaddleCount) {
+        return;
+    }
+
+    uint32_t before = app->paddle_sources[paddle];
+    uint32_t after = active ? (before | source_mask) : (before & ~source_mask);
+
+    if(before == after) {
+        return;
+    }
+
+    app->paddle_sources[paddle] = after;
+    morse_keyer_paddle_event(&app->keyer, paddle, after != 0U, now_ms);
+    morse_keyer_tick(&app->keyer, now_ms);
+    morse_flipper_drain_keyer_events(app);
+}
+
+static void morse_flipper_refresh_keyer(MorseFlipperApp* app, uint32_t now_ms) {
+    morse_keyer_reset(&app->keyer);
+    morse_flipper_drain_keyer_events(app);
+    morse_keyer_set_mode(&app->keyer, app->keyer_mode);
+    morse_keyer_set_dit_duration(&app->keyer, MORSE_FLIPPER_DEFAULT_DIT_MS);
+
+    for(uint8_t paddle = 0; paddle < MorseKeyerPaddleCount; paddle++) {
+        if(app->paddle_sources[paddle] != 0U) {
+            morse_keyer_paddle_event(&app->keyer, paddle, true, now_ms);
+        }
+    }
+
+    morse_keyer_tick(&app->keyer, now_ms);
+    morse_flipper_drain_keyer_events(app);
+}
+
+static void morse_flipper_sync_gpio_inputs(MorseFlipperApp* app, uint32_t now_ms) {
+    bool straight_active =
+        (app->input_source == MorseFlipperInputSourceStraight) && morse_flipper_straight_down();
+    bool dit_active =
+        (app->input_source == MorseFlipperInputSourcePaddle) && morse_flipper_logical_dit_down(app);
+    bool dah_active =
+        (app->input_source == MorseFlipperInputSourcePaddle) && morse_flipper_logical_dah_down(app);
+
+    morse_flipper_set_note_source(app, 0U, MORSE_SOURCE_STRAIGHT_GPIO, straight_active);
+    morse_flipper_set_paddle_source(
+        app, MorseKeyerPaddleDit, MORSE_PADDLE_SOURCE_GPIO_DIT, dit_active, now_ms);
+    morse_flipper_set_paddle_source(
+        app, MorseKeyerPaddleDah, MORSE_PADDLE_SOURCE_GPIO_DAH, dah_active, now_ms);
+}
+
+static uint8_t morse_flipper_read_input_mask(const MorseFlipperApp* app) {
+    uint8_t mask = 0U;
+
+    if(app->ok_down) {
+        mask |= 1U << 0;
+    }
+    if(morse_flipper_straight_down()) {
+        mask |= 1U << 1;
+    }
+    if(morse_flipper_dah_down()) {
+        mask |= 1U << 2;
+    }
+    if(morse_flipper_dit_down()) {
+        mask |= 1U << 3;
+    }
+
+    return mask;
+}
+
+static const char* morse_flipper_input_line(const MorseFlipperApp* app, char* buf, size_t buf_sz) {
+    size_t n = snprintf(buf, buf_sz, "raw ");
+
+    if(app->input_mask & (1U << 0)) {
+        n += snprintf(buf + n, buf_sz - n, "ok ");
+    }
+    if(app->input_mask & (1U << 1)) {
+        n += snprintf(buf + n, buf_sz - n, "p3 ");
+    }
+    if(app->input_mask & (1U << 2)) {
+        n += snprintf(buf + n, buf_sz - n, "p5 ");
+    }
+    if(app->input_mask & (1U << 3)) {
+        n += snprintf(buf + n, buf_sz - n, "p7 ");
+    }
+
+    if(n == 4U) {
+        snprintf(buf, buf_sz, "raw -");
+    }
+
+    return buf;
+}
+
 static void morse_flipper_tone_nudge(MorseFlipperApp* app, int dir) {
     int idx = (int)app->tone_idx + dir;
 
-    if(idx < 0) idx = 0;
-    if(idx >= (int)COUNT_OF(morse_flipper_tones)) idx = COUNT_OF(morse_flipper_tones) - 1;
-    if(idx == (int)app->tone_idx) return;
+    if(idx < 0) {
+        idx = 0;
+    }
+    if(idx >= (int)COUNT_OF(morse_flipper_tones)) {
+        idx = (int)COUNT_OF(morse_flipper_tones) - 1;
+    }
+    if(idx == (int)app->tone_idx) {
+        return;
+    }
 
-    app->tone_idx = idx;
+    app->tone_idx = (uint8_t)idx;
     app->preview_ticks = MORSE_FLIPPER_PREVIEW_TICKS;
 
     if(app->tone_on && app->speaker_owned && furi_hal_speaker_is_mine()) {
@@ -302,29 +436,21 @@ static void morse_flipper_tone_nudge(MorseFlipperApp* app, int dir) {
     }
 
     morse_flipper_save_config(app);
+    morse_flipper_update_sidetone(app);
     view_port_update(app->view_port);
 }
 
-static void morse_flipper_sync_tone(MorseFlipperApp* app) {
+static void morse_flipper_poll(MorseFlipperApp* app) {
     uint32_t now_ms = furi_get_tick();
-    bool want_tone = morse_flipper_manual_down(app) || (app->preview_ticks > 0);
     bool old_tone = app->tone_on;
     bool old_busy = app->speaker_busy;
     uint8_t old_mask = app->input_mask;
 
     app->input_mask = morse_flipper_read_input_mask(app);
-    morse_flipper_keyer_sync(app, now_ms);
-
-    if(morse_keyer_output_active(&app->keyer, MorseKeyerPaddleDit) ||
-       morse_keyer_output_active(&app->keyer, MorseKeyerPaddleDah)) {
-        want_tone = true;
-    }
-
-    if(want_tone && !app->tone_on) {
-        morse_flipper_tone_start(app);
-    } else if(!want_tone && app->tone_on) {
-        morse_flipper_tone_stop(app);
-    }
+    morse_flipper_sync_gpio_inputs(app, now_ms);
+    morse_keyer_tick(&app->keyer, now_ms);
+    morse_flipper_drain_keyer_events(app);
+    morse_flipper_update_sidetone(app);
 
     if(old_tone != app->tone_on || old_busy != app->speaker_busy || old_mask != app->input_mask) {
         view_port_update(app->view_port);
@@ -333,8 +459,8 @@ static void morse_flipper_sync_tone(MorseFlipperApp* app) {
 
 static void morse_flipper_draw(Canvas* canvas, void* ctx) {
     MorseFlipperApp* app = ctx;
-    char tone_line[24];
-    char input_line[24];
+    char tone_line[32];
+    char input_line[32];
 
     canvas_clear(canvas);
     canvas_set_font(canvas, FontPrimary);
@@ -385,15 +511,15 @@ int32_t morse_flipper_fap(void* p) {
         .speaker_owned = false,
         .speaker_busy = false,
         .ok_down = false,
-        .prev_dit_down = false,
-        .prev_dah_down = false,
         .handedness = MorseFlipperHandednessNormal,
         .input_source = MorseFlipperInputSourceStraight,
         .keyer_mode = MorseKeyerModeStraight,
         .keyer = {0},
-        .tone_idx = 0,
-        .preview_ticks = 0,
-        .input_mask = 0,
+        .tone_idx = 0U,
+        .preview_ticks = 0U,
+        .input_mask = 0U,
+        .paddle_sources = {0U, 0U},
+        .note_sources = {0U, 0U, 0U},
     };
 
     morse_flipper_load_config(&app);
@@ -411,13 +537,21 @@ int32_t morse_flipper_fap(void* p) {
     while(running && !app.exit_requested) {
         if(furi_message_queue_get(app.q, &event, MORSE_FLIPPER_POLL_MS) == FuriStatusOk) {
             if(event.key == InputKeyOk) {
-                if(event.type == InputTypePress) app.ok_down = true;
-                else if(event.type == InputTypeRelease) app.ok_down = false;
+                if(event.type == InputTypePress) {
+                    app.ok_down = true;
+                    morse_flipper_set_note_source(&app, 0U, MORSE_SOURCE_STRAIGHT_OK, true);
+                } else if(event.type == InputTypeRelease) {
+                    app.ok_down = false;
+                    morse_flipper_set_note_source(&app, 0U, MORSE_SOURCE_STRAIGHT_OK, false);
+                }
             }
 
             if(event.type == InputTypePress) {
-                if(event.key == InputKeyLeft) morse_flipper_tone_nudge(&app, -1);
-                else if(event.key == InputKeyRight) morse_flipper_tone_nudge(&app, 1);
+                if(event.key == InputKeyLeft) {
+                    morse_flipper_tone_nudge(&app, -1);
+                } else if(event.key == InputKeyRight) {
+                    morse_flipper_tone_nudge(&app, 1);
+                }
             }
 
             if(event.key == InputKeyUp && event.type == InputTypeShort) {
@@ -427,17 +561,15 @@ int32_t morse_flipper_fap(void* p) {
                     app.input_source = MorseFlipperInputSourceStraight;
                 }
 
-                morse_keyer_reset(&app.keyer);
-                app.prev_dit_down = false;
-                app.prev_dah_down = false;
-                morse_flipper_sync_tone(&app);
+                morse_flipper_refresh_keyer(&app, furi_get_tick());
+                morse_flipper_poll(&app);
                 view_port_update(app.view_port);
             }
 
             if(event.key == InputKeyDown && event.type == InputTypeShort) {
                 app.keyer_mode = morse_keyer_next_ui_mode(app.keyer_mode);
-                morse_keyer_set_mode(&app.keyer, app.keyer_mode);
                 morse_flipper_save_config(&app);
+                morse_flipper_refresh_keyer(&app, furi_get_tick());
                 view_port_update(app.view_port);
             }
 
@@ -448,10 +580,8 @@ int32_t morse_flipper_fap(void* p) {
                     app.handedness = MorseFlipperHandednessNormal;
                 }
 
-                morse_keyer_reset(&app.keyer);
-                app.prev_dit_down = false;
-                app.prev_dah_down = false;
-                morse_flipper_sync_tone(&app);
+                morse_flipper_refresh_keyer(&app, furi_get_tick());
+                morse_flipper_poll(&app);
                 view_port_update(app.view_port);
             }
 
@@ -459,15 +589,23 @@ int32_t morse_flipper_fap(void* p) {
                 if(event.type == InputTypePress || event.type == InputTypeShort ||
                    event.type == InputTypeLong) {
                     app.ok_down = false;
+                    morse_flipper_set_note_source(&app, 0U, MORSE_SOURCE_STRAIGHT_OK, false);
                     running = false;
                 }
             }
         }
 
-        morse_flipper_sync_tone(&app);
-        if(app.preview_ticks > 0) app.preview_ticks--;
+        morse_flipper_poll(&app);
+
+        if(app.preview_ticks > 0U) {
+            app.preview_ticks--;
+            morse_flipper_update_sidetone(&app);
+        }
     }
 
+    morse_keyer_reset(&app.keyer);
+    morse_flipper_drain_keyer_events(&app);
+    morse_flipper_release_all_notes(&app);
     morse_flipper_tone_stop(&app);
     morse_flipper_save_config(&app);
     furi_thread_set_signal_callback(furi_thread_get_current(), NULL, NULL);
