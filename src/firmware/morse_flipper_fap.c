@@ -509,7 +509,7 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
         canvas_draw_str(canvas, 8, 28, run_line);
         canvas_draw_str(canvas, 8, 40, "L dit  B dah  O str");
         canvas_draw_str(canvas, 8, 52, morse_flipper_input_line(app, input_line, sizeof(input_line)));
-        canvas_draw_str(canvas, 8, 62, "back exits");
+        canvas_draw_str(canvas, 8, 62, "back is dah");
         return;
     }
 
@@ -674,10 +674,6 @@ int32_t morse_flipper_fap(void* p) {
                             MORSE_PADDLE_SOURCE_BTN_DAH,
                             false,
                             now_ms);
-                    } else if(event.type == InputTypeShort || event.type == InputTypeLong) {
-                        morse_flipper_clear_button_keying(&app, now_ms);
-                        app.screen = MorseFlipperScreenHome;
-                        view_port_update(app.view_port);
                     }
                 }
                 continue;
@@ -803,6 +799,7 @@ int32_t morse_flipper_fap(void* p) {
         }
     }
 
+    morse_flipper_clear_button_keying(&app, furi_get_tick());
     morse_keyer_reset(&app.keyer);
     morse_flipper_drain_keyer_events(&app);
     morse_flipper_release_all_notes(&app);
