@@ -652,11 +652,33 @@ static void morse_flipper_set_pc_mode(MorseFlipperApp* app, uint8_t mode) {
 
     morse_flipper_release_all_notes(app);
 
-    app->pc_mode = mode;
-    if(mode != MorseFlipperPcModeMidi) {
+    if(app->pc_mode == MorseFlipperPcModeKeyboard) {
+        furi_hal_hid_kb_release_all();
+    }
+
+    if(mode == MorseFlipperPcModeOff) {
+        if(app->previous_usb_config != NULL) {
+            furi_check(furi_hal_usb_set_config(app->previous_usb_config, NULL));
+            app->previous_usb_config = NULL;
+        }
+        app->pc_mode = MorseFlipperPcModeOff;
+        morse_flipper_clear_vail_overrides(app);
+        morse_flipper_refresh_keyer(app, furi_get_tick());
+        return;
+    }
+
+    if(app->previous_usb_config == NULL) {
+        app->previous_usb_config = furi_hal_usb_get_config();
+    }
+
+    if(mode == MorseFlipperPcModeMidi) {
+        furi_check(furi_hal_usb_set_config(&morse_usb_midi_interface, NULL));
+    } else {
+        furi_check(furi_hal_usb_set_config(&usb_hid, &app->hid_cfg));
         morse_flipper_clear_vail_overrides(app);
     }
 
+    app->pc_mode = mode;
     morse_flipper_refresh_keyer(app, furi_get_tick());
 }
 
