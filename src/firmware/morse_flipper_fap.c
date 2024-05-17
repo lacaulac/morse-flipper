@@ -111,6 +111,7 @@ typedef struct {
     bool tone_on;
     bool speaker_owned;
     bool speaker_busy;
+    bool transport_connected;
     bool ok_down;
     uint8_t screen;
     uint8_t pc_mode;
@@ -219,6 +220,18 @@ static const char* morse_flipper_pc_state_name(const MorseFlipperApp* app) {
     return "usb local off";
 }
 
+static bool morse_flipper_transport_connected(const MorseFlipperApp* app) {
+    if(app->pc_mode == MorseFlipperPcModeMidi) {
+        return morse_usb_midi_is_connected();
+    }
+
+    if(app->pc_mode == MorseFlipperPcModeKeyboard) {
+        return furi_hal_hid_is_connected();
+    }
+
+    return false;
+}
+
 static uint16_t morse_flipper_keyboard_key_for_note(uint8_t note) {
     switch(note) {
     case 0:
@@ -290,6 +303,14 @@ static void morse_flipper_clear_vail_overrides(MorseFlipperApp* app) {
     app->vail_mode_active = false;
     app->vail_speed_active = false;
     app->vail_tone_active = false;
+}
+
+static void morse_flipper_resync_transport_notes(MorseFlipperApp* app) {
+    for(uint8_t note = 0U; note < COUNT_OF(app->note_sources); note++) {
+        if(app->note_sources[note] != 0U) {
+            morse_flipper_send_transport_note(app, note, true);
+        }
+    }
 }
 
 static void morse_flipper_load_config(MorseFlipperApp* app) {
@@ -662,6 +683,7 @@ static void morse_flipper_set_pc_mode(MorseFlipperApp* app, uint8_t mode) {
             app->previous_usb_config = NULL;
         }
         app->pc_mode = MorseFlipperPcModeOff;
+        app->transport_connected = false;
         morse_flipper_clear_vail_overrides(app);
         morse_flipper_refresh_keyer(app, furi_get_tick());
         return;
@@ -679,6 +701,7 @@ static void morse_flipper_set_pc_mode(MorseFlipperApp* app, uint8_t mode) {
     }
 
     app->pc_mode = mode;
+    app->transport_connected = false;
     morse_flipper_refresh_keyer(app, furi_get_tick());
 }
 
@@ -802,9 +825,15 @@ static void morse_flipper_poll(MorseFlipperApp* app) {
     bool old_tone = app->tone_on;
     bool old_busy = app->speaker_busy;
     uint8_t old_mask = app->input_mask;
+    bool old_transport = app->transport_connected;
 
     if(app->pc_mode == MorseFlipperPcModeMidi) {
         morse_flipper_handle_midi_rx(app);
+    }
+
+    app->transport_connected = morse_flipper_transport_connected(app);
+    if(!old_transport && app->transport_connected) {
+        morse_flipper_resync_transport_notes(app);
     }
 
     app->input_mask = morse_flipper_read_input_mask(app);
@@ -813,7 +842,8 @@ static void morse_flipper_poll(MorseFlipperApp* app) {
     morse_flipper_drain_keyer_events(app);
     morse_flipper_update_sidetone(app);
 
-    if(old_tone != app->tone_on || old_busy != app->speaker_busy || old_mask != app->input_mask) {
+    if(old_tone != app->tone_on || old_busy != app->speaker_busy || old_mask != app->input_mask ||
+       old_transport != app->transport_connected) {
         view_port_update(app->view_port);
     }
 }
@@ -957,6 +987,7 @@ int32_t morse_flipper_fap(void* p) {
         .tone_on = false,
         .speaker_owned = false,
         .speaker_busy = false,
+        .transport_connected = false,
         .ok_down = false,
         .screen = MorseFlipperScreenHome,
         .pc_mode = MorseFlipperPcModeOff,
