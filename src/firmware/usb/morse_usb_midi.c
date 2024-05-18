@@ -131,7 +131,7 @@ struct morse_usb_midi_config_descriptor {
     struct usb_midi_endpoint_descriptor midi_bulk_in;
 } __attribute__((packed));
 
-static const struct usb_device_descriptor morse_usb_midi_device_descriptor = {
+static struct usb_device_descriptor morse_usb_midi_device_descriptor = {
     .bLength = sizeof(struct usb_device_descriptor),
     .bDescriptorType = USB_DTYPE_DEVICE,
     .bcdUSB = VERSION_BCD(2, 0, 0),
@@ -148,7 +148,7 @@ static const struct usb_device_descriptor morse_usb_midi_device_descriptor = {
     .bNumConfigurations = 1,
 };
 
-static const struct morse_usb_midi_config_descriptor morse_usb_midi_config = {
+static struct morse_usb_midi_config_descriptor morse_usb_midi_config = {
     .config =
         {
             .bLength = sizeof(struct usb_config_descriptor),
@@ -319,16 +319,18 @@ static const struct morse_usb_midi_config_descriptor morse_usb_midi_config = {
         },
 };
 
-static const struct usb_string_descriptor morse_usb_midi_manufacturer =
+static struct usb_string_descriptor morse_usb_midi_manufacturer =
     USB_STRING_DESC("YO3GND");
-static const struct usb_string_descriptor morse_usb_midi_product =
+static struct usb_string_descriptor morse_usb_midi_product =
     USB_STRING_DESC("Morse Flipper MIDI");
-static const struct usb_string_descriptor morse_usb_midi_serial =
+static struct usb_string_descriptor morse_usb_midi_serial =
     USB_STRING_DESC("Morse Flipper");
 
 typedef struct {
     usbd_device* dev;
     FuriSemaphore* tx_sem;
+    MorseUsbMidiRxCallback rx_callback;
+    void* context;
     bool connected;
 } MorseUsbMidiState;
 
@@ -359,6 +361,14 @@ bool morse_usb_midi_is_connected(void) {
     return morse_usb_midi_state.connected;
 }
 
+void morse_usb_midi_set_context(void* context) {
+    morse_usb_midi_state.context = context;
+}
+
+void morse_usb_midi_set_rx_callback(MorseUsbMidiRxCallback callback) {
+    morse_usb_midi_state.rx_callback = callback;
+}
+
 size_t morse_usb_midi_rx(uint8_t* buffer, size_t size) {
     if(buffer == NULL || size == 0U || morse_usb_midi_state.dev == NULL ||
        !morse_usb_midi_state.connected) {
@@ -374,7 +384,9 @@ size_t morse_usb_midi_tx(const uint8_t* buffer, size_t size) {
         return 0U;
     }
 
-    furi_check(furi_semaphore_acquire(morse_usb_midi_state.tx_sem, FuriWaitForever) == FuriStatusOk);
+    if(furi_semaphore_acquire(morse_usb_midi_state.tx_sem, 0U) != FuriStatusOk) {
+        return 0U;
+    }
 
     if(!morse_usb_midi_state.connected || morse_usb_midi_state.dev == NULL) {
         furi_semaphore_release(morse_usb_midi_state.tx_sem);
@@ -400,6 +412,9 @@ static void morse_usb_midi_init(usbd_device* dev, FuriHalUsbInterface* intf, voi
     morse_usb_midi_interface.str_serial_descr = (void*)&morse_usb_midi_serial;
     morse_usb_midi_interface.dev_descr->idVendor = MORSE_USB_MIDI_VID;
     morse_usb_midi_interface.dev_descr->idProduct = MORSE_USB_MIDI_PID;
+    morse_usb_midi_interface.dev_descr->iManufacturer = MorseUsbStrManufacturer;
+    morse_usb_midi_interface.dev_descr->iProduct = MorseUsbStrProduct;
+    morse_usb_midi_interface.dev_descr->iSerialNumber = MorseUsbStrSerial;
 
     morse_usb_midi_state.dev = dev;
     morse_usb_midi_state.connected = false;
@@ -477,6 +492,10 @@ static void morse_usb_midi_ep_event(usbd_device* dev, uint8_t event, uint8_t ep)
 
     if(event == usbd_evt_eptx) {
         furi_semaphore_release(morse_usb_midi_state.tx_sem);
+    } else if(event == usbd_evt_eprx) {
+        if(morse_usb_midi_state.rx_callback != NULL) {
+            morse_usb_midi_state.rx_callback(morse_usb_midi_state.context);
+        }
     }
 }
 

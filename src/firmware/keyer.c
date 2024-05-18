@@ -143,6 +143,18 @@ static int8_t morse_keyer_first_down_paddle(const MorseKeyer* keyer) {
     return -1;
 }
 
+static int8_t morse_keyer_opposite_paddle(int8_t paddle) {
+    if(paddle == MorseKeyerPaddleDit) {
+        return MorseKeyerPaddleDah;
+    }
+
+    if(paddle == MorseKeyerPaddleDah) {
+        return MorseKeyerPaddleDit;
+    }
+
+    return -1;
+}
+
 static uint32_t morse_keyer_element_duration(const MorseKeyer* keyer, uint8_t paddle) {
     if(paddle == MorseKeyerPaddleDah) {
         return (uint32_t)keyer->dit_duration_ms * 3U;
@@ -188,8 +200,13 @@ static int8_t morse_keyer_next_ultimatic(MorseKeyer* keyer) {
 static int8_t morse_keyer_next_plain_iambic(MorseKeyer* keyer) {
     int8_t next = morse_keyer_next_elbug(keyer);
 
-    if(keyer->paddle_down[MorseKeyerPaddleDit] && keyer->paddle_down[MorseKeyerPaddleDah]) {
-        keyer->next_repeat_paddle = (int8_t)(1 - keyer->next_repeat_paddle);
+    if(next < 0) {
+        next = morse_keyer_first_down_paddle(keyer);
+    }
+
+    if(next >= 0 && keyer->paddle_down[MorseKeyerPaddleDit] &&
+       keyer->paddle_down[MorseKeyerPaddleDah]) {
+        keyer->next_repeat_paddle = morse_keyer_opposite_paddle(next);
     }
 
     return next;
@@ -267,7 +284,8 @@ static void morse_keyer_pulse_family(MorseKeyer* keyer, uint32_t now_ms) {
     }
 
     int8_t next = morse_keyer_next_pulse_for_mode(keyer);
-    if(next < 0) {
+    if(next < 0 || next >= MorseKeyerPaddleCount) {
+        keyer->next_repeat_paddle = morse_keyer_first_down_paddle(keyer);
         morse_keyer_stop_pulse(keyer);
         return;
     }
