@@ -12,6 +12,7 @@ App(
         "src/firmware/morse_flipper_fap.c",
         "src/firmware/keyer.c",
         "src/firmware/pc_keys.c",
+        "src/firmware/trainer.c",
         "src/firmware/usb/*.c",
     ],
     targets=["f7"],

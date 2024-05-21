@@ -1,0 +1,40 @@
+#pragma once
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#define MORSE_TRAINER_CHARSET_CAP 64U
+#define MORSE_TRAINER_GROUP_CAP   16U
+#define MORSE_TRAINER_ANSWER_CAP  96U
+
+typedef struct {
+    uint8_t lesson;
+    uint8_t group_size;
+    uint8_t session_groups;
+    uint16_t local_dit_ms;
+    uint32_t rng_state;
+    uint32_t wait_ms;
+    uint8_t phase;
+    int16_t last_score;
+    bool last_failed;
+    bool session_active;
+    bool session_aborted;
+    uint8_t session_index;
+    uint8_t session_fail_count;
+    uint8_t session_consecutive_missed;
+    uint8_t custom_set_idx;
+    char custom_name[24];
+    char charset_override[MORSE_TRAINER_CHARSET_CAP];
+    char last_group[MORSE_TRAINER_GROUP_CAP];
+    char expected[MORSE_TRAINER_ANSWER_CAP];
+    char answer[MORSE_TRAINER_ANSWER_CAP];
+    char reveal[MORSE_TRAINER_GROUP_CAP];
+} MorseTrainer;
+
+void morse_trainer_init(MorseTrainer* trainer);
+
+size_t morse_trainer_lesson_count(void);
+void morse_trainer_set_lesson(MorseTrainer* trainer, uint8_t lesson);
+uint8_t morse_trainer_lesson(const MorseTrainer* trainer);
+const char* morse_trainer_charset(const MorseTrainer* trainer);
