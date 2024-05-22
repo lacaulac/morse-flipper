@@ -38,3 +38,7 @@ size_t morse_trainer_lesson_count(void);
 void morse_trainer_set_lesson(MorseTrainer* trainer, uint8_t lesson);
 uint8_t morse_trainer_lesson(const MorseTrainer* trainer);
 const char* morse_trainer_charset(const MorseTrainer* trainer);
+const char* morse_trainer_last_group(const MorseTrainer* trainer);
+const char* morse_trainer_expected(const MorseTrainer* trainer);
+const char* morse_trainer_char_morse(char ch);
+const char* morse_trainer_next_group(MorseTrainer* trainer);

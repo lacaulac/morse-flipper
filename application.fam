@@ -13,6 +13,7 @@ App(
         "src/firmware/keyer.c",
         "src/firmware/pc_keys.c",
         "src/firmware/trainer.c",
+        "src/firmware/cw.c",
         "src/firmware/usb/*.c",
     ],
     targets=["f7"],
