@@ -5,6 +5,13 @@
 
 static const char morse_trainer_koch_order[] = "KMURESNAPTLWI.JZ=FOY,VG5/Q92H38B?47C1D60X";
 
+enum {
+    MorseTrainerPhaseIdle = 0,
+    MorseTrainerPhaseListen = 1,
+    MorseTrainerPhaseRepeat = 2,
+    MorseTrainerPhaseDone = 3,
+};
+
 static uint32_t morse_trainer_rand(MorseTrainer* trainer) {
     trainer->rng_state = trainer->rng_state * 1664525U + 1013904223U;
     return trainer->rng_state;
@@ -170,4 +177,76 @@ const char* morse_trainer_next_group(MorseTrainer* trainer) {
     }
     trainer->expected[wi] = '\0';
     return trainer->last_group;
+}
+
+void morse_trainer_start_repeat(MorseTrainer* trainer) {
+    if(trainer == NULL) {
+        return;
+    }
+
+    morse_trainer_next_group(trainer);
+    trainer->answer[0] = '\0';
+    trainer->reveal[0] = '\0';
+    trainer->wait_ms = 0U;
+    trainer->last_score = -1;
+    trainer->last_failed = false;
+    trainer->phase = MorseTrainerPhaseListen;
+}
+
+void morse_trainer_finish_listen(MorseTrainer* trainer) {
+    if(trainer == NULL) {
+        return;
+    }
+
+    trainer->phase = MorseTrainerPhaseRepeat;
+    trainer->wait_ms = 0U;
+}
+
+void morse_trainer_finish_repeat(MorseTrainer* trainer) {
+    if(trainer == NULL) {
+        return;
+    }
+
+    trainer->phase = MorseTrainerPhaseDone;
+}
+
+void morse_trainer_feed_element(MorseTrainer* trainer, char elem) {
+    size_t len;
+
+    if(trainer == NULL || trainer->phase != MorseTrainerPhaseRepeat) {
+        return;
+    }
+
+    if(elem != '.' && elem != '-') {
+        return;
+    }
+
+    len = strlen(trainer->answer);
+    if(len + 1U >= sizeof(trainer->answer)) {
+        return;
+    }
+
+    trainer->answer[len] = elem;
+    trainer->answer[len + 1U] = '\0';
+}
+
+const char* morse_trainer_answer(const MorseTrainer* trainer) {
+    return trainer ? trainer->answer : "";
+}
+
+const char* morse_trainer_phase_name(const MorseTrainer* trainer) {
+    if(trainer == NULL) {
+        return "idle";
+    }
+
+    switch(trainer->phase) {
+    case MorseTrainerPhaseListen:
+        return "listen";
+    case MorseTrainerPhaseRepeat:
+        return "repeat";
+    case MorseTrainerPhaseDone:
+        return "done";
+    default:
+        return "idle";
+    }
 }
