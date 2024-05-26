@@ -9,6 +9,7 @@
 #include "keyer.h"
 #include "pc_keys.h"
 #include "trainer.h"
+#include "trainer_files.h"
 #include "usb/morse_usb_midi.h"
 
 #define MORSE_FLIPPER_VOLUME 0.7f
@@ -160,6 +161,7 @@ typedef struct {
     uint32_t paddle_sources[MorseKeyerPaddleCount];
     uint32_t note_sources[3];
     MorseTrainer trainer;
+    MorseTrainerCustomSets custom_sets;
 } MorseFlipperApp;
 
 static void morse_flipper_set_paddle_source(
@@ -182,6 +184,7 @@ static void morse_flipper_cycle_pc_key_preset(MorseFlipperApp* app, int dir);
 static void morse_flipper_tick_trainer_playback(MorseFlipperApp* app, uint32_t now_ms);
 static void morse_flipper_start_trainer_group(MorseFlipperApp* app, uint32_t now_ms);
 static void morse_flipper_cycle_trainer_value(MorseFlipperApp* app, int dir);
+static void morse_flipper_apply_trainer_charset_choice(MorseFlipperApp* app);
 
 static uint8_t morse_flipper_current_keyer_mode(const MorseFlipperApp* app) {
     if(app->vail_mode_active) {
@@ -842,13 +845,53 @@ static void morse_flipper_cycle_trainer_value(MorseFlipperApp* app, int dir) {
         next = (int)morse_trainer_group_size(&app->trainer) + dir;
         morse_trainer_set_group_size(&app->trainer, (uint8_t)next);
         break;
-    default:
+    case 2:
         next = (int)morse_trainer_session_groups(&app->trainer) + dir;
         morse_trainer_set_session_groups(&app->trainer, (uint8_t)next);
+        break;
+    default:
+        next = (int)app->trainer.custom_set_idx + dir;
+        if(next < 0) {
+            next = (int)app->custom_sets.count;
+        } else if(next > (int)app->custom_sets.count) {
+            next = 0;
+        }
+        app->trainer.custom_set_idx = (uint8_t)next;
+        morse_flipper_apply_trainer_charset_choice(app);
         break;
     }
 
     view_port_update(app->view_port);
+}
+
+static void morse_flipper_apply_trainer_charset_choice(MorseFlipperApp* app) {
+    if(app == NULL) {
+        return;
+    }
+
+    if(app->trainer.custom_set_idx == 0U || app->custom_sets.count == 0U) {
+        app->trainer.custom_name[0] = '\0';
+        app->trainer.charset_override[0] = '\0';
+        return;
+    }
+
+    if(app->trainer.custom_set_idx > app->custom_sets.count) {
+        app->trainer.custom_set_idx = 0U;
+        app->trainer.custom_name[0] = '\0';
+        app->trainer.charset_override[0] = '\0';
+        return;
+    }
+
+    strncpy(
+        app->trainer.custom_name,
+        app->custom_sets.sets[app->trainer.custom_set_idx - 1U].name,
+        sizeof(app->trainer.custom_name) - 1U);
+    app->trainer.custom_name[sizeof(app->trainer.custom_name) - 1U] = '\0';
+    strncpy(
+        app->trainer.charset_override,
+        app->custom_sets.sets[app->trainer.custom_set_idx - 1U].chars,
+        sizeof(app->trainer.charset_override) - 1U);
+    app->trainer.charset_override[sizeof(app->trainer.charset_override) - 1U] = '\0';
 }
 
 static void morse_flipper_cycle_mode(MorseFlipperApp* app) {
@@ -1342,8 +1385,6 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
     }
 
     if(app->screen == MorseFlipperScreenTrainer) {
-        canvas_set_font(canvas, FontPrimary);
-        canvas_draw_str(canvas, 10, 14, "Koch Group");
         canvas_set_font(canvas, FontSecondary);
         snprintf(
             trainer_line,
@@ -1355,22 +1396,27 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
         snprintf(
             trainer_line2,
             sizeof(trainer_line2),
-            "%c size %u  groups %u",
+            "%c size %u",
             app->trainer_row == 1U ? '>' : ' ',
-            (unsigned)morse_trainer_group_size(&app->trainer),
-            (unsigned)morse_trainer_session_groups(&app->trainer));
+            (unsigned)morse_trainer_group_size(&app->trainer));
         snprintf(
             trainer_line3,
             sizeof(trainer_line3),
-            "%c chars %s  %s",
+            "%c groups %u",
             app->trainer_row == 2U ? '>' : ' ',
-            morse_trainer_charset(&app->trainer),
-            morse_trainer_phase_name(&app->trainer));
-        canvas_draw_str(canvas, 8, 26, trainer_line);
-        canvas_draw_str(canvas, 8, 36, trainer_line2);
-        canvas_draw_str(canvas, 8, 46, trainer_line3);
+            (unsigned)morse_trainer_session_groups(&app->trainer));
+        snprintf(
+            tone_line,
+            sizeof(tone_line),
+            "%c chars %s",
+            app->trainer_row == 3U ? '>' : ' ',
+            app->trainer.custom_set_idx == 0U ? "lesson" : app->trainer.custom_name);
+        canvas_draw_str(canvas, 8, 20, trainer_line);
+        canvas_draw_str(canvas, 8, 30, trainer_line2);
+        canvas_draw_str(canvas, 8, 40, trainer_line3);
+        canvas_draw_str(canvas, 8, 50, tone_line);
         canvas_set_font(canvas, FontPrimary);
-        canvas_draw_str(canvas, 8, 56, morse_trainer_last_group(&app->trainer));
+        canvas_draw_str(canvas, 8, 64, morse_trainer_last_group(&app->trainer));
         canvas_set_font(canvas, FontSecondary);
         if(strcmp(morse_trainer_phase_name(&app->trainer), "repeat") == 0 ||
            strcmp(morse_trainer_phase_name(&app->trainer), "done") == 0) {
@@ -1381,13 +1427,14 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
                 morse_trainer_answer(&app->trainer),
                 (int)morse_trainer_last_score(&app->trainer),
                 morse_trainer_last_failed(&app->trainer) ? " fail" : "");
-            canvas_draw_str(canvas, 2, 64, trainer_line);
+            canvas_draw_str(canvas, 2, 8, trainer_line);
         } else {
             canvas_draw_str(
                 canvas,
                 8,
-                64,
-                app->trainer_playback_active ? "playing  Bk home" : "L/R tweak OK play");
+                8,
+                app->trainer_playback_active ? "playing  Bk home" :
+                                               "L/R tweak OK play Bk home");
         }
         return;
     }
@@ -1522,9 +1569,12 @@ int32_t morse_flipper_fap(void* p) {
         .paddle_sources = {0U, 0U},
         .note_sources = {0U, 0U, 0U},
         .trainer = {0},
+        .custom_sets = {0},
     };
 
     morse_trainer_init(&app.trainer);
+    morse_trainer_load_custom_sets(&app.custom_sets);
+    morse_flipper_apply_trainer_charset_choice(&app);
     morse_flipper_load_config(&app);
     morse_keyer_init(&app.keyer, app.keyer_mode, morse_flipper_current_dit_ms(&app));
     morse_flipper_gpio_init();
@@ -1627,13 +1677,13 @@ int32_t morse_flipper_fap(void* p) {
 
                 if(event.key == InputKeyUp &&
                    (event.type == InputTypeShort || event.type == InputTypeRepeat)) {
-                    app.trainer_row = (app.trainer_row == 0U) ? 2U : (app.trainer_row - 1U);
+                    app.trainer_row = (app.trainer_row == 0U) ? 3U : (app.trainer_row - 1U);
                     view_port_update(app.view_port);
                 }
 
                 if(event.key == InputKeyDown &&
                    (event.type == InputTypeShort || event.type == InputTypeRepeat)) {
-                    app.trainer_row = (app.trainer_row + 1U) % 3U;
+                    app.trainer_row = (app.trainer_row + 1U) % 4U;
                     view_port_update(app.view_port);
                 }
 
