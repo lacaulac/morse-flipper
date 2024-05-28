@@ -13,6 +13,7 @@
 #include <string.h>
 
 static const char* morse_trainer_custom_path_value = "/ext/ham/flipper-cw-custom-characters.txt";
+static const char* morse_trainer_session_log_path_value = "/ext/ham/flipper-cw-session-results.txt";
 static const char* morse_trainer_custom_defaults =
     "numbers=0123456789\n"
     "dits=EISH5\n"
@@ -20,6 +21,10 @@ static const char* morse_trainer_custom_defaults =
 
 const char* morse_trainer_custom_chars_path(void) {
     return morse_trainer_custom_path_value;
+}
+
+const char* morse_trainer_session_log_path(void) {
+    return morse_trainer_session_log_path_value;
 }
 
 #ifdef MORSE_FLIPPER_FAP
@@ -122,4 +127,55 @@ bool morse_trainer_load_custom_sets(MorseTrainerCustomSets* sets) {
     }
 
     return sets->count != 0U;
+}
+
+bool morse_trainer_append_session_log(const MorseTrainer* trainer) {
+    char line[192];
+
+    if(trainer == NULL) {
+        return false;
+    }
+
+    snprintf(
+        line,
+        sizeof(line),
+        "lesson=%u speed=%u groups=%u size=%u score=%u fails=%u aborted=%u missed=%u\n",
+        (unsigned)morse_trainer_lesson(trainer),
+        (unsigned)(trainer->local_dit_ms == 0U ? 0U : (1200U / trainer->local_dit_ms)),
+        (unsigned)morse_trainer_session_total(trainer),
+        (unsigned)morse_trainer_group_size(trainer),
+        (unsigned)morse_trainer_session_average_score(trainer),
+        (unsigned)morse_trainer_session_fail_count(trainer),
+        morse_trainer_session_aborted(trainer) ? 1U : 0U,
+        (unsigned)morse_trainer_session_consecutive_missed(trainer));
+
+#ifdef MORSE_FLIPPER_FAP
+    Storage* storage = furi_record_open(RECORD_STORAGE);
+    File* file = storage_file_alloc(storage);
+    bool ok;
+
+    storage_common_mkdir(storage, "/ext/ham");
+    ok = storage_file_open(
+        file, morse_trainer_session_log_path_value, FSAM_WRITE, FSOM_OPEN_APPEND);
+    if(ok) {
+        storage_file_write(file, line, strlen(line));
+    }
+    storage_file_close(file);
+    storage_file_free(file);
+    furi_record_close(RECORD_STORAGE);
+    return ok;
+#else
+    FILE* f = fopen(morse_trainer_session_log_path_value, "ab");
+    if(f == NULL) {
+        mkdir("/ext", 0777);
+        mkdir("/ext/ham", 0777);
+        f = fopen(morse_trainer_session_log_path_value, "ab");
+    }
+    if(f == NULL) {
+        return false;
+    }
+    fwrite(line, 1, strlen(line), f);
+    fclose(f);
+    return true;
+#endif
 }

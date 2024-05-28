@@ -27,6 +27,9 @@ static void morse_trainer_note_session_result(MorseTrainer* trainer, bool missed
         trainer->session_consecutive_missed = 0U;
     }
 
+    trainer->session_score_sum = (uint16_t)(trainer->session_score_sum + trainer->last_score);
+    trainer->session_scored_groups++;
+
     if(trainer->session_consecutive_missed >= 4U) {
         trainer->session_aborted = true;
         trainer->session_active = false;
@@ -306,6 +309,8 @@ void morse_trainer_start_session(MorseTrainer* trainer) {
     trainer->session_index = 1U;
     trainer->session_fail_count = 0U;
     trainer->session_consecutive_missed = 0U;
+    trainer->session_score_sum = 0U;
+    trainer->session_scored_groups = 0U;
     morse_trainer_start_repeat(trainer);
 }
 
@@ -375,4 +380,12 @@ uint8_t morse_trainer_session_fail_count(const MorseTrainer* trainer) {
 
 uint8_t morse_trainer_session_consecutive_missed(const MorseTrainer* trainer) {
     return trainer ? trainer->session_consecutive_missed : 0U;
+}
+
+uint8_t morse_trainer_session_average_score(const MorseTrainer* trainer) {
+    if(trainer == NULL || trainer->session_scored_groups == 0U) {
+        return 0U;
+    }
+
+    return (uint8_t)(trainer->session_score_sum / trainer->session_scored_groups);
 }

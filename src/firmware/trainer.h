@@ -23,6 +23,8 @@ typedef struct {
     uint8_t session_index;
     uint8_t session_fail_count;
     uint8_t session_consecutive_missed;
+    uint16_t session_score_sum;
+    uint8_t session_scored_groups;
     uint8_t custom_set_idx;
     char custom_name[24];
     char charset_override[MORSE_TRAINER_CHARSET_CAP];
@@ -64,3 +66,4 @@ uint8_t morse_trainer_session_total(const MorseTrainer* trainer);
 bool morse_trainer_session_aborted(const MorseTrainer* trainer);
 uint8_t morse_trainer_session_fail_count(const MorseTrainer* trainer);
 uint8_t morse_trainer_session_consecutive_missed(const MorseTrainer* trainer);
+uint8_t morse_trainer_session_average_score(const MorseTrainer* trainer);

@@ -134,6 +134,7 @@ typedef struct {
     bool left_down;
     bool ok_down;
     bool back_down;
+    bool session_log_pending;
     bool trainer_playback_active;
     bool trainer_playback_mark;
     volatile bool midi_rx_pending;
@@ -795,6 +796,7 @@ static void morse_flipper_start_session(MorseFlipperApp* app, uint32_t now_ms) {
     }
 
     morse_trainer_start_session(&app->trainer);
+    app->session_log_pending = true;
     morse_flipper_begin_group_playback(app, now_ms);
 }
 
@@ -1288,7 +1290,14 @@ static void morse_flipper_poll(MorseFlipperApp* app) {
         morse_flipper_handle_midi_rx(app);
     }
 
-    if(app->screen == MorseFlipperScreenTrainer &&
+    if(app->screen == MorseFlipperScreenSession && app->session_log_pending &&
+       !morse_trainer_session_active(&app->trainer) &&
+       strcmp(morse_trainer_phase_name(&app->trainer), "done") == 0) {
+        morse_trainer_append_session_log(&app->trainer);
+        app->session_log_pending = false;
+    }
+
+    if((app->screen == MorseFlipperScreenTrainer || app->screen == MorseFlipperScreenSession) &&
        strcmp(morse_trainer_phase_name(&app->trainer), "repeat") == 0) {
         morse_trainer_tick(&app->trainer, MORSE_FLIPPER_POLL_MS);
     }
@@ -1605,6 +1614,7 @@ int32_t morse_flipper_fap(void* p) {
         .left_down = false,
         .ok_down = false,
         .back_down = false,
+        .session_log_pending = false,
         .trainer_playback_active = false,
         .trainer_playback_mark = false,
         .midi_rx_pending = false,
@@ -1729,6 +1739,7 @@ int32_t morse_flipper_fap(void* p) {
                         morse_flipper_clear_button_keying(&app, furi_get_tick());
                         app.trainer_playback_active = false;
                         app.trainer_playback_mark = false;
+                        app.session_log_pending = false;
                         morse_flipper_enter_screen(&app, MorseFlipperScreenHome, furi_get_tick());
                     }
                     continue;
@@ -1765,6 +1776,7 @@ int32_t morse_flipper_fap(void* p) {
                    (event.type == InputTypeShort || event.type == InputTypeLong)) {
                     app.trainer_playback_active = false;
                     app.trainer_playback_mark = false;
+                    app.session_log_pending = false;
                     morse_flipper_enter_screen(&app, MorseFlipperScreenHome, furi_get_tick());
                 }
                 continue;

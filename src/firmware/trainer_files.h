@@ -20,3 +20,5 @@ typedef struct {
 
 const char* morse_trainer_custom_chars_path(void);
 bool morse_trainer_load_custom_sets(MorseTrainerCustomSets* sets);
+const char* morse_trainer_session_log_path(void);
+bool morse_trainer_append_session_log(const MorseTrainer* trainer);
