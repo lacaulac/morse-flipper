@@ -179,3 +179,65 @@ bool morse_trainer_append_session_log(const MorseTrainer* trainer) {
     return true;
 #endif
 }
+
+bool morse_trainer_load_session_lines(MorseTrainerSessionLines* lines) {
+    char buf[1024];
+    char* line;
+    char* next;
+    uint8_t slot;
+    uint8_t i;
+
+    if(lines == NULL) {
+        return false;
+    }
+
+    memset(lines, 0, sizeof(*lines));
+
+#ifdef MORSE_FLIPPER_FAP
+    Storage* storage = furi_record_open(RECORD_STORAGE);
+    File* file = storage_file_alloc(storage);
+    uint16_t got = 0U;
+
+    if(storage_file_open(file, morse_trainer_session_log_path_value, FSAM_READ, FSOM_OPEN_EXISTING)) {
+        got = storage_file_read(file, buf, sizeof(buf) - 1U);
+        buf[got] = '\0';
+    } else {
+        buf[0] = '\0';
+    }
+    storage_file_close(file);
+    storage_file_free(file);
+    furi_record_close(RECORD_STORAGE);
+#else
+    FILE* f = fopen(morse_trainer_session_log_path_value, "rb");
+    size_t got = 0U;
+
+    if(f != NULL) {
+        got = fread(buf, 1, sizeof(buf) - 1U, f);
+        fclose(f);
+    }
+    buf[got] = '\0';
+#endif
+
+    line = buf;
+    while(line != NULL && *line != '\0') {
+        next = strchr(line, '\n');
+        if(next != NULL) {
+            *next++ = '\0';
+        }
+
+        if(lines->count < 8U) {
+            slot = lines->count++;
+        } else {
+            for(i = 1U; i < 8U; i++) {
+                strcpy(lines->lines[i - 1U], lines->lines[i]);
+            }
+            slot = 7U;
+        }
+
+        strncpy(lines->lines[slot], line, sizeof(lines->lines[slot]) - 1U);
+        lines->lines[slot][sizeof(lines->lines[slot]) - 1U] = '\0';
+        line = next;
+    }
+
+    return lines->count != 0U;
+}

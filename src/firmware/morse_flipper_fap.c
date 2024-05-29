@@ -58,6 +58,7 @@ typedef enum {
     MorseFlipperScreenPcKeys = 4,
     MorseFlipperScreenTrainer = 5,
     MorseFlipperScreenSession = 6,
+    MorseFlipperScreenBrowse = 7,
 } MorseFlipperScreen;
 
 typedef enum {
@@ -164,6 +165,8 @@ typedef struct {
     uint32_t note_sources[3];
     MorseTrainer trainer;
     MorseTrainerCustomSets custom_sets;
+    MorseTrainerSessionLines session_lines;
+    uint8_t session_line_idx;
 } MorseFlipperApp;
 
 static void morse_flipper_set_paddle_source(
@@ -1294,6 +1297,9 @@ static void morse_flipper_poll(MorseFlipperApp* app) {
        !morse_trainer_session_active(&app->trainer) &&
        strcmp(morse_trainer_phase_name(&app->trainer), "done") == 0) {
         morse_trainer_append_session_log(&app->trainer);
+        morse_trainer_load_session_lines(&app->session_lines);
+        app->session_line_idx =
+            app->session_lines.count == 0U ? 0U : (app->session_lines.count - 1U);
         app->session_log_pending = false;
     }
 
@@ -1334,6 +1340,7 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
     char trainer_line[32];
     char trainer_line2[32];
     char trainer_line3[32];
+    char browse_line[32];
 
     canvas_clear(canvas);
     canvas_set_font(canvas, FontSecondary);
@@ -1512,6 +1519,26 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
         return;
     }
 
+    if(app->screen == MorseFlipperScreenBrowse) {
+        canvas_set_font(canvas, FontPrimary);
+        canvas_draw_str(canvas, 8, 14, "Session Logs");
+        canvas_set_font(canvas, FontSecondary);
+        snprintf(
+            browse_line,
+            sizeof(browse_line),
+            "%u/%u",
+            (unsigned)(app->session_line_idx + 1U),
+            (unsigned)app->session_lines.count);
+        canvas_draw_str(canvas, 96, 14, browse_line);
+        if(app->session_lines.count != 0U) {
+            canvas_draw_str(canvas, 2, 32, app->session_lines.lines[app->session_line_idx]);
+        } else {
+            canvas_draw_str(canvas, 2, 32, "no saved sessions");
+        }
+        canvas_draw_str(canvas, 2, 62, "U/D pick  R home");
+        return;
+    }
+
     if(app->screen == MorseFlipperScreenTrace) {
         snprintf(
             trace_line1,
@@ -1644,10 +1671,13 @@ int32_t morse_flipper_fap(void* p) {
         .note_sources = {0U, 0U, 0U},
         .trainer = {0},
         .custom_sets = {0},
+        .session_lines = {0},
+        .session_line_idx = 0U,
     };
 
     morse_trainer_init(&app.trainer);
     morse_trainer_load_custom_sets(&app.custom_sets);
+    morse_trainer_load_session_lines(&app.session_lines);
     morse_flipper_apply_trainer_charset_choice(&app);
     morse_flipper_load_config(&app);
     morse_keyer_init(&app.keyer, app.keyer_mode, morse_flipper_current_dit_ms(&app));
@@ -1803,6 +1833,7 @@ int32_t morse_flipper_fap(void* p) {
                         morse_flipper_clear_button_keying(&app, furi_get_tick());
                         app.trainer_playback_active = false;
                         app.trainer_playback_mark = false;
+                        app.session_log_pending = false;
                         morse_flipper_enter_screen(&app, MorseFlipperScreenHome, furi_get_tick());
                     }
                     continue;
@@ -1826,6 +1857,38 @@ int32_t morse_flipper_fap(void* p) {
                    (event.type == InputTypeShort || event.type == InputTypeLong)) {
                     app.trainer_playback_active = false;
                     app.trainer_playback_mark = false;
+                    app.session_log_pending = false;
+                    morse_flipper_enter_screen(&app, MorseFlipperScreenHome, furi_get_tick());
+                }
+
+                if(event.key == InputKeyUp && event.type == InputTypeLong) {
+                    morse_trainer_load_session_lines(&app.session_lines);
+                    app.session_line_idx =
+                        app.session_lines.count == 0U ? 0U : (app.session_lines.count - 1U);
+                    morse_flipper_enter_screen(&app, MorseFlipperScreenBrowse, furi_get_tick());
+                }
+                continue;
+            }
+
+            if(app.screen == MorseFlipperScreenBrowse) {
+                if(event.key == InputKeyUp &&
+                   (event.type == InputTypeShort || event.type == InputTypeRepeat) &&
+                   app.session_lines.count != 0U) {
+                    app.session_line_idx = (app.session_line_idx == 0U) ?
+                                               (app.session_lines.count - 1U) :
+                                               (app.session_line_idx - 1U);
+                    view_port_update(app.view_port);
+                }
+
+                if(event.key == InputKeyDown &&
+                   (event.type == InputTypeShort || event.type == InputTypeRepeat) &&
+                   app.session_lines.count != 0U) {
+                    app.session_line_idx = (app.session_line_idx + 1U) % app.session_lines.count;
+                    view_port_update(app.view_port);
+                }
+
+                if((event.key == InputKeyRight || event.key == InputKeyBack) &&
+                   (event.type == InputTypeShort || event.type == InputTypeLong)) {
                     morse_flipper_enter_screen(&app, MorseFlipperScreenHome, furi_get_tick());
                 }
                 continue;

@@ -18,7 +18,13 @@ typedef struct {
     MorseTrainerCustomSet sets[MORSE_TRAINER_CUSTOM_SET_CAP];
 } MorseTrainerCustomSets;
 
+typedef struct {
+    uint8_t count;
+    char lines[8][96];
+} MorseTrainerSessionLines;
+
 const char* morse_trainer_custom_chars_path(void);
 bool morse_trainer_load_custom_sets(MorseTrainerCustomSets* sets);
 const char* morse_trainer_session_log_path(void);
 bool morse_trainer_append_session_log(const MorseTrainer* trainer);
+bool morse_trainer_load_session_lines(MorseTrainerSessionLines* lines);
