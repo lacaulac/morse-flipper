@@ -1,0 +1,32 @@
+#ifndef yo3gnd_cw_decoder_2288
+#define yo3gnd_cw_decoder_2288
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+typedef struct
+{
+    uint16_t dit_ms;
+    uint16_t dit_samples[8];
+    size_t dit_sample_count;
+    int16_t pending_samples[64];
+    size_t pending_count;
+    uint8_t symbol_code;
+    size_t symbol_count;
+    char output[96];
+    size_t output_len;
+    bool timing_reset;
+} MorseFlipperCwDecoder;
+
+void morse_flipper_cw_decoder_init(MorseFlipperCwDecoder* decoder, uint16_t starting_dit_ms);
+void morse_flipper_cw_decoder_reset(MorseFlipperCwDecoder* decoder);
+void morse_flipper_cw_decoder_feed_mark(MorseFlipperCwDecoder* decoder, uint16_t ms);
+void morse_flipper_cw_decoder_feed_space(MorseFlipperCwDecoder* decoder, uint16_t ms);
+bool morse_flipper_cw_decoder_timing_ready(const MorseFlipperCwDecoder* decoder);
+uint16_t morse_flipper_cw_decoder_dit_ms(const MorseFlipperCwDecoder* decoder);
+const char* morse_flipper_cw_decoder_output(const MorseFlipperCwDecoder* decoder);
+void morse_flipper_cw_decoder_clear_output(MorseFlipperCwDecoder* decoder);
+bool morse_flipper_cw_decoder_timing_reset(const MorseFlipperCwDecoder* decoder);
+
+#endif

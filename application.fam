@@ -11,7 +11,12 @@ App(
     sources=[
         "src/firmware/morse_flipper_fap.c",
         "src/firmware/keyer.c",
+        "src/firmware/morse_flipper_cw_decoder.c",
         "src/firmware/pc_keys.c",
+        "src/firmware/morse_flipper_radio.c",
+        "src/firmware/morse_flipper_rf.c",
+        "src/firmware/morse_flipper_rf_timing.c",
+        "src/firmware/morse_flipper_straight_trainer.c",
         "src/firmware/trainer.c",
         "src/firmware/cw.c",
         "src/firmware/trainer_files.c",
