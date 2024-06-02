@@ -207,6 +207,7 @@ typedef struct {
     bool gpio_level;
     bool gpio_gap_flushed;
     uint8_t straight_mark_idx;
+    uint8_t straight_return_screen;
     uint8_t rf_edit_digit;
     char rf_edit_khz[8];
     char rf_rx_text[64];
@@ -243,7 +244,6 @@ static void morse_flipper_cycle_pc_mode(MorseFlipperApp* app, int dir);
 static void morse_flipper_midi_rx_ready(void* context);
 static void morse_flipper_cycle_pc_key_preset(MorseFlipperApp* app, int dir);
 static void morse_flipper_tick_trainer_playback(MorseFlipperApp* app, uint32_t now_ms);
-static void morse_flipper_start_trainer_group(MorseFlipperApp* app, uint32_t now_ms);
 static void morse_flipper_cycle_trainer_value(MorseFlipperApp* app, int dir);
 static void morse_flipper_apply_trainer_charset_choice(MorseFlipperApp* app);
 static void morse_flipper_drop_live_keying_for_playback(MorseFlipperApp* app, uint32_t now_ms);
@@ -326,10 +326,6 @@ static bool morse_flipper_live_keyer_phase(const MorseFlipperApp* app) {
     if(app->screen == MorseFlipperScreenRun || app->screen == MorseFlipperScreenTrace ||
        app->screen == MorseFlipperScreenPc) {
         return true;
-    }
-
-    if(app->screen == MorseFlipperScreenTrainer) {
-        return strcmp(morse_trainer_phase_name(&app->trainer), "repeat") == 0;
     }
 
     if(app->screen == MorseFlipperScreenSession) {
@@ -1117,8 +1113,7 @@ static void morse_flipper_cycle_pc_key_preset(MorseFlipperApp* app, int dir) {
 static bool morse_flipper_training_playback_active(const MorseFlipperApp* app) {
     if(app == NULL) return false;
     if(app->screen == MorseFlipperScreenStraight) return app->straight_playback_active;
-    return (app->screen == MorseFlipperScreenTrainer || app->screen == MorseFlipperScreenSession) &&
-           app->trainer_playback_active;
+    return app->screen == MorseFlipperScreenSession && app->trainer_playback_active;
 }
 
 static void morse_flipper_reset_session_runtime(MorseFlipperApp* app) {
@@ -1255,15 +1250,6 @@ static void morse_flipper_start_straight_round(MorseFlipperApp* app, uint32_t no
     app->straight_mark_idx = 0U;
     app->straight_next_at = now_ms;
     view_port_update(app->view_port);
-}
-
-static void morse_flipper_start_trainer_group(MorseFlipperApp* app, uint32_t now_ms) {
-    if(app == NULL) {
-        return;
-    }
-
-    morse_trainer_start_repeat(&app->trainer);
-    morse_flipper_begin_group_playback(app, now_ms);
 }
 
 static void morse_flipper_start_session(MorseFlipperApp* app, uint32_t now_ms) {
@@ -1962,8 +1948,7 @@ static void morse_flipper_poll(MorseFlipperApp* app) {
         app->session_log_pending = false;
     }
 
-    if((app->screen == MorseFlipperScreenTrainer ||
-        (app->screen == MorseFlipperScreenSession && app->session_started)) &&
+    if(app->screen == MorseFlipperScreenSession && app->session_started &&
        strcmp(morse_trainer_phase_name(&app->trainer), "repeat") == 0) {
         morse_trainer_tick(&app->trainer, MORSE_FLIPPER_POLL_MS);
     }
@@ -2143,6 +2128,9 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
 
     if(app->screen == MorseFlipperScreenTrainer) {
         canvas_set_font(canvas, FontSecondary);
+        canvas_set_font(canvas, FontPrimary);
+        canvas_draw_str(canvas, 8, 12, "Koch Setup");
+        canvas_set_font(canvas, FontSecondary);
         snprintf(
             trainer_line,
             sizeof(trainer_line),
@@ -2168,40 +2156,11 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
             "%c chars %s",
             app->trainer_row == 3U ? '>' : ' ',
             app->trainer.custom_set_idx == 0U ? "lesson" : app->trainer.custom_name);
-        canvas_draw_str(canvas, 8, 20, trainer_line);
-        canvas_draw_str(canvas, 8, 30, trainer_line2);
-        canvas_draw_str(canvas, 8, 40, trainer_line3);
-        canvas_draw_str(canvas, 8, 50, tone_line);
-        canvas_set_font(canvas, FontPrimary);
-        canvas_draw_str(canvas, 8, 64, morse_trainer_last_group(&app->trainer));
-        canvas_set_font(canvas, FontSecondary);
-        if(strcmp(morse_trainer_phase_name(&app->trainer), "repeat") == 0 ||
-           strcmp(morse_trainer_phase_name(&app->trainer), "done") == 0) {
-            snprintf(
-                trainer_line,
-                sizeof(trainer_line),
-                "ans %s %d%s",
-                morse_trainer_answer(&app->trainer),
-                (int)morse_trainer_last_score(&app->trainer),
-                morse_trainer_last_failed(&app->trainer) ? " fail" : "");
-            canvas_draw_str(canvas, 2, 8, trainer_line);
-            canvas_draw_str(
-                canvas,
-                8,
-                60,
-                morse_flipper_button_paddle_keying_active(app) ? "R score hold L" :
-                                                                 "R score Bk home");
-            if(morse_flipper_button_paddle_keying_active(app)) {
-                morse_flipper_draw_left_exit_hint(canvas);
-            }
-        } else {
-            canvas_draw_str(
-                canvas,
-                8,
-                8,
-                app->trainer_playback_active ? "playing  Bk home" :
-                                               "L/R tweak OK grp hold OK 1ch");
-        }
+        canvas_draw_str(canvas, 8, 24, trainer_line);
+        canvas_draw_str(canvas, 8, 34, trainer_line2);
+        canvas_draw_str(canvas, 8, 44, trainer_line3);
+        canvas_draw_str(canvas, 8, 54, tone_line);
+        canvas_draw_str(canvas, 8, 64, "OK sess  Bk home");
         return;
     }
 
@@ -2275,7 +2234,7 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
             canvas_draw_str(canvas, 8, 10, trainer_line);
             canvas_draw_str(canvas, 8, 22, trainer_line2);
             canvas_draw_str(canvas, 8, 34, "fail 0 miss 0");
-            canvas_draw_str(canvas, 8, 64, "OK start  L home");
+            canvas_draw_str(canvas, 8, 64, "OK start hold OK 1ch");
             return;
         }
 
@@ -2323,7 +2282,7 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
                 canvas,
                 8,
                 64,
-                app->trainer_playback_active ? "playing" : "OK start  Bk home");
+                app->trainer_playback_active ? "playing" : "OK start hold OK 1ch");
         }
         return;
     }
@@ -2684,43 +2643,8 @@ int32_t morse_flipper_fap(void* p) {
             }
 
             if(app.screen == MorseFlipperScreenTrainer) {
-                if(strcmp(morse_trainer_phase_name(&app.trainer), "repeat") == 0) {
-                    if(event.key == InputKeyLeft || event.key == InputKeyOk ||
-                       event.key == InputKeyBack) {
-                        morse_flipper_handle_active_keying_event(&app, &event);
-                    }
-
-                    if(event.key == InputKeyBack &&
-                       (event.type == InputTypeShort || event.type == InputTypeLong) &&
-                       !morse_flipper_button_paddle_keying_active(&app)) {
-                        app.trainer_playback_active = false;
-                        app.trainer_playback_mark = false;
-                        app.session_log_pending = false;
-                        morse_flipper_enter_screen(&app, MorseFlipperScreenHome, furi_get_tick());
-                    }
-
-                    if(event.key == InputKeyRight && event.type == InputTypeShort) {
-                        morse_flipper_clear_button_keying(&app, furi_get_tick());
-                        morse_trainer_score_repeat(&app.trainer);
-                        view_port_update(app.view_port);
-                    }
-
-                    if(event.key == InputKeyRight && event.type == InputTypeLong) {
-                        morse_flipper_clear_button_keying(&app, furi_get_tick());
-                        app.trainer_playback_active = false;
-                        app.trainer_playback_mark = false;
-                        app.session_log_pending = false;
-                        morse_flipper_enter_screen(&app, MorseFlipperScreenHome, furi_get_tick());
-                    }
-                    continue;
-                }
-
                 if(event.key == InputKeyOk && event.type == InputTypeShort) {
-                    morse_flipper_start_trainer_group(&app, furi_get_tick());
-                }
-
-                if(event.key == InputKeyOk && event.type == InputTypeLong) {
-                    morse_flipper_enter_screen(&app, MorseFlipperScreenStraight, furi_get_tick());
+                    morse_flipper_enter_screen(&app, MorseFlipperScreenSession, furi_get_tick());
                 }
 
                 if(event.key == InputKeyUp &&
@@ -2760,7 +2684,7 @@ int32_t morse_flipper_fap(void* p) {
 
                 if(event.key == InputKeyBack &&
                    (event.type == InputTypeShort || event.type == InputTypeLong)) {
-                    morse_flipper_enter_screen(&app, MorseFlipperScreenTrainer, now_ms);
+                    morse_flipper_enter_screen(&app, app.straight_return_screen, now_ms);
                     continue;
                 }
 
@@ -2816,10 +2740,15 @@ int32_t morse_flipper_fap(void* p) {
                 }
 
                 if(event.key == InputKeyOk &&
-                   (event.type == InputTypePress || event.type == InputTypeShort ||
-                    event.type == InputTypeLong) &&
+                   event.type == InputTypeShort &&
                    !morse_trainer_session_active(&app.trainer) && !app.trainer_playback_active) {
                     morse_flipper_start_session(&app, furi_get_tick());
+                }
+
+                if(event.key == InputKeyOk && event.type == InputTypeLong &&
+                   !morse_trainer_session_active(&app.trainer) && !app.trainer_playback_active) {
+                    app.straight_return_screen = MorseFlipperScreenSession;
+                    morse_flipper_enter_screen(&app, MorseFlipperScreenStraight, furi_get_tick());
                 }
 
                 if(event.key == InputKeyLeft &&
