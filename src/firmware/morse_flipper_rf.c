@@ -238,7 +238,7 @@ void morse_flipper_rf_init(MorseFlipperRf* rf)
     memset(rf, 0, sizeof(*rf));
     rf_use_fallback_bands(rf);
     morse_flipper_rf_timing_init(&rf->rx_timing);
-    rf->frequency_hz = 433920000u;
+    rf->frequency_hz = 434150000u;
     rf_refresh_text(rf);
 }
 

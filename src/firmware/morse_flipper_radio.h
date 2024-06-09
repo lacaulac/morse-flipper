@@ -11,6 +11,7 @@ typedef struct
     bool rx_on;
     bool tx_level;
     uint32_t freq_hz;
+    uint32_t tuned_hz;
     void (*rx_cb)(void* ctx, bool level, uint16_t duration_ms);
     void* rx_ctx;
     bool rx_mark[64];

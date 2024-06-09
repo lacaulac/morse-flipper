@@ -9,6 +9,28 @@
 #include <furi_hal.h>
 #include <lib/subghz/devices/cc1101_configs.h>
 
+static const uint8_t morse_flipper_ook_270khz_no_autocal_regs[] = {
+    0x02, 0x0D,
+    0x03, 0x47,
+    0x08, 0x32,
+    0x0B, 0x06,
+    0x14, 0x00,
+    0x13, 0x00,
+    0x12, 0x30,
+    0x11, 0x32,
+    0x10, 0x67,
+    0x18, 0x08,
+    0x19, 0x18,
+    0x1D, 0x40,
+    0x1C, 0x00,
+    0x1B, 0x03,
+    0x20, 0xFB,
+    0x22, 0x11,
+    0x21, 0xB6,
+    0x00, 0x00,
+    0x00, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+};
+
 static void radio_rx_capture(bool level, uint32_t duration, void* context)
 {
     MorseFlipperRadio* radio = context;
@@ -30,6 +52,17 @@ static void radio_apply_frequency(MorseFlipperRadio* radio)
 {
     if(!radio || !radio->freq_hz) return;
     radio->freq_hz = furi_hal_subghz_set_frequency_and_path(radio->freq_hz);
+    radio->tuned_hz = radio->freq_hz;
+}
+
+static void radio_prepare_preset(MorseFlipperRadio* radio)
+{
+    if(!radio || radio->ready) return;
+
+    furi_hal_subghz_reset();
+    furi_hal_subghz_load_custom_preset(morse_flipper_ook_270khz_no_autocal_regs);
+    radio->ready = true;
+    radio->tuned_hz = 0;
 }
 
 static void radio_prepare_rx(MorseFlipperRadio* radio)
@@ -38,10 +71,9 @@ static void radio_prepare_rx(MorseFlipperRadio* radio)
 
     if(!radio) return;
 
+    radio_prepare_preset(radio);
     data_gpio = furi_hal_subghz_get_data_gpio();
-    furi_hal_subghz_reset();
-    furi_hal_subghz_load_custom_preset(subghz_device_cc1101_preset_ook_270khz_async_regs);
-    radio_apply_frequency(radio);
+    if(radio->tuned_hz != radio->freq_hz) radio_apply_frequency(radio);
     furi_hal_gpio_init(data_gpio, GpioModeInput, GpioPullNo, GpioSpeedLow);
 }
 
@@ -51,10 +83,10 @@ static bool radio_prepare_tx(MorseFlipperRadio* radio)
 
     if(!radio) return false;
 
+    radio_prepare_preset(radio);
+
     data_gpio = furi_hal_subghz_get_data_gpio();
-    furi_hal_subghz_reset();
-    furi_hal_subghz_load_custom_preset(subghz_device_cc1101_preset_ook_650khz_async_regs);
-    radio_apply_frequency(radio);
+    if(radio->tuned_hz != radio->freq_hz) radio_apply_frequency(radio);
     furi_hal_gpio_init(data_gpio, GpioModeOutputPushPull, GpioPullNo, GpioSpeedLow);
     furi_hal_gpio_write(data_gpio, false);
     radio->tx_level = false;
@@ -77,11 +109,13 @@ static void radio_stop_rx(MorseFlipperRadio* radio)
 
 static void radio_stop_tx(MorseFlipperRadio* radio)
 {
-    if(!radio || !radio->tx_on) return;
+    if(!radio) return;
 
 #ifdef MORSE_FLIPPER_FAP
-    furi_hal_subghz_idle();
-    furi_hal_gpio_init(furi_hal_subghz_get_data_gpio(), GpioModeInput, GpioPullNo, GpioSpeedLow);
+    if(radio->tx_on) {
+        furi_hal_gpio_write(furi_hal_subghz_get_data_gpio(), false);
+        furi_hal_subghz_idle();
+    }
 #endif
 
     radio->tx_on = false;
@@ -108,6 +142,7 @@ void morse_flipper_radio_deinit(MorseFlipperRadio* radio)
     radio->tx_on = false;
     radio->rx_on = false;
     radio->freq_hz = 0;
+    radio->tuned_hz = 0;
 }
 
 void morse_flipper_radio_set_rx_callback(
@@ -129,18 +164,12 @@ void morse_flipper_radio_sync_live(
     if(!radio) return;
 
 #ifdef MORSE_FLIPPER_FAP
-    if(!radio->ready)
-    {
-        furi_hal_subghz_reset();
-        furi_hal_subghz_idle();
-        radio->ready = true;
-    }
-
     if(freq_hz && radio->freq_hz != freq_hz)
     {
         radio_stop_rx(radio);
         radio_stop_tx(radio);
         radio->freq_hz = freq_hz;
+        radio->tuned_hz = 0;
     }
 
     if(!active)
