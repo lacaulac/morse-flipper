@@ -24,6 +24,12 @@ typedef enum {
     MorsePcKeyGreater,
 } MorsePcKey;
 
+typedef enum {
+    MorsePcMouseBtnNone = 0,
+    MorsePcMouseBtnLeft = 1,
+    MorsePcMouseBtnRight = 2,
+} MorsePcMouseButton;
+
 uint8_t morse_pc_paddle_preset_count(void);
 uint8_t morse_pc_straight_preset_count(void);
 
@@ -33,3 +39,4 @@ const char* morse_pc_key_name(uint8_t key);
 
 uint8_t morse_pc_straight_preset_key(uint8_t idx);
 uint8_t morse_pc_paddle_preset_key(uint8_t idx, uint8_t note, bool swapped);
+uint8_t morse_pc_mouse_button(uint8_t note, bool inverted);

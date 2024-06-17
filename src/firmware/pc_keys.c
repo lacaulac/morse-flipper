@@ -14,13 +14,13 @@ typedef struct {
 } MorsePcStraightPreset;
 
 static const MorsePcPaddlePreset morse_pc_paddle_presets[] = {
-    {"[ and ]", MorsePcKeyOpenBracket, MorsePcKeyCloseBracket},
-    {"X / Z", MorsePcKeyX, MorsePcKeyZ},
-    {"L/R Ctrl", MorsePcKeyLeftCtrl, MorsePcKeyRightCtrl},
-    {"L/R Shift", MorsePcKeyLeftShift, MorsePcKeyRightShift},
-    {". and /", MorsePcKeyPeriod, MorsePcKeySlash},
-    {", and .", MorsePcKeyComma, MorsePcKeyPeriod},
-    {"< and >", MorsePcKeyLess, MorsePcKeyGreater},
+    {"X Z", MorsePcKeyX, MorsePcKeyZ},
+    {"Ctrl-s", MorsePcKeyLeftCtrl, MorsePcKeyRightCtrl},
+    {"Shift-s", MorsePcKeyLeftShift, MorsePcKeyRightShift},
+    {". /", MorsePcKeyPeriod, MorsePcKeySlash},
+    {", .", MorsePcKeyComma, MorsePcKeyPeriod},
+    {"< >", MorsePcKeyLess, MorsePcKeyGreater},
+    {"[ ]", MorsePcKeyOpenBracket, MorsePcKeyCloseBracket},
 };
 
 static const MorsePcStraightPreset morse_pc_straight_presets[] = {
@@ -102,12 +102,26 @@ uint8_t morse_pc_straight_preset_key(uint8_t idx) {
 }
 
 uint8_t morse_pc_paddle_preset_key(uint8_t idx, uint8_t note, bool swapped) {
-    const MorsePcPaddlePreset* preset = &morse_pc_paddle_presets[morse_pc_clamp_paddle_idx(idx)];
-    bool want_dah = note == 2U;
+    const MorsePcPaddlePreset* p = &morse_pc_paddle_presets[morse_pc_clamp_paddle_idx(idx)];
+    bool dah = note == 2U;
 
     if(swapped) {
-        want_dah = !want_dah;
+        dah = !dah;
     }
 
-    return want_dah ? preset->dah_key : preset->dit_key;
+    return dah ? p->dah_key : p->dit_key;
+}
+
+uint8_t morse_pc_mouse_button(uint8_t note, bool inverted) {
+    uint8_t btn = MorsePcMouseBtnNone;
+
+    if(note == 2U) btn = MorsePcMouseBtnRight;
+    else if(note == 0U || note == 1U) btn = MorsePcMouseBtnLeft;
+
+    if(inverted) {
+        if(btn == MorsePcMouseBtnLeft) return MorsePcMouseBtnRight;
+        if(btn == MorsePcMouseBtnRight) return MorsePcMouseBtnLeft;
+    }
+
+    return btn;
 }

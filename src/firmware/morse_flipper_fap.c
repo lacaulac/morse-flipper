@@ -27,7 +27,7 @@
 #define MORSE_FLIPPER_POLL_MS 5
 #define MORSE_FLIPPER_PREVIEW_TICKS 8
 #define MORSE_FLIPPER_CONFIG_PATH APP_DATA_PATH("config.bin")
-#define MORSE_FLIPPER_CONFIG_VERSION 4
+#define MORSE_FLIPPER_CONFIG_VERSION 5
 #define MORSE_FLIPPER_DEFAULT_DIT_MS 100U
 #define MORSE_FLIPPER_SESSION_SETTLE_MS 700U
 #define MORSE_FLIPPER_SESSION_RESULT_MS 160U
@@ -142,9 +142,24 @@ typedef enum {
 
 typedef enum {
     MorseFlipperPcModeOff = 0,
-    MorseFlipperPcModeMidi = 1,
-    MorseFlipperPcModeKeyboard = 2,
+    MorseFlipperPcModeKeyboard = 1,
+    MorseFlipperPcModeMouse = 2,
+    MorseFlipperPcModeMidi = 3,
 } MorseFlipperPcMode;
+
+typedef enum {
+    MorseFlipperUsbSettingConnection = 0,
+    MorseFlipperUsbSettingPaddle,
+    MorseFlipperUsbSettingStraight,
+    MorseFlipperUsbSettingMouseSwap,
+} MorseFlipperUsbSettingIndex;
+
+static const char* const morse_flipper_usb_mode_names[] = {
+    "None",
+    "Keyboard",
+    "Mouse",
+    "MIDI",
+};
 
 static const uint8_t morse_flipper_input_values[] = {
     MorseFlipperInputSourceButtons,
@@ -183,6 +198,10 @@ typedef struct {
     uint8_t gpio_dah_idx;
     uint8_t gpio_ground_idx;
     uint8_t trainer_custom_set_idx;
+    uint8_t usb_mode;
+    uint8_t usb_paddle_preset;
+    uint8_t usb_straight_preset;
+    uint8_t usb_mouse_invert;
 } MorseFlipperConfig;
 
 typedef struct {
@@ -212,6 +231,23 @@ typedef struct {
     uint8_t gpio_dah_idx;
     uint8_t gpio_ground_idx;
 } MorseFlipperConfigV3;
+
+typedef struct {
+    uint32_t version;
+    uint8_t tone_idx;
+    uint8_t keyer_mode;
+    uint8_t handedness;
+    uint8_t trainer_lesson;
+    uint8_t trainer_group_size;
+    uint8_t trainer_session_groups;
+    uint8_t spare0;
+    uint16_t local_dit_ms;
+    uint8_t gpio_straight_idx;
+    uint8_t gpio_dit_idx;
+    uint8_t gpio_dah_idx;
+    uint8_t gpio_ground_idx;
+    uint8_t trainer_custom_set_idx;
+} MorseFlipperConfigV4;
 
 typedef struct {
     uint32_t version;
@@ -273,6 +309,7 @@ typedef struct {
     bool speaker_busy;
     float speaker_hz;
     bool transport_connected;
+    bool mouse_invert;
     bool left_down;
     bool ok_down;
     bool back_down;
@@ -287,6 +324,7 @@ typedef struct {
     volatile bool midi_rx_pending;
     uint8_t screen;
     uint8_t pc_mode;
+    uint8_t pc_mode_pref;
     uint8_t pc_paddle_preset;
     uint8_t pc_straight_preset;
     uint8_t pc_keys_row;
@@ -385,6 +423,7 @@ static void morse_flipper_update_sidetone(MorseFlipperApp* app);
 static void morse_flipper_cycle_pc_mode(MorseFlipperApp* app, int dir);
 static void morse_flipper_midi_rx_ready(void* context);
 static void morse_flipper_cycle_pc_key_preset(MorseFlipperApp* app, int dir);
+static void morse_flipper_release_mouse_buttons(void);
 static void morse_flipper_tick_trainer_playback(MorseFlipperApp* app, uint32_t now_ms);
 static void morse_flipper_cycle_trainer_value(MorseFlipperApp* app, int dir);
 static void morse_flipper_apply_trainer_charset_choice(MorseFlipperApp* app);
@@ -450,6 +489,10 @@ static void morse_flipper_settings_gpio_straight_changed(VariableItem* item);
 static void morse_flipper_settings_gpio_dit_changed(VariableItem* item);
 static void morse_flipper_settings_gpio_dah_changed(VariableItem* item);
 static void morse_flipper_settings_gpio_ground_changed(VariableItem* item);
+static void morse_flipper_settings_usb_mode_changed(VariableItem* item);
+static void morse_flipper_settings_usb_paddle_changed(VariableItem* item);
+static void morse_flipper_settings_usb_straight_changed(VariableItem* item);
+static void morse_flipper_settings_usb_mouse_swap_changed(VariableItem* item);
 static void morse_flipper_trainer_lesson_changed(VariableItem* item);
 static void morse_flipper_trainer_group_size_changed(VariableItem* item);
 static void morse_flipper_trainer_groups_changed(VariableItem* item);
@@ -721,10 +764,12 @@ static const char* morse_flipper_status_line(const MorseFlipperApp* app, char* b
 
 static const char* morse_flipper_pc_mode_name(uint8_t mode) {
     switch(mode) {
-    case MorseFlipperPcModeMidi:
-        return "midi";
     case MorseFlipperPcModeKeyboard:
         return "keyboard";
+    case MorseFlipperPcModeMouse:
+        return "mouse";
+    case MorseFlipperPcModeMidi:
+        return "midi";
     default:
         return "off";
     }
@@ -854,12 +899,20 @@ static const char* morse_flipper_source_short_name(
 }
 
 static const char* morse_flipper_pc_state_name(const MorseFlipperApp* app) {
+    bool up = false;
+
     if(app->pc_mode == MorseFlipperPcModeMidi) {
         return morse_usb_midi_is_connected() ? "usb midi up" : "usb midi wait";
     }
 
     if(app->pc_mode == MorseFlipperPcModeKeyboard) {
-        return furi_hal_hid_is_connected() ? "usb hid up" : "usb hid wait";
+        up = furi_hal_hid_is_connected();
+        return up ? "usb hid up" : "usb hid wait";
+    }
+
+    if(app->pc_mode == MorseFlipperPcModeMouse) {
+        up = furi_hal_hid_is_connected();
+        return up ? "usb mouse up" : "usb mouse wait";
     }
 
     return "usb local off";
@@ -886,7 +939,7 @@ static bool morse_flipper_transport_connected(const MorseFlipperApp* app) {
         return morse_usb_midi_is_connected();
     }
 
-    if(app->pc_mode == MorseFlipperPcModeKeyboard) {
+    if(app->pc_mode == MorseFlipperPcModeKeyboard || app->pc_mode == MorseFlipperPcModeMouse) {
         return furi_hal_hid_is_connected();
     }
 
@@ -980,6 +1033,23 @@ static void morse_flipper_send_keyboard_note(MorseFlipperApp* app, uint8_t note,
     }
 }
 
+static void morse_flipper_release_mouse_buttons(void) {
+    furi_hal_hid_mouse_release(HID_MOUSE_BTN_LEFT);
+    furi_hal_hid_mouse_release(HID_MOUSE_BTN_RIGHT);
+}
+
+static void morse_flipper_send_mouse_note(MorseFlipperApp* app, uint8_t note, bool active) {
+    uint8_t btn = morse_pc_mouse_button(note, app->mouse_invert);
+
+    if(btn == MorsePcMouseBtnNone) return;
+
+    if(active) {
+        furi_hal_hid_mouse_press(btn);
+    } else {
+        furi_hal_hid_mouse_release(btn);
+    }
+}
+
 static void morse_flipper_send_transport_note(MorseFlipperApp* app, uint8_t note, bool active) {
     switch(app->pc_mode) {
     case MorseFlipperPcModeMidi:
@@ -987,6 +1057,9 @@ static void morse_flipper_send_transport_note(MorseFlipperApp* app, uint8_t note
         break;
     case MorseFlipperPcModeKeyboard:
         morse_flipper_send_keyboard_note(app, note, active);
+        break;
+    case MorseFlipperPcModeMouse:
+        morse_flipper_send_mouse_note(app, note, active);
         break;
     default:
         break;
@@ -1062,6 +1135,7 @@ static void morse_flipper_load_config(MorseFlipperApp* app) {
     Storage* storage = furi_record_open(RECORD_STORAGE);
     File* file = storage_file_alloc(storage);
     MorseFlipperConfig config;
+    MorseFlipperConfigV4 config_v4;
     MorseFlipperConfigV3 config_v3;
     MorseFlipperConfigV2 config_v2;
     MorseFlipperConfigV1 config_v1;
@@ -1105,6 +1179,52 @@ static void morse_flipper_load_config(MorseFlipperApp* app) {
             }
             if(config.trainer_custom_set_idx <= app->custom_sets.count) {
                 app->trainer.custom_set_idx = config.trainer_custom_set_idx;
+            }
+            if(config.usb_mode <= MorseFlipperPcModeMidi) app->pc_mode_pref = config.usb_mode;
+            if(config.usb_paddle_preset < morse_pc_paddle_preset_count())
+                app->pc_paddle_preset = config.usb_paddle_preset;
+            if(config.usb_straight_preset < morse_pc_straight_preset_count())
+                app->pc_straight_preset = config.usb_straight_preset;
+            app->mouse_invert = config.usb_mouse_invert != 0U;
+        } else if(got == sizeof(config_v4)) {
+            memcpy(&config_v4, &config, sizeof(config_v4));
+            if(config_v4.version == 4U) {
+                if(config_v4.tone_idx < COUNT_OF(morse_flipper_tones)) {
+                    app->tone_idx = config_v4.tone_idx;
+                }
+
+                if(config_v4.keyer_mode >= MorseKeyerModeStraight &&
+                   config_v4.keyer_mode <= MorseKeyerModeKeyahead) {
+                    app->keyer_mode = config_v4.keyer_mode;
+                }
+
+                if(config_v4.handedness <= MorseFlipperHandednessSwapped) {
+                    app->handedness = config_v4.handedness;
+                }
+
+                if(config_v4.spare0 <= MorseFlipperInputSourceButtons) {
+                    app->input_source = config_v4.spare0;
+                }
+
+                morse_trainer_set_lesson(&app->trainer, config_v4.trainer_lesson);
+                morse_trainer_set_group_size(&app->trainer, config_v4.trainer_group_size);
+                morse_trainer_set_session_groups(&app->trainer, config_v4.trainer_session_groups);
+                if(config_v4.local_dit_ms != 0U) {
+                    app->trainer.local_dit_ms = config_v4.local_dit_ms;
+                }
+                if(morse_flipper_gpio_validate(
+                       config_v4.gpio_straight_idx,
+                       config_v4.gpio_dit_idx,
+                       config_v4.gpio_dah_idx,
+                       config_v4.gpio_ground_idx) == MorseFlipperGpioRuleOk) {
+                    app->gpio_straight_idx = config_v4.gpio_straight_idx;
+                    app->gpio_dit_idx = config_v4.gpio_dit_idx;
+                    app->gpio_dah_idx = config_v4.gpio_dah_idx;
+                    app->gpio_ground_idx = config_v4.gpio_ground_idx;
+                }
+                if(config_v4.trainer_custom_set_idx <= app->custom_sets.count) {
+                    app->trainer.custom_set_idx = config_v4.trainer_custom_set_idx;
+                }
             }
         } else if(got == sizeof(config_v3)) {
             memcpy(&config_v3, &config, sizeof(config_v3));
@@ -1208,6 +1328,10 @@ static void morse_flipper_save_config(const MorseFlipperApp* app) {
         .gpio_dah_idx = app->gpio_dah_idx,
         .gpio_ground_idx = app->gpio_ground_idx,
         .trainer_custom_set_idx = app->trainer.custom_set_idx,
+        .usb_mode = app->pc_mode_pref,
+        .usb_paddle_preset = app->pc_paddle_preset,
+        .usb_straight_preset = app->pc_straight_preset,
+        .usb_mouse_invert = app->mouse_invert ? 1U : 0U,
     };
 
     if(storage_file_open(file, MORSE_FLIPPER_CONFIG_PATH, FSAM_WRITE, FSOM_CREATE_ALWAYS)) {
@@ -1597,8 +1721,8 @@ static void morse_flipper_cycle_pc_mode(MorseFlipperApp* app, int dir) {
     int next = (int)app->pc_mode + dir;
 
     if(next < (int)MorseFlipperPcModeOff) {
-        next = (int)MorseFlipperPcModeKeyboard;
-    } else if(next > (int)MorseFlipperPcModeKeyboard) {
+        next = (int)MorseFlipperPcModeMidi;
+    } else if(next > (int)MorseFlipperPcModeMidi) {
         next = (int)MorseFlipperPcModeOff;
     }
 
@@ -2209,6 +2333,45 @@ static void morse_flipper_settings_gpio_ground_changed(VariableItem* item) {
     variable_item_set_current_value_text(item, morse_flipper_gpio_name(idx));
 }
 
+static void morse_flipper_settings_usb_mode_changed(VariableItem* item) {
+    MorseFlipperApp* app = variable_item_get_context(item);
+    uint8_t idx = variable_item_get_current_value_index(item);
+
+    if(idx > MorseFlipperPcModeMidi) idx = MorseFlipperPcModeOff;
+
+    variable_item_set_current_value_text(item, morse_flipper_usb_mode_names[idx]);
+    app->pc_mode_pref = idx;
+    morse_flipper_set_pc_mode(app, idx);
+    morse_flipper_save_config(app);
+}
+
+static void morse_flipper_settings_usb_paddle_changed(VariableItem* item) {
+    MorseFlipperApp* app = variable_item_get_context(item);
+    uint8_t v = variable_item_get_current_value_index(item);
+
+    app->pc_paddle_preset = v;
+    variable_item_set_current_value_text(item, morse_pc_paddle_preset_name(v));
+    morse_flipper_save_config(app);
+}
+
+static void morse_flipper_settings_usb_straight_changed(VariableItem* item) {
+    MorseFlipperApp* app = variable_item_get_context(item);
+    uint8_t pick = variable_item_get_current_value_index(item);
+
+    app->pc_straight_preset = pick;
+    variable_item_set_current_value_text(item, morse_pc_straight_preset_name(pick));
+    morse_flipper_save_config(app);
+}
+
+static void morse_flipper_settings_usb_mouse_swap_changed(VariableItem* item) {
+    MorseFlipperApp* app = variable_item_get_context(item);
+    uint8_t idx = variable_item_get_current_value_index(item);
+
+    app->mouse_invert = idx != 0U;
+    variable_item_set_current_value_text(item, app->mouse_invert ? "Yes" : "No");
+    morse_flipper_save_config(app);
+}
+
 static void morse_flipper_trainer_lesson_changed(VariableItem* item) {
     MorseFlipperApp* app = variable_item_get_context(item);
     uint8_t idx = variable_item_get_current_value_index(item);
@@ -2439,7 +2602,9 @@ static void morse_flipper_refresh_keyer(MorseFlipperApp* app, uint32_t now_ms) {
 }
 
 static void morse_flipper_set_pc_mode(MorseFlipperApp* app, uint8_t mode) {
-    if(mode > MorseFlipperPcModeKeyboard) {
+    const char* prod = "Morse Flipper Kbd";
+
+    if(mode > MorseFlipperPcModeMidi) {
         mode = MorseFlipperPcModeOff;
     }
 
@@ -2451,6 +2616,8 @@ static void morse_flipper_set_pc_mode(MorseFlipperApp* app, uint8_t mode) {
 
     if(app->pc_mode == MorseFlipperPcModeKeyboard) {
         furi_hal_hid_kb_release_all();
+    } else if(app->pc_mode == MorseFlipperPcModeMouse) {
+        morse_flipper_release_mouse_buttons();
     }
 
     if(mode == MorseFlipperPcModeOff) {
@@ -2479,9 +2646,17 @@ static void morse_flipper_set_pc_mode(MorseFlipperApp* app, uint8_t mode) {
         furi_delay_ms(150U);
         furi_check(furi_hal_usb_set_config(&morse_usb_midi_interface, NULL));
     } else {
+        if(mode == MorseFlipperPcModeMouse) prod = "Morse Flipper Mouse";
+        snprintf(
+            app->hid_cfg.product,
+            sizeof(app->hid_cfg.product),
+            "%s",
+            prod);
         morse_usb_midi_set_rx_callback(NULL);
         morse_usb_midi_set_context(NULL);
         app->midi_rx_pending = false;
+        furi_check(furi_hal_usb_set_config(NULL, NULL));
+        furi_delay_ms(150U);
         furi_check(furi_hal_usb_set_config(&usb_hid, &app->hid_cfg));
         morse_flipper_clear_vail_overrides(app);
     }
@@ -3644,11 +3819,10 @@ static void morse_flipper_scene_menu_settings_on_enter(void* context) {
     submenu_set_header(app->submenu, "Settings");
     submenu_add_item(app->submenu, "Main settings", MorseFlipperSceneHome, morse_flipper_scene_menu_pick, app);
     submenu_add_item(app->submenu, "Koch - LCWO", MorseFlipperSceneTrainer, morse_flipper_scene_menu_pick, app);
-    submenu_add_item(app->submenu, "USB connection", MorseFlipperScenePc, morse_flipper_scene_menu_pick, app);
-    submenu_add_item(app->submenu, "USB Settings", MorseFlipperScenePcKeys, morse_flipper_scene_menu_pick, app);
+    submenu_add_item(app->submenu, "USB", MorseFlipperScenePc, morse_flipper_scene_menu_pick, app);
     submenu_add_item(app->submenu, "Trace menu", MorseFlipperSceneTrace, morse_flipper_scene_menu_pick, app);
     if(sel != MorseFlipperSceneHome && sel != MorseFlipperSceneTrainer && sel != MorseFlipperScenePc &&
-       sel != MorseFlipperScenePcKeys && sel != MorseFlipperSceneTrace)
+       sel != MorseFlipperSceneTrace)
         sel = MorseFlipperSceneHome;
     submenu_set_selected_item(app->submenu, sel);
     view_dispatcher_switch_to_view(app->view_dispatcher, MorseFlipperViewMenu);
@@ -3986,7 +4160,49 @@ static void morse_flipper_scene_trainer_on_enter(void* context) {
 
 static void morse_flipper_scene_pc_on_enter(void* context) {
     MorseFlipperApp* app = context;
-    morse_flipper_scene_show_live(app, MorseFlipperScreenPc);
+    VariableItem* it;
+    uint8_t sel = scene_manager_get_scene_state(app->scene_manager, MorseFlipperScenePc);
+
+    morse_flipper_enter_screen(app, MorseFlipperScreenMenu, furi_get_tick());
+    variable_item_list_reset(app->settings_list);
+    variable_item_list_set_enter_callback(
+        app->settings_list, morse_flipper_settings_noop_enter, app);
+
+    it = variable_item_list_add(
+        app->settings_list,
+        "Connection",
+        COUNT_OF(morse_flipper_usb_mode_names),
+        morse_flipper_settings_usb_mode_changed,
+        app);
+    variable_item_set_current_value_index(it, app->pc_mode_pref);
+    variable_item_set_current_value_text(it, morse_flipper_usb_mode_names[app->pc_mode_pref]);
+
+    it = variable_item_list_add(
+        app->settings_list,
+        "Paddle",
+        morse_pc_paddle_preset_count(),
+        morse_flipper_settings_usb_paddle_changed,
+        app);
+    variable_item_set_current_value_index(it, app->pc_paddle_preset);
+    variable_item_set_current_value_text(it, morse_pc_paddle_preset_name(app->pc_paddle_preset));
+
+    it = variable_item_list_add(
+        app->settings_list,
+        "Straight",
+        morse_pc_straight_preset_count(),
+        morse_flipper_settings_usb_straight_changed,
+        app);
+    variable_item_set_current_value_index(it, app->pc_straight_preset);
+    variable_item_set_current_value_text(it, morse_pc_straight_preset_name(app->pc_straight_preset));
+
+    it = variable_item_list_add(
+        app->settings_list, "Invert mouse", 2U, morse_flipper_settings_usb_mouse_swap_changed, app);
+    variable_item_set_current_value_index(it, app->mouse_invert ? 1U : 0U);
+    variable_item_set_current_value_text(it, app->mouse_invert ? "Yes" : "No");
+
+    if(sel > MorseFlipperUsbSettingMouseSwap) sel = MorseFlipperUsbSettingConnection;
+    variable_item_list_set_selected_item(app->settings_list, sel);
+    view_dispatcher_switch_to_view(app->view_dispatcher, MorseFlipperViewSettings);
 }
 
 static void morse_flipper_scene_pc_keys_on_enter(void* context) {
@@ -4004,6 +4220,26 @@ static void morse_flipper_scene_trainer_on_exit(void* context) {
     scene_manager_set_scene_state(
         app->scene_manager,
         MorseFlipperSceneTrainer,
+        variable_item_list_get_selected_item_index(app->settings_list));
+    variable_item_list_reset(app->settings_list);
+}
+
+static bool morse_flipper_scene_pc_on_event(void* context, SceneManagerEvent event) {
+    MorseFlipperApp* app = context;
+
+    if(event.type == SceneManagerEventTypeBack) {
+        morse_flipper_scene_back(app);
+        return true;
+    }
+
+    return false;
+}
+
+static void morse_flipper_scene_pc_on_exit(void* context) {
+    MorseFlipperApp* app = context;
+    scene_manager_set_scene_state(
+        app->scene_manager,
+        MorseFlipperScenePc,
         variable_item_list_get_selected_item_index(app->settings_list));
     variable_item_list_reset(app->settings_list);
 }
@@ -4036,7 +4272,7 @@ static const AppSceneOnEventCallback morse_flipper_scene_on_event_handlers[Morse
     morse_flipper_scene_live_on_event,
     morse_flipper_scene_home_on_event,
     morse_flipper_scene_live_on_event,
-    morse_flipper_scene_live_on_event,
+    morse_flipper_scene_pc_on_event,
     morse_flipper_scene_live_on_event,
     morse_flipper_scene_live_on_event,
     morse_flipper_scene_gpio_on_event,
@@ -4053,7 +4289,7 @@ static const AppSceneOnExitCallback morse_flipper_scene_on_exit_handlers[MorseFl
     morse_flipper_scene_live_on_exit,
     morse_flipper_scene_home_on_exit,
     morse_flipper_scene_trainer_on_exit,
-    morse_flipper_scene_live_on_exit,
+    morse_flipper_scene_pc_on_exit,
     morse_flipper_scene_live_on_exit,
     morse_flipper_scene_live_on_exit,
     morse_flipper_scene_gpio_on_exit,
@@ -4093,6 +4329,7 @@ int32_t morse_flipper_fap(void* p) {
         .speaker_owned = false,
         .speaker_busy = false,
         .transport_connected = false,
+        .mouse_invert = false,
         .left_down = false,
         .ok_down = false,
         .back_down = false,
@@ -4107,6 +4344,7 @@ int32_t morse_flipper_fap(void* p) {
         .midi_rx_pending = false,
         .screen = MorseFlipperScreenMenu,
         .pc_mode = MorseFlipperPcModeOff,
+        .pc_mode_pref = MorseFlipperPcModeOff,
         .pc_paddle_preset = 0U,
         .pc_straight_preset = 0U,
         .pc_keys_row = 0U,
@@ -4196,6 +4434,7 @@ int32_t morse_flipper_fap(void* p) {
     morse_flipper_cw_decoder_init(&app.gpio_decoder, morse_flipper_current_dit_ms(&app));
     morse_keyer_init(&app.keyer, app.keyer_mode, morse_flipper_current_dit_ms(&app));
     morse_flipper_gpio_init(&app);
+    morse_flipper_set_pc_mode(&app, app.pc_mode_pref);
     app.view_dispatcher = view_dispatcher_alloc();
     view_dispatcher_set_event_callback_context(app.view_dispatcher, &app);
     view_dispatcher_set_custom_event_callback(app.view_dispatcher, morse_flipper_custom_event_callback);
