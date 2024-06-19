@@ -9,6 +9,8 @@
 #include <input/input.h>
 #include <storage/storage.h>
 #include <dialogs/dialogs.h>
+#include <notification/notification.h>
+#include <notification/notification_messages.h>
 #include <m-array.h>
 #include <string.h>
 
@@ -30,7 +32,7 @@
 #define MORSE_FLIPPER_CONFIG_PATH APP_DATA_PATH("config.bin")
 #define MORSE_FLIPPER_CONFIG_VERSION 6
 #define MORSE_FLIPPER_DEFAULT_DIT_MS 100U
-#define MORSE_FLIPPER_SESSION_SETTLE_MS 700U
+#define MORSE_FLIPPER_SESSION_SETTLE_MS 1000U
 #define MORSE_FLIPPER_SESSION_RESULT_MS 160U
 #define MORSE_FLIPPER_STRAIGHT_SETTLE_MS 700U
 #define MORSE_FLIPPER_RF_TX_TAIL_DITS 2U
@@ -159,6 +161,11 @@ typedef enum {
 } MorseFlipperPcMode;
 
 typedef enum {
+    MorseFlipperBacklightAuto = 0,
+    MorseFlipperBacklightHold,
+} MorseFlipperBacklightMode;
+
+typedef enum {
     MorseFlipperUsbSettingConnection = 0,
     MorseFlipperUsbSettingPaddle,
     MorseFlipperUsbSettingStraight,
@@ -170,6 +177,50 @@ static const char* const morse_flipper_usb_mode_names[] = {
     "Keyboard",
     "Mouse",
     "MIDI",
+};
+
+static const NotificationSequence morse_flipper_led_good_twice = {
+    &message_green_255,
+    &message_delay_50,
+    &message_green_0,
+    &message_delay_50,
+    &message_green_255,
+    &message_delay_50,
+    &message_green_0,
+    NULL,
+};
+
+static const NotificationSequence morse_flipper_led_bad_twice = {
+    &message_red_255,
+    &message_delay_50,
+    &message_red_0,
+    &message_delay_50,
+    &message_red_255,
+    &message_delay_50,
+    &message_red_0,
+    NULL,
+};
+
+static const NotificationMessage morse_flipper_msg_green_96 = {
+    .type = NotificationMessageTypeLedGreen,
+    .data.led.value = 96U,
+};
+
+static const NotificationSequence morse_flipper_led_miss_twice = {
+    &message_red_255,
+    &morse_flipper_msg_green_96,
+    &message_blue_0,
+    &message_delay_50,
+    &message_red_0,
+    &message_green_0,
+    &message_delay_50,
+    &message_red_255,
+    &morse_flipper_msg_green_96,
+    &message_blue_0,
+    &message_delay_50,
+    &message_red_0,
+    &message_green_0,
+    NULL,
 };
 
 static const uint8_t morse_flipper_input_values[] = {
@@ -337,6 +388,7 @@ typedef struct {
     View* live_view;
     Gui* gui;
     DialogsApp* dialogs;
+    NotificationApp* notifications;
     volatile bool exit_requested;
     FuriHalUsbInterface* previous_usb_config;
     FuriHalUsbHidConfig hid_cfg;
@@ -377,6 +429,7 @@ typedef struct {
     uint8_t trainer_group_pause_s;
     uint8_t trainer_char_idx;
     uint8_t trainer_mark_idx;
+    uint8_t session_wait_draw_s;
     uint8_t gpio_edit_straight_idx;
     uint8_t gpio_edit_dit_idx;
     uint8_t gpio_edit_dah_idx;
@@ -422,6 +475,7 @@ typedef struct {
     uint8_t straight_mark_idx;
     uint8_t straight_return_screen;
     uint8_t rf_edit_digit;
+    uint8_t backlight_mode;
     char rf_edit_khz[8];
     char rf_rx_text[64];
     char rf_tx_text[64];
@@ -493,6 +547,7 @@ static bool morse_flipper_session_idle_view(const MorseFlipperApp* app);
 static void morse_flipper_tick_session(MorseFlipperApp* app, uint32_t now_ms);
 static void morse_flipper_leave_session(MorseFlipperApp* app, uint32_t now_ms);
 static void morse_flipper_leave_live_screen(MorseFlipperApp* app, uint32_t now_ms);
+static bool morse_flipper_session_wait_key_down(const MorseFlipperApp* app);
 static void morse_flipper_reset_straight_state(MorseFlipperApp* app, uint32_t now_ms);
 static void morse_flipper_start_straight_round(MorseFlipperApp* app, uint32_t now_ms);
 static void morse_flipper_tick_straight(MorseFlipperApp* app, uint32_t now_ms);
@@ -503,6 +558,8 @@ static void morse_flipper_view_dirty(MorseFlipperApp* app);
 static void morse_flipper_scene_open(MorseFlipperApp* app, uint32_t scene);
 static void morse_flipper_scene_back(MorseFlipperApp* app);
 static void morse_flipper_live_draw(Canvas* canvas, void* model);
+static uint8_t morse_flipper_backlight_mode(const MorseFlipperApp* app);
+static void morse_flipper_sync_backlight(MorseFlipperApp* app, uint32_t now_ms);
 static uint32_t morse_flipper_settings_list_state(VariableItemList* list);
 static void morse_flipper_settings_list_restore(VariableItemList* list, uint32_t state);
 static uint8_t morse_flipper_input_value_index(uint8_t source);
@@ -588,6 +645,40 @@ static void morse_flipper_scene_back(MorseFlipperApp* app) {
 
     scene_manager_stop(app->scene_manager);
     if(app->view_dispatcher) view_dispatcher_stop(app->view_dispatcher);
+}
+
+static uint8_t morse_flipper_backlight_mode(const MorseFlipperApp* app) {
+    if(app == NULL) return MorseFlipperBacklightAuto;
+
+    if(app->screen == MorseFlipperScreenRun || app->screen == MorseFlipperScreenTrace ||
+       app->screen == MorseFlipperScreenPc || app->screen == MorseFlipperScreenStraight)
+        return MorseFlipperBacklightHold;
+
+    if(app->screen == MorseFlipperScreenRf)
+        return app->rf_live_active ? MorseFlipperBacklightHold : MorseFlipperBacklightAuto;
+
+    if(app->screen == MorseFlipperScreenSession)
+        return app->session_started ? MorseFlipperBacklightHold : MorseFlipperBacklightAuto;
+
+    return MorseFlipperBacklightAuto;
+}
+
+static void morse_flipper_sync_backlight(MorseFlipperApp* app, uint32_t now_ms) {
+    uint8_t want;
+
+    if(app == NULL || app->notifications == NULL) return;
+    UNUSED(now_ms);
+
+    want = morse_flipper_backlight_mode(app);
+    if(want != app->backlight_mode) {
+        if(app->backlight_mode != MorseFlipperBacklightAuto)
+            notification_message(app->notifications, &sequence_display_backlight_enforce_auto);
+
+        app->backlight_mode = want;
+
+        if(want != MorseFlipperBacklightAuto)
+            notification_message(app->notifications, &sequence_display_backlight_enforce_on);
+    }
 }
 
 static uint32_t morse_flipper_settings_list_state(VariableItemList* list) {
@@ -1445,6 +1536,7 @@ static void morse_flipper_draw_session_bottom(Canvas* canvas, const MorseFlipper
     char count_line[16];
     char size_line[16];
     char score_line[16];
+    char wait_line[16];
     uint8_t asked = 0U;
     uint8_t total = morse_trainer_session_total(&app->trainer);
     uint8_t fail = morse_trainer_session_fail_count(&app->trainer);
@@ -1453,8 +1545,14 @@ static void morse_flipper_draw_session_bottom(Canvas* canvas, const MorseFlipper
     uint8_t fill = 0U;
     uint8_t x;
     Font title_font = FontSecondary;
+    bool wait = false;
+    uint32_t now_ms;
+    uint32_t left_ms;
+    uint16_t secs;
 
     morse_flipper_session_title(app, lesson_line, sizeof(lesson_line));
+    now_ms = furi_get_tick();
+    wait = app->session_result_hold && app->session_next_group_at > now_ms;
 
     if(app->session_started) {
         asked = morse_trainer_session_index(&app->trainer);
@@ -1471,18 +1569,30 @@ static void morse_flipper_draw_session_bottom(Canvas* canvas, const MorseFlipper
     snprintf(score_line, sizeof(score_line), "%u/%u", (unsigned)good, (unsigned)asked);
 
     canvas_set_font(canvas, FontSecondary);
-    if(canvas_string_width(canvas, lesson_line) > 128U) {
-        title_font = FontKeyboard;
-        canvas_set_font(canvas, title_font);
-    }
+    if(!wait) {
+        if(canvas_string_width(canvas, lesson_line) > 128U) {
+            title_font = FontKeyboard;
+            canvas_set_font(canvas, title_font);
+        }
 
-    x = (uint8_t)((128 - canvas_string_width(canvas, lesson_line)) / 2);
-    canvas_draw_str(canvas, x, 42, lesson_line);
+        x = (uint8_t)((128 - canvas_string_width(canvas, lesson_line)) / 2);
+        canvas_draw_str(canvas, x, 42, lesson_line);
+    } else {
+        left_ms = app->session_next_group_at - now_ms;
+        secs = (uint16_t)((left_ms + 999U) / 1000U);
+        if(secs == 0U) secs = 1U;
+        snprintf(wait_line, sizeof(wait_line), "%u", (unsigned)secs);
+        canvas_set_font(canvas, FontPrimary);
+        x = (uint8_t)((128 - canvas_string_width(canvas, wait_line)) / 2);
+        canvas_draw_str(canvas, x, 47, wait_line);
+    }
 
     canvas_set_font(canvas, FontSecondary);
     canvas_draw_str(canvas, 0, 51, size_line);
-    x = (uint8_t)((128 - canvas_string_width(canvas, count_line)) / 2);
-    canvas_draw_str(canvas, x, 51, count_line);
+    if(!wait) {
+        x = (uint8_t)((128 - canvas_string_width(canvas, count_line)) / 2);
+        canvas_draw_str(canvas, x, 51, count_line);
+    }
     x = (uint8_t)(128 - canvas_string_width(canvas, score_line));
     canvas_draw_str(canvas, x, 51, score_line);
 
@@ -2427,6 +2537,7 @@ static void morse_flipper_reset_session_runtime(MorseFlipperApp* app) {
     app->session_last_input_at = 0U;
     app->session_result_until = 0U;
     app->session_next_group_at = 0U;
+    app->session_wait_draw_s = 0xFFU;
 }
 
 static void morse_flipper_reset_straight_state(MorseFlipperApp* app, uint32_t now_ms) {
@@ -2495,18 +2606,42 @@ static bool morse_flipper_session_live_keying(const MorseFlipperApp* app) {
             app->note_sources[2] != 0U);
 }
 
+static bool morse_flipper_session_wait_key_down(const MorseFlipperApp* app) {
+    if(app == NULL) return false;
+
+    if(app->input_source == MorseFlipperInputSourceButtons) {
+        if(morse_flipper_straight_like_mode(app)) return app->ok_down;
+        return app->ok_down || app->back_down;
+    }
+
+    if(app->input_source == MorseFlipperInputSourceStraight) return morse_flipper_straight_down();
+
+    return morse_flipper_logical_dit_down(app) || morse_flipper_logical_dah_down(app);
+}
+
 static void morse_flipper_queue_session_feedback(MorseFlipperApp* app, uint32_t now_ms) {
+    bool missed;
+    const NotificationSequence* seq;
+
     if(app == NULL || !app->session_round_pending) return;
 
     app->session_round_pending = false;
     app->session_result_hold = true;
-    app->session_result_tone = true;
     app->session_result_good = !morse_trainer_last_failed(&app->trainer);
+    missed = morse_trainer_answer(&app->trainer)[0] == '\0';
+    app->session_result_tone = !app->session_result_good;
     app->session_result_until = now_ms + MORSE_FLIPPER_SESSION_RESULT_MS;
     app->session_next_group_at =
         morse_trainer_session_active(&app->trainer) ?
             (now_ms + ((uint32_t)app->trainer_group_pause_s * 1000U)) :
             0U;
+    app->session_wait_draw_s = 0xFFU;
+    seq = &morse_flipper_led_good_twice;
+    if(!app->session_result_good) {
+        if(missed) seq = &morse_flipper_led_miss_twice;
+        else seq = &morse_flipper_led_bad_twice;
+    }
+    if(app->notifications) notification_message(app->notifications, seq);
     morse_flipper_update_sidetone(app);
     morse_flipper_view_dirty(app);
 }
@@ -2546,6 +2681,7 @@ static void morse_flipper_begin_group_playback(MorseFlipperApp* app, uint32_t no
         app->session_last_input_at = now_ms;
         app->session_result_until = 0U;
         app->session_next_group_at = 0U;
+        app->session_wait_draw_s = 0xFFU;
     }
     morse_flipper_view_dirty(app);
 }
@@ -2749,13 +2885,34 @@ static void morse_flipper_cycle_trainer_value(MorseFlipperApp* app, int dir) {
 
 static void morse_flipper_tick_session(MorseFlipperApp* app, uint32_t now_ms) {
     uint32_t dt;
+    uint32_t left_ms;
+    uint8_t left_s;
 
     if(app == NULL || app->screen != MorseFlipperScreenSession || !app->session_started) return;
 
     if(app->session_result_tone && now_ms >= app->session_result_until) app->session_result_tone = false;
 
+    if(app->session_result_hold && app->session_next_group_at > now_ms) {
+        if(morse_flipper_session_wait_key_down(app)) {
+            if(app->session_next_group_at - now_ms > 1000U) {
+                app->session_next_group_at = now_ms + 1000U;
+                app->session_wait_draw_s = 0xFFU;
+                morse_flipper_view_dirty(app);
+            }
+        }
+
+        left_ms = app->session_next_group_at - now_ms;
+        left_s = (uint8_t)((left_ms + 999U) / 1000U);
+        if(left_s == 0U) left_s = 1U;
+        if(left_s != app->session_wait_draw_s) {
+            app->session_wait_draw_s = left_s;
+            morse_flipper_view_dirty(app);
+        }
+    }
+
     if(app->session_next_group_at != 0U && now_ms >= app->session_next_group_at) {
         app->session_next_group_at = 0U;
+        app->session_wait_draw_s = 0xFFU;
         if(morse_trainer_next_session_group(&app->trainer)) {
             morse_flipper_begin_group_playback(app, now_ms);
         } else {
@@ -2779,7 +2936,7 @@ static void morse_flipper_tick_session(MorseFlipperApp* app, uint32_t now_ms) {
         return;
     }
 
-    dt = morse_flipper_current_dit_ms(app) * 6U;
+    dt = morse_flipper_current_dit_ms(app) * 8U;
     if(dt < MORSE_FLIPPER_SESSION_SETTLE_MS) dt = MORSE_FLIPPER_SESSION_SETTLE_MS;
 
     if(now_ms - app->session_last_input_at < dt) return;
@@ -3570,6 +3727,7 @@ static void morse_flipper_poll(MorseFlipperApp* app) {
     morse_flipper_radio_drain_rx(&app->radio);
 #endif
     morse_flipper_update_sidetone(app);
+    morse_flipper_sync_backlight(app, now_ms);
 
     if(old_tone != app->tone_on || old_busy != app->speaker_busy || old_mask != app->input_mask ||
        old_transport != app->transport_connected) {
@@ -4988,6 +5146,7 @@ int32_t morse_flipper_fap(void* p) {
         .live_view = NULL,
         .gui = furi_record_open(RECORD_GUI),
         .dialogs = furi_record_open(RECORD_DIALOGS),
+        .notifications = furi_record_open(RECORD_NOTIFICATION),
         .exit_requested = false,
         .previous_usb_config = NULL,
         .hid_cfg =
@@ -5034,6 +5193,7 @@ int32_t morse_flipper_fap(void* p) {
         .trainer_row = 0U,
         .trainer_char_idx = 0U,
         .trainer_mark_idx = 0U,
+        .session_wait_draw_s = 0xFFU,
         .vail_mode_active = false,
         .vail_speed_active = false,
         .vail_tone_active = false,
@@ -5074,6 +5234,7 @@ int32_t morse_flipper_fap(void* p) {
         .gpio_gap_flushed = true,
         .straight_mark_idx = 0U,
         .rf_edit_digit = 0U,
+        .backlight_mode = MorseFlipperBacklightAuto,
         .rf_edit_khz = {0},
         .rf_rx_text = {0},
         .rf_tx_text = {0},
@@ -5148,6 +5309,12 @@ int32_t morse_flipper_fap(void* p) {
     morse_flipper_drain_keyer_events(&app);
     morse_flipper_release_all_notes(&app);
     morse_flipper_tone_stop(&app);
+    if(app.backlight_mode != MorseFlipperBacklightAuto && app.notifications)
+        notification_message(app.notifications, &sequence_display_backlight_enforce_auto);
+    if(app.notifications) {
+        notification_message(app.notifications, &sequence_reset_green);
+        notification_message(app.notifications, &sequence_reset_red);
+    }
     morse_flipper_save_config(&app);
 
     morse_flipper_gpio_deinit();
@@ -5162,6 +5329,7 @@ int32_t morse_flipper_fap(void* p) {
     if(app.scene_manager) scene_manager_free(app.scene_manager);
     if(app.view_dispatcher) view_dispatcher_free(app.view_dispatcher);
     furi_record_close(RECORD_DIALOGS);
+    furi_record_close(RECORD_NOTIFICATION);
     furi_record_close(RECORD_GUI);
 
     return 0;
