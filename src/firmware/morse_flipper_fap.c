@@ -1460,7 +1460,7 @@ static void morse_flipper_draw_session_rows(Canvas* canvas, const MorseFlipperAp
     prompt_count = morse_flipper_session_prompt_count(app);
     answer_count = morse_flipper_session_answer_count(answers);
     done = !idle && app->session_started && !app->trainer_playback_active &&
-           strcmp(morse_trainer_phase_name(&app->trainer), "done") == 0;
+           morse_trainer_phase(&app->trainer) == MorseTrainerPhaseDone;
 
     canvas_set_font(canvas, row_font);
 
@@ -2583,7 +2583,7 @@ static void morse_flipper_reset_session_state(MorseFlipperApp* app, uint32_t now
 static bool morse_flipper_session_repeat_active(const MorseFlipperApp* app) {
     return app && app->screen == MorseFlipperScreenSession && app->session_started &&
            !app->trainer_playback_active && app->session_next_group_at == 0U &&
-           strcmp(morse_trainer_phase_name(&app->trainer), "repeat") == 0;
+           morse_trainer_phase(&app->trainer) == MorseTrainerPhaseRepeat;
 }
 
 static bool morse_flipper_session_idle_view(const MorseFlipperApp* app) {
@@ -2923,7 +2923,7 @@ static void morse_flipper_tick_session(MorseFlipperApp* app, uint32_t now_ms) {
 
     if(!app->session_round_pending || app->trainer_playback_active) return;
 
-    if(strcmp(morse_trainer_phase_name(&app->trainer), "done") == 0) {
+    if(morse_trainer_phase(&app->trainer) == MorseTrainerPhaseDone) {
         morse_flipper_queue_session_feedback(app, now_ms);
         return;
     }
@@ -3312,13 +3312,13 @@ static void morse_flipper_drain_keyer_events(MorseFlipperApp* app) {
         if((app->screen == MorseFlipperScreenTrainer ||
             app->screen == MorseFlipperScreenSession) &&
            event.type == MorseKeyerEventPress &&
-           strcmp(morse_trainer_phase_name(&app->trainer), "repeat") == 0) {
+           morse_trainer_phase(&app->trainer) == MorseTrainerPhaseRepeat) {
             morse_trainer_feed_element(
                 &app->trainer, event.paddle == MorseKeyerPaddleDit ? '.' : '-');
         }
 
         if(app->screen == MorseFlipperScreenSession &&
-           strcmp(morse_trainer_phase_name(&app->trainer), "repeat") == 0) {
+           morse_trainer_phase(&app->trainer) == MorseTrainerPhaseRepeat) {
             app->session_last_input_at = furi_get_tick();
         }
 

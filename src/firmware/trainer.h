@@ -8,6 +8,13 @@
 #define MORSE_TRAINER_GROUP_CAP   16U
 #define MORSE_TRAINER_ANSWER_CAP  96U
 
+typedef enum {
+    MorseTrainerPhaseIdle = 0,
+    MorseTrainerPhaseListen = 1,
+    MorseTrainerPhaseRepeat = 2,
+    MorseTrainerPhaseDone = 3,
+} MorseTrainerPhase;
+
 typedef struct {
     uint8_t lesson;
     uint8_t group_size;
@@ -15,7 +22,7 @@ typedef struct {
     uint16_t local_dit_ms;
     uint32_t rng_state;
     uint32_t wait_ms;
-    uint8_t phase;
+    MorseTrainerPhase phase;
     int16_t last_score;
     bool last_failed;
     bool session_active;
@@ -59,6 +66,7 @@ void morse_trainer_reset_session(MorseTrainer* trainer);
 void morse_trainer_start_session(MorseTrainer* trainer);
 bool morse_trainer_next_session_group(MorseTrainer* trainer);
 const char* morse_trainer_answer(const MorseTrainer* trainer);
+MorseTrainerPhase morse_trainer_phase(const MorseTrainer* trainer);
 const char* morse_trainer_phase_name(const MorseTrainer* trainer);
 int16_t morse_trainer_last_score(const MorseTrainer* trainer);
 bool morse_trainer_last_failed(const MorseTrainer* trainer);

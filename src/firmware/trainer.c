@@ -6,13 +6,6 @@
 
 static const char morse_trainer_koch_order[] = "KMURESNAPTLWI.JZ=FOY,VG5/Q92H38B?47C1D60X";
 
-enum {
-    MorseTrainerPhaseIdle = 0,
-    MorseTrainerPhaseListen = 1,
-    MorseTrainerPhaseRepeat = 2,
-    MorseTrainerPhaseDone = 3,
-};
-
 static void morse_trainer_note_session_result(MorseTrainer* trainer, bool missed) {
     if(trainer == NULL || !trainer->session_active) {
         return;
@@ -384,12 +377,21 @@ const char* morse_trainer_answer(const MorseTrainer* trainer) {
     return trainer ? trainer->answer : "";
 }
 
+MorseTrainerPhase morse_trainer_phase(const MorseTrainer* trainer) {
+    if(trainer == NULL) return MorseTrainerPhaseIdle;
+    return trainer->phase;
+}
+
 const char* morse_trainer_phase_name(const MorseTrainer* trainer) {
+    MorseTrainerPhase p;
+
     if(trainer == NULL) {
         return "idle";
     }
 
-    switch(trainer->phase) {
+    p = trainer->phase;
+
+    switch(p) {
     case MorseTrainerPhaseListen:
         return "listen";
     case MorseTrainerPhaseRepeat:
