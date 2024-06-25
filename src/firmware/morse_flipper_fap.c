@@ -548,6 +548,9 @@ static void morse_flipper_tick_session(MorseFlipperApp* app, uint32_t now_ms);
 static void morse_flipper_leave_session(MorseFlipperApp* app, uint32_t now_ms);
 static void morse_flipper_leave_live_screen(MorseFlipperApp* app, uint32_t now_ms);
 static bool morse_flipper_session_wait_key_down(const MorseFlipperApp* app);
+static bool morse_flipper_straight_down(void);
+static bool morse_flipper_logical_dit_down(const MorseFlipperApp* app);
+static bool morse_flipper_logical_dah_down(const MorseFlipperApp* app);
 static void morse_flipper_reset_straight_state(MorseFlipperApp* app, uint32_t now_ms);
 static void morse_flipper_start_straight_round(MorseFlipperApp* app, uint32_t now_ms);
 static void morse_flipper_tick_straight(MorseFlipperApp* app, uint32_t now_ms);
@@ -1173,7 +1176,8 @@ static bool morse_flipper_session_running_view(const MorseFlipperApp* app) {
     return !morse_flipper_session_idle_view(app);
 }
 
-#include "morse_flipper_session_draw.c"
+#include "morse_flipper_session.h"
+#include "morse_flipper_session.c"
 
 static const char* morse_flipper_pc_state_name(const MorseFlipperApp* app) {
     bool up = false;
@@ -2100,8 +2104,6 @@ static bool morse_flipper_straight_answer_down(const MorseFlipperApp* app) {
 
     return false;
 }
-
-#include "morse_flipper_session_tick.c"
 
 static void morse_flipper_reset_straight_state(MorseFlipperApp* app, uint32_t now_ms) {
     if(app == NULL) return;
