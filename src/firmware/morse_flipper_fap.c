@@ -4,6 +4,7 @@
 #include <gui/gui.h>
 #include <gui/modules/submenu.h>
 #include <gui/modules/variable_item_list.h>
+#include <gui/modules/widget.h>
 #include <gui/scene_manager.h>
 #include <gui/view_dispatcher.h>
 #include <input/input.h>
@@ -100,18 +101,22 @@ typedef enum {
     MorseFlipperScreenRf = 8,
     MorseFlipperScreenStraight = 9,
     MorseFlipperScreenMenu = 10,
+    MorseFlipperScreenHelp = 11,
+    MorseFlipperScreenAbout = 12,
 } MorseFlipperScreen;
 
 typedef enum {
     MorseFlipperViewMenu = 0,
     MorseFlipperViewLive,
     MorseFlipperViewSettings,
+    MorseFlipperViewWidget,
 } MorseFlipperView;
 
 typedef enum {
     MorseFlipperSceneMenuMain = 0,
     MorseFlipperSceneMenuTraining,
     MorseFlipperSceneMenuSettings,
+    MorseFlipperSceneMenuHelp,
     MorseFlipperSceneRun,
     MorseFlipperSceneRf,
     MorseFlipperSceneSession,
@@ -123,8 +128,22 @@ typedef enum {
     MorseFlipperScenePcKeys,
     MorseFlipperSceneTrace,
     MorseFlipperSceneGpio,
+    MorseFlipperSceneHelp,
+    MorseFlipperSceneAbout,
     MorseFlipperSceneNum,
 } MorseFlipperScene;
+
+typedef enum {
+    MorseFlipperHelpFirstSteps = 0,
+    MorseFlipperHelpInputKeys,
+    MorseFlipperHelpLcwo,
+    MorseFlipperHelpPrepping,
+    MorseFlipperHelpContact,
+    MorseFlipperHelpContesting,
+    MorseFlipperHelpUsbLive,
+    MorseFlipperHelpMovingForward,
+    MorseFlipperHelpCount,
+} MorseFlipperHelpTopic;
 
 typedef enum {
     MorseFlipperSettingWpm = 0,
@@ -384,11 +403,13 @@ typedef struct {
     SceneManager* scene_manager;
     Submenu* submenu;
     VariableItemList* settings_list;
+    Widget* widget;
     VariableItem* trainer_items[MorseFlipperTrainerSettingChars + 1U];
     View* live_view;
     Gui* gui;
     DialogsApp* dialogs;
     NotificationApp* notifications;
+    FuriString* help_text;
     volatile bool exit_requested;
     FuriHalUsbInterface* previous_usb_config;
     FuriHalUsbHidConfig hid_cfg;
@@ -424,6 +445,8 @@ typedef struct {
     uint8_t gpio_dah_idx;
     uint8_t gpio_ground_idx;
     uint8_t trainer_row;
+    uint8_t help_topic;
+    uint8_t help_page;
     uint8_t trainer_farnsworth_wpm;
     uint8_t trainer_answer_timeout_s;
     uint8_t trainer_group_pause_s;
@@ -540,6 +563,8 @@ static bool morse_flipper_straight_answer_down(const MorseFlipperApp* app);
 static void morse_flipper_cycle_mode(MorseFlipperApp* app);
 static void morse_flipper_toggle_handedness(MorseFlipperApp* app);
 static void morse_flipper_tick_trainer_playback(MorseFlipperApp* app, uint32_t now_ms);
+static void morse_flipper_help_open(MorseFlipperApp* app);
+static void morse_flipper_about_open(MorseFlipperApp* app);
 static void morse_flipper_cycle_trainer_value(MorseFlipperApp* app, int dir);
 static void morse_flipper_apply_trainer_charset_choice(MorseFlipperApp* app);
 static void morse_flipper_drop_live_keying_for_playback(MorseFlipperApp* app, uint32_t now_ms);
@@ -1323,6 +1348,7 @@ static void morse_flipper_send_keyboard_note(MorseFlipperApp* app, uint8_t note,
 
 #include "morse_flipper_runtime.c"
 #include "morse_flipper_rf_live.c"
+#include "morse_flipper_help.c"
 
 static void morse_flipper_tone_stop(MorseFlipperApp* app) {
     if(furi_hal_speaker_is_mine()) {
@@ -1903,6 +1929,10 @@ static uint8_t morse_flipper_scene_screen(uint32_t scene) {
         return MorseFlipperScreenPcKeys;
     case MorseFlipperSceneTrace:
         return MorseFlipperScreenTrace;
+    case MorseFlipperSceneHelp:
+        return MorseFlipperScreenHelp;
+    case MorseFlipperSceneAbout:
+        return MorseFlipperScreenAbout;
     default:
         return MorseFlipperScreenMenu;
     }
@@ -1915,9 +1945,13 @@ static uint8_t morse_flipper_scene_view(uint32_t scene) {
     case MorseFlipperScenePc:
     case MorseFlipperSceneGpio:
         return MorseFlipperViewSettings;
+    case MorseFlipperSceneHelp:
+    case MorseFlipperSceneAbout:
+        return MorseFlipperViewWidget;
     case MorseFlipperSceneMenuMain:
     case MorseFlipperSceneMenuTraining:
     case MorseFlipperSceneMenuSettings:
+    case MorseFlipperSceneMenuHelp:
         return MorseFlipperViewMenu;
     default:
         return MorseFlipperViewLive;
@@ -1942,10 +1976,12 @@ MorseFlipperApp* morse_flipper_boot(void) {
         .scene_manager = NULL,
         .submenu = NULL,
         .settings_list = NULL,
+        .widget = NULL,
         .live_view = NULL,
         .gui = furi_record_open(RECORD_GUI),
         .dialogs = furi_record_open(RECORD_DIALOGS),
         .notifications = furi_record_open(RECORD_NOTIFICATION),
+        .help_text = NULL,
         .exit_requested = false,
         .previous_usb_config = NULL,
         .hid_cfg =
@@ -2085,6 +2121,10 @@ MorseFlipperApp* morse_flipper_boot(void) {
         MorseFlipperViewSettings,
         variable_item_list_get_view(app.settings_list));
 
+    app.widget = widget_alloc();
+    app.help_text = furi_string_alloc();
+    view_dispatcher_add_view(app.view_dispatcher, MorseFlipperViewWidget, widget_get_view(app.widget));
+
     app.live_view = view_alloc();
     view_set_context(app.live_view, &app);
     view_allocate_model(app.live_view, ViewModelTypeLockFree, sizeof(MorseFlipperLiveModel));
@@ -2127,10 +2167,13 @@ void morse_flipper_shutdown(MorseFlipperApp* app) {
 
     morse_flipper_gpio_deinit();
     if(app->view_dispatcher) {
+        view_dispatcher_remove_view(app->view_dispatcher, MorseFlipperViewWidget);
         view_dispatcher_remove_view(app->view_dispatcher, MorseFlipperViewSettings);
         view_dispatcher_remove_view(app->view_dispatcher, MorseFlipperViewLive);
         view_dispatcher_remove_view(app->view_dispatcher, MorseFlipperViewMenu);
     }
+    if(app->help_text) furi_string_free(app->help_text);
+    if(app->widget) widget_free(app->widget);
     if(app->settings_list) variable_item_list_free(app->settings_list);
     if(app->live_view) view_free(app->live_view);
     if(app->submenu) submenu_free(app->submenu);

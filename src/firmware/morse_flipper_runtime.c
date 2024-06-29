@@ -957,6 +957,36 @@ static bool morse_flipper_live_input(InputEvent* event, void* ctx) {
     MorseFlipperApp* app = ctx;
     uint32_t now_ms = furi_get_tick();
 
+    if(app->screen == MorseFlipperScreenHelp) {
+        if(event->key == InputKeyLeft && (event->type == InputTypeShort || event->type == InputTypeRepeat)) {
+            app->help_topic = app->help_topic == 0U ? (MorseFlipperHelpCount - 1U) : app->help_topic - 1U;
+            morse_flipper_view_dirty(app);
+            return true;
+        }
+
+        if(event->key == InputKeyRight && (event->type == InputTypeShort || event->type == InputTypeRepeat)) {
+            app->help_topic = (app->help_topic + 1U) % MorseFlipperHelpCount;
+            morse_flipper_view_dirty(app);
+            return true;
+        }
+
+        if(event->key == InputKeyBack && (event->type == InputTypeShort || event->type == InputTypeLong)) {
+            morse_flipper_scene_back(app);
+            return true;
+        }
+
+        return false;
+    }
+
+    if(app->screen == MorseFlipperScreenAbout) {
+        if(event->key == InputKeyBack && (event->type == InputTypeShort || event->type == InputTypeLong)) {
+            morse_flipper_scene_back(app);
+            return true;
+        }
+
+        return false;
+    }
+
     if(app->screen == MorseFlipperScreenPcKeys) {
         if(event->key == InputKeyUp &&
            (event->type == InputTypeShort || event->type == InputTypeRepeat)) {
