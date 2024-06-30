@@ -33,6 +33,7 @@
 #define MORSE_FLIPPER_PREVIEW_TICKS 8
 #define MORSE_FLIPPER_CONFIG_PATH APP_DATA_PATH("config.bin")
 #define MORSE_FLIPPER_CONFIG_VERSION 6
+#define MORSE_FLIPPER_TONE_OFF_IDX 0xFFU
 #define MORSE_FLIPPER_DEFAULT_DIT_MS 100U
 #define MORSE_FLIPPER_SESSION_SETTLE_MS 1000U
 #define MORSE_FLIPPER_SESSION_RESULT_MS 160U
@@ -364,7 +365,6 @@ typedef struct {
 } MorseFlipperConfigV1;
 
 static const MorseFlipperTone morse_flipper_tones[] = {
-    {"Off", 0.0f, 0U},
     {"G2", 98.00f, 43U},
     {"A2", 110.00f, 45U},
     {"B2", 123.47f, 47U},
@@ -885,7 +885,16 @@ static const MorseFlipperTone* morse_flipper_current_tone(const MorseFlipperApp*
         return &morse_flipper_tones[app->vail_tone_idx];
     }
 
+    if(app->tone_idx >= COUNT_OF(morse_flipper_tones)) {
+        return &morse_flipper_tones[0];
+    }
+
     return &morse_flipper_tones[app->tone_idx];
+}
+
+static const char* morse_flipper_tone_name(const MorseFlipperApp* app) {
+    if(app != NULL && app->tone_idx == MORSE_FLIPPER_TONE_OFF_IDX) return "Off";
+    return morse_flipper_current_tone(app)->name;
 }
 
 static float morse_flipper_active_tone_hz(const MorseFlipperApp* app) {
@@ -895,10 +904,16 @@ static float morse_flipper_active_tone_hz(const MorseFlipperApp* app) {
     return hz;
 }
 
+static bool morse_flipper_buzz_ok(const MorseFlipperApp* app)
+{
+    if(app == NULL) return false;
+    return app->tone_idx != MORSE_FLIPPER_TONE_OFF_IDX;
+}
+
 static bool morse_flipper_use_pwm_buzzer(const MorseFlipperApp* app)
 {
     if(app == NULL) return false;
-    if(app->tone_idx == 0U) return false;
+    if(!morse_flipper_buzz_ok(app)) return false;
     return app->screen == MorseFlipperScreenRun && app->audio_pwm.running;
 }
 
@@ -1334,13 +1349,9 @@ static void morse_flipper_update_sidetone(MorseFlipperApp* app) {
     bool want_tx_tone = morse_flipper_any_active_notes(app) || (app->prev_n > 0U);
     bool want_aux_tone =
         app->trainer_playback_mark || app->sk_play_mark || app->session_result_tone;
-    bool want_tone = want_tx_tone || want_aux_tone;
-
-    if(app->tone_idx == 0U) {
-        morse_flipper_audio_pwm_set_gate(&app->audio_pwm, false);
-        morse_flipper_tone_stop(app);
-        return;
-    }
+    bool want_tone = want_aux_tone ||
+                     (want_tx_tone && !morse_flipper_use_pwm_buzzer(app) &&
+                      morse_flipper_buzz_ok(app));
 
     if(morse_flipper_use_pwm_buzzer(app)) {
         if(app->sp_owned || app->tone_on) {

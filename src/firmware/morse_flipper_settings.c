@@ -210,8 +210,8 @@ static void morse_flipper_settings_tone_changed(VariableItem* item) {
     MorseFlipperApp* app = variable_item_get_context(item);
     uint8_t idx = variable_item_get_current_value_index(item);
 
-    app->tone_idx = idx;
-    variable_item_set_current_value_text(item, morse_flipper_tones[idx].name);
+    app->tone_idx = idx == 0U ? MORSE_FLIPPER_TONE_OFF_IDX : (uint8_t)(idx - 1U);
+    variable_item_set_current_value_text(item, morse_flipper_tone_name(app));
     app->prev_n = MORSE_FLIPPER_PREVIEW_TICKS;
 
     if(app->tone_on && app->sp_owned && furi_hal_speaker_is_mine()) {
@@ -419,11 +419,11 @@ static void morse_flipper_scene_home_on_enter(void* context) {
     item = variable_item_list_add(
         app->settings_list,
         "Buzzer TX",
-        COUNT_OF(morse_flipper_tones),
+        COUNT_OF(morse_flipper_tones) + 1U,
         morse_flipper_settings_tone_changed,
         app);
-    variable_item_set_current_value_index(item, app->tone_idx);
-    variable_item_set_current_value_text(item, morse_flipper_tones[app->tone_idx].name);
+    variable_item_set_current_value_index( item, app->tone_idx == MORSE_FLIPPER_TONE_OFF_IDX ? 0U : (uint8_t)(app->tone_idx + 1U));
+    variable_item_set_current_value_text(item, morse_flipper_tone_name(app));
 
     variable_item_list_add(app->settings_list, "GPIO", 0U, NULL, app);
     if(sel > MorseFlipperSettingGpio) sel = MorseFlipperSettingWpm;

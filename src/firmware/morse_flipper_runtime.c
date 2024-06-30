@@ -96,6 +96,12 @@ static void morse_flipper_resync_transport_notes(MorseFlipperApp* app) {
     }
 }
 
+static uint8_t morse_flipper_cfg_tone_idx(uint8_t x) {
+    if(x == MORSE_FLIPPER_TONE_OFF_IDX) return MORSE_FLIPPER_TONE_OFF_IDX;
+    if(x < COUNT_OF(morse_flipper_tones)) return x;
+    return 0U;
+}
+
 static void morse_flipper_load_config(MorseFlipperApp* app) {
     Storage* storage = furi_record_open(RECORD_STORAGE);
     File* file = storage_file_alloc(storage);
@@ -110,9 +116,7 @@ static void morse_flipper_load_config(MorseFlipperApp* app) {
     if(storage_file_open(file, MORSE_FLIPPER_CONFIG_PATH, FSAM_READ, FSOM_OPEN_EXISTING)) {
         got = storage_file_read(file, &config, sizeof(config));
         if(got == sizeof(config) && config.version == MORSE_FLIPPER_CONFIG_VERSION) {
-            if(config.tone_idx < COUNT_OF(morse_flipper_tones)) {
-                app->tone_idx = config.tone_idx;
-            }
+            app->tone_idx = morse_flipper_cfg_tone_idx(config.tone_idx);
 
             if(config.keyer_mode >= MorseKeyerModeStraight &&
                config.keyer_mode <= MorseKeyerModeKeyahead) {
@@ -158,9 +162,7 @@ static void morse_flipper_load_config(MorseFlipperApp* app) {
         } else if(got == sizeof(config_v5)) {
             memcpy(&config_v5, &config, sizeof(config_v5));
             if(config_v5.version == 5U) {
-                if(config_v5.tone_idx < COUNT_OF(morse_flipper_tones)) {
-                    app->tone_idx = config_v5.tone_idx;
-                }
+                app->tone_idx = morse_flipper_cfg_tone_idx(config_v5.tone_idx);
 
                 if(config_v5.keyer_mode >= MorseKeyerModeStraight &&
                    config_v5.keyer_mode <= MorseKeyerModeKeyahead) {
@@ -204,9 +206,7 @@ static void morse_flipper_load_config(MorseFlipperApp* app) {
         } else if(got == sizeof(config_v4)) {
             memcpy(&config_v4, &config, sizeof(config_v4));
             if(config_v4.version == 4U) {
-                if(config_v4.tone_idx < COUNT_OF(morse_flipper_tones)) {
-                    app->tone_idx = config_v4.tone_idx;
-                }
+                app->tone_idx = morse_flipper_cfg_tone_idx(config_v4.tone_idx);
 
                 if(config_v4.keyer_mode >= MorseKeyerModeStraight &&
                    config_v4.keyer_mode <= MorseKeyerModeKeyahead) {
@@ -244,9 +244,7 @@ static void morse_flipper_load_config(MorseFlipperApp* app) {
         } else if(got == sizeof(config_v3)) {
             memcpy(&config_v3, &config, sizeof(config_v3));
             if(config_v3.version == 3U) {
-                if(config_v3.tone_idx < COUNT_OF(morse_flipper_tones)) {
-                    app->tone_idx = config_v3.tone_idx;
-                }
+                app->tone_idx = morse_flipper_cfg_tone_idx(config_v3.tone_idx);
 
                 if(config_v3.keyer_mode >= MorseKeyerModeStraight &&
                    config_v3.keyer_mode <= MorseKeyerModeKeyahead) {
@@ -281,9 +279,7 @@ static void morse_flipper_load_config(MorseFlipperApp* app) {
         } else if(got == sizeof(config_v2)) {
             memcpy(&config_v2, &config, sizeof(config_v2));
             if(config_v2.version == 2U) {
-                if(config_v2.tone_idx < COUNT_OF(morse_flipper_tones)) {
-                    app->tone_idx = config_v2.tone_idx;
-                }
+                app->tone_idx = morse_flipper_cfg_tone_idx(config_v2.tone_idx);
 
                 if(config_v2.keyer_mode >= MorseKeyerModeStraight &&
                    config_v2.keyer_mode <= MorseKeyerModeKeyahead) {
@@ -308,9 +304,7 @@ static void morse_flipper_load_config(MorseFlipperApp* app) {
         } else if(got == sizeof(config_v1)) {
             memcpy(&config_v1, &config, sizeof(config_v1));
             if(config_v1.version == 1U) {
-                if(config_v1.tone_idx < COUNT_OF(morse_flipper_tones)) {
-                    app->tone_idx = config_v1.tone_idx;
-                }
+                app->tone_idx = morse_flipper_cfg_tone_idx(config_v1.tone_idx);
 
                 if(config_v1.keyer_mode >= MorseKeyerModeStraight &&
                    config_v1.keyer_mode <= MorseKeyerModeKeyahead) {

@@ -107,7 +107,7 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
             run_line,
             sizeof(run_line),
             "%s %s %s",
-            morse_flipper_current_tone(app)->name,
+            morse_flipper_tone_name(app),
             morse_keyer_mode_name(morse_flipper_current_keyer_mode(app)),
             morse_flipper_hand_name(app));
 
@@ -419,7 +419,7 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
         tone_line,
         sizeof(tone_line),
         "< %s > %s",
-        morse_flipper_current_tone(app)->name,
+        morse_flipper_tone_name(app),
         morse_keyer_mode_name(morse_flipper_current_keyer_mode(app)));
 
     canvas_set_font(canvas, FontSecondary);
