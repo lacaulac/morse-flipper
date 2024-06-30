@@ -26,11 +26,7 @@ void morse_flipper_radio_set_rx_callback(
     MorseFlipperRadio* radio,
     void (*cb)(void* ctx, bool level, uint16_t duration_ms),
     void* ctx);
-void morse_flipper_radio_sync_live(
-    MorseFlipperRadio* radio,
-    uint32_t freq_hz,
-    bool active,
-    bool tx_on);
+void morse_flipper_radio_sync_live( MorseFlipperRadio* radio, uint32_t freq_hz, bool active, bool tx_on);
 void morse_flipper_radio_drain_rx(MorseFlipperRadio* radio);
 void morse_flipper_radio_set_tx_level(MorseFlipperRadio* radio, bool level);
 

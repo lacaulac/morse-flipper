@@ -115,15 +115,11 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
         canvas_draw_str(canvas, 8, 14, "Free Practice");
         canvas_set_font(canvas, FontSecondary);
         canvas_draw_str(canvas, 8, 28, run_line);
-        if(app->input_source == MorseFlipperInputSourceButtons &&
+        if(app->in_src == MorseFlipperInputSourceButtons &&
            morse_flipper_button_paddle_keying_active(app)) {
             canvas_draw_str(canvas, 8, 40, morse_flipper_button_map_line(app));
         } else {
-            canvas_draw_str(
-                canvas,
-                8,
-                40,
-                morse_flipper_free_practice_hint(app, browse_line, sizeof(browse_line)));
+            canvas_draw_str( canvas, 8, 40, morse_flipper_free_practice_hint(app, browse_line, sizeof(browse_line)));
         }
         canvas_draw_str(canvas, 8, 52, morse_flipper_input_line(app, input_line, sizeof(input_line)));
         canvas_draw_str(canvas, 8, 62, morse_flipper_status_line(app, browse_line, sizeof(browse_line)));
@@ -269,7 +265,7 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
         canvas_draw_str(canvas, 2, 58, tone_line);
         if(app->straight_playback_active) {
             canvas_draw_str(canvas, 2, 64, "playing  Bk back");
-        } else if(app->straight_wait_answer) {
+        } else if(app->sk_wait) {
             canvas_draw_str(canvas, 2, 64, morse_flipper_straight_wait_hint(app, browse_line, sizeof(browse_line)));
         } else {
             canvas_draw_str(canvas, 2, 64, "OK play  Bk back");
@@ -312,9 +308,9 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
             sizeof(trainer_line),
             "rf %s %s",
             morse_flipper_rf_frequency_text(&app->rf),
-            app->rf_live_active ? "live" : "idle");
+            app->rf_live ? "live" : "idle");
         canvas_draw_str(canvas, 2, 10, trainer_line);
-        if(app->rf_manual_active) {
+        if(app->rf_man) {
             snprintf(
                 trainer_line2,
                 sizeof(trainer_line2),
@@ -328,7 +324,7 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
             return;
         }
 
-        if(app->rf_live_active) {
+        if(app->rf_live) {
             snprintf(
                 trainer_line2,
                 sizeof(trainer_line2),
@@ -356,11 +352,7 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
                                                            morse_flipper_rf_rx_log_line(&app->rf, morse_flipper_rf_rx_log_count(&app->rf) ?
                                                                                                  (morse_flipper_rf_rx_log_count(&app->rf) - 1U) :
                                                                                                  0U));
-            canvas_draw_str(
-                canvas,
-                2,
-                64,
-                morse_flipper_live_back_is_key(app) ? "live key hold L" : "live key Bk back");
+            canvas_draw_str( canvas, 2, 64, morse_flipper_live_back_is_key(app) ? "live key hold L" : "live key Bk back");
             if(morse_flipper_live_left_hint(app)) {
                 morse_flipper_draw_left_exit_hint(canvas);
             }

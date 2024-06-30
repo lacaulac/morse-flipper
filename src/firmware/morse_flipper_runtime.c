@@ -38,7 +38,7 @@ static void morse_flipper_clear_vail_overrides(MorseFlipperApp* app) {
     app->vail_speed_active = false;
     app->vail_tone_active = false;
 
-    if(had_tone_override && app->tone_on && app->speaker_owned && furi_hal_speaker_is_mine()) {
+    if(had_tone_override && app->tone_on && app->sp_owned && furi_hal_speaker_is_mine()) {
         furi_hal_speaker_start(morse_flipper_current_tone(app)->hz, MORSE_FLIPPER_VOLUME);
     }
 }
@@ -79,7 +79,7 @@ static void morse_flipper_apply_vail_tone(MorseFlipperApp* app, uint8_t midi_not
     app->vail_tone_active = true;
     app->vail_tone_idx = tone_idx;
 
-    if(app->tone_on && app->speaker_owned && furi_hal_speaker_is_mine()) {
+    if(app->tone_on && app->sp_owned && furi_hal_speaker_is_mine()) {
         furi_hal_speaker_start(morse_flipper_current_tone(app)->hz, MORSE_FLIPPER_VOLUME);
     } else {
         morse_flipper_update_sidetone(app);
@@ -89,8 +89,8 @@ static void morse_flipper_apply_vail_tone(MorseFlipperApp* app, uint8_t midi_not
 }
 
 static void morse_flipper_resync_transport_notes(MorseFlipperApp* app) {
-    for(uint8_t note = 0U; note < COUNT_OF(app->note_sources); note++) {
-        if(app->note_sources[note] != 0U) {
+    for(uint8_t note = 0U; note < COUNT_OF(app->note_src); note++) {
+        if(app->note_src[note] != 0U) {
             morse_flipper_send_transport_note(app, note, true);
         }
     }
@@ -124,7 +124,7 @@ static void morse_flipper_load_config(MorseFlipperApp* app) {
             }
 
             if(config.spare0 <= MorseFlipperInputSourceButtons) {
-                app->input_source = config.spare0;
+                app->in_src = config.spare0;
             }
 
             morse_trainer_set_lesson(&app->trainer, config.trainer_lesson);
@@ -146,15 +146,15 @@ static void morse_flipper_load_config(MorseFlipperApp* app) {
             if(config.trainer_custom_set_idx <= app->custom_sets.count) {
                 app->trainer.custom_set_idx = config.trainer_custom_set_idx;
             }
-            if(config.usb_mode <= MorseFlipperPcModeMidi) app->pc_mode_pref = config.usb_mode;
+            if(config.usb_mode <= MorseFlipperPcModeMidi) app->pc_pref = config.usb_mode;
             if(config.usb_paddle_preset < morse_pc_paddle_preset_count())
                 app->pc_paddle_preset = config.usb_paddle_preset;
             if(config.usb_straight_preset < morse_pc_straight_preset_count())
                 app->pc_straight_preset = config.usb_straight_preset;
             app->mouse_invert = config.usb_mouse_invert != 0U;
-            app->trainer_farnsworth_wpm = config.trainer_farnsworth_wpm;
-            app->trainer_answer_timeout_s = config.trainer_answer_timeout_s;
-            app->trainer_group_pause_s = config.trainer_group_pause_s;
+            app->trainer_farn_wpm = config.trainer_farn_wpm;
+            app->trainer_to_s = config.trainer_to_s;
+            app->trainer_gap_s = config.trainer_gap_s;
         } else if(got == sizeof(config_v5)) {
             memcpy(&config_v5, &config, sizeof(config_v5));
             if(config_v5.version == 5U) {
@@ -172,7 +172,7 @@ static void morse_flipper_load_config(MorseFlipperApp* app) {
                 }
 
                 if(config_v5.spare0 <= MorseFlipperInputSourceButtons) {
-                    app->input_source = config_v5.spare0;
+                    app->in_src = config_v5.spare0;
                 }
 
                 morse_trainer_set_lesson(&app->trainer, config_v5.trainer_lesson);
@@ -194,7 +194,7 @@ static void morse_flipper_load_config(MorseFlipperApp* app) {
                 if(config_v5.trainer_custom_set_idx <= app->custom_sets.count) {
                     app->trainer.custom_set_idx = config_v5.trainer_custom_set_idx;
                 }
-                if(config_v5.usb_mode <= MorseFlipperPcModeMidi) app->pc_mode_pref = config_v5.usb_mode;
+                if(config_v5.usb_mode <= MorseFlipperPcModeMidi) app->pc_pref = config_v5.usb_mode;
                 if(config_v5.usb_paddle_preset < morse_pc_paddle_preset_count())
                     app->pc_paddle_preset = config_v5.usb_paddle_preset;
                 if(config_v5.usb_straight_preset < morse_pc_straight_preset_count())
@@ -218,7 +218,7 @@ static void morse_flipper_load_config(MorseFlipperApp* app) {
                 }
 
                 if(config_v4.spare0 <= MorseFlipperInputSourceButtons) {
-                    app->input_source = config_v4.spare0;
+                    app->in_src = config_v4.spare0;
                 }
 
                 morse_trainer_set_lesson(&app->trainer, config_v4.trainer_lesson);
@@ -258,7 +258,7 @@ static void morse_flipper_load_config(MorseFlipperApp* app) {
                 }
 
                 if(config_v3.spare0 <= MorseFlipperInputSourceButtons) {
-                    app->input_source = config_v3.spare0;
+                    app->in_src = config_v3.spare0;
                 }
 
                 morse_trainer_set_lesson(&app->trainer, config_v3.trainer_lesson);
@@ -295,7 +295,7 @@ static void morse_flipper_load_config(MorseFlipperApp* app) {
                 }
 
                 if(config_v2.spare0 <= MorseFlipperInputSourceButtons) {
-                    app->input_source = config_v2.spare0;
+                    app->in_src = config_v2.spare0;
                 }
 
                 morse_trainer_set_lesson(&app->trainer, config_v2.trainer_lesson);
@@ -320,7 +320,7 @@ static void morse_flipper_load_config(MorseFlipperApp* app) {
         }
     }
 
-    morse_flipper_clamp_trainer_settings(app);
+    morse_flipper_train_fix(app);
 
     storage_file_close(file);
     storage_file_free(file);
@@ -338,20 +338,20 @@ static void morse_flipper_save_config(const MorseFlipperApp* app) {
         .trainer_lesson = morse_trainer_lesson(&app->trainer),
         .trainer_group_size = morse_trainer_group_size(&app->trainer),
         .trainer_session_groups = morse_trainer_session_groups(&app->trainer),
-        .spare0 = app->input_source,
+        .spare0 = app->in_src,
         .local_dit_ms = app->trainer.local_dit_ms,
         .gpio_straight_idx = app->gpio_straight_idx,
         .gpio_dit_idx = app->gpio_dit_idx,
         .gpio_dah_idx = app->gpio_dah_idx,
         .gpio_ground_idx = app->gpio_ground_idx,
         .trainer_custom_set_idx = app->trainer.custom_set_idx,
-        .usb_mode = app->pc_mode_pref,
+        .usb_mode = app->pc_pref,
         .usb_paddle_preset = app->pc_paddle_preset,
         .usb_straight_preset = app->pc_straight_preset,
         .usb_mouse_invert = app->mouse_invert ? 1U : 0U,
-        .trainer_farnsworth_wpm = app->trainer_farnsworth_wpm,
-        .trainer_answer_timeout_s = app->trainer_answer_timeout_s,
-        .trainer_group_pause_s = app->trainer_group_pause_s,
+        .trainer_farn_wpm = app->trainer_farn_wpm,
+        .trainer_to_s = app->trainer_to_s,
+        .trainer_gap_s = app->trainer_gap_s,
     };
 
     if(storage_file_open(file, MORSE_FLIPPER_CONFIG_PATH, FSAM_WRITE, FSOM_CREATE_ALWAYS)) {
@@ -422,10 +422,7 @@ static void morse_flipper_append_text(char* dst, size_t dst_sz, const char* add)
     memcpy(dst + len, add, add_len + 1U);
 }
 
-static void morse_flipper_decoder_drain_into(
-    MorseFlipperCwDecoder* decoder,
-    char* out,
-    size_t out_sz) {
+static void morse_flipper_dec_drain( MorseFlipperCwDecoder* decoder, char* out, size_t out_sz) {
     if(decoder == NULL || out == NULL || out_sz < 2U) return;
 
     if(morse_flipper_cw_decoder_output(decoder)[0] != '\0') {
@@ -435,9 +432,9 @@ static void morse_flipper_decoder_drain_into(
 }
 
 static char morse_flipper_tx_symbol(const MorseFlipperApp* app) {
-    if(app->note_sources[1] != 0U) return '.';
-    if(app->note_sources[2] != 0U) return '-';
-    if(app->note_sources[0] != 0U) return 'K';
+    if(app->note_src[1] != 0U) return '.';
+    if(app->note_src[2] != 0U) return '-';
+    if(app->note_src[0] != 0U) return 'K';
     return '?';
 }
 
@@ -463,7 +460,7 @@ static void morse_flipper_feed_tx_edge(MorseFlipperApp* app, bool level, uint32_
             } else {
                 morse_flipper_cw_decoder_feed_space(&app->tx_decoder, (uint16_t)dt);
             }
-            morse_flipper_decoder_drain_into(&app->tx_decoder, app->rf_tx_text, sizeof(app->rf_tx_text));
+            morse_flipper_dec_drain(&app->tx_decoder, app->rf_tx_text, sizeof(app->rf_tx_text));
         }
     }
 
@@ -487,7 +484,7 @@ static void morse_flipper_feed_gpio_edge(MorseFlipperApp* app, bool level, uint3
             } else {
                 morse_flipper_cw_decoder_feed_space(&app->gpio_decoder, (uint16_t)dt);
             }
-            morse_flipper_decoder_drain_into(&app->gpio_decoder, app->gpio_text, sizeof(app->gpio_text));
+            morse_flipper_dec_drain(&app->gpio_decoder, app->gpio_text, sizeof(app->gpio_text));
         }
     }
 
@@ -496,7 +493,7 @@ static void morse_flipper_feed_gpio_edge(MorseFlipperApp* app, bool level, uint3
     app->gpio_gap_flushed = level;
 }
 
-static void morse_flipper_feed_straight_mark(MorseFlipperApp* app, uint16_t mark_ms) {
+static void morse_flipper_feed_sk_mark(MorseFlipperApp* app, uint16_t mark_ms) {
     char elem;
 
     if(app == NULL || mark_ms == 0U) return;
@@ -507,8 +504,8 @@ static void morse_flipper_feed_straight_mark(MorseFlipperApp* app, uint16_t mark
 
     if(strlen(morse_flipper_straight_trainer_answer(&app->straight_trainer)) >=
        strlen(morse_flipper_straight_trainer_target_morse(&app->straight_trainer))) {
-        app->straight_wait_answer = false;
-        app->straight_done = true;
+        app->sk_wait = false;
+        app->sk_done = true;
         app->straight_trainer.active = false;
         morse_trainer_note_straight_attempt(
             &app->straight_stats,
@@ -529,8 +526,7 @@ static void morse_flipper_drain_keyer_events(MorseFlipperApp* app) {
             app->screen == MorseFlipperScreenSession) &&
            event.type == MorseKeyerEventPress &&
            morse_trainer_phase(&app->trainer) == MorseTrainerPhaseRepeat) {
-            morse_trainer_feed_element(
-                &app->trainer, event.paddle == MorseKeyerPaddleDit ? '.' : '-');
+            morse_trainer_feed_element( &app->trainer, event.paddle == MorseKeyerPaddleDit ? '.' : '-');
         }
 
         if(app->screen == MorseFlipperScreenSession &&
@@ -546,12 +542,7 @@ static void morse_flipper_drain_keyer_events(MorseFlipperApp* app) {
     }
 }
 
-static void morse_flipper_set_paddle_source(
-    MorseFlipperApp* app,
-    uint8_t paddle,
-    uint32_t source_mask,
-    bool active,
-    uint32_t now_ms) {
+static void morse_flipper_set_paddle_source( MorseFlipperApp* app, uint8_t paddle, uint32_t source_mask, bool active, uint32_t now_ms) {
     if(paddle >= MorseKeyerPaddleCount) {
         return;
     }
@@ -569,9 +560,7 @@ static void morse_flipper_set_paddle_source(
     morse_flipper_drain_keyer_events(app);
 }
 
-static void morse_flipper_handle_active_keying_event(
-    MorseFlipperApp* app,
-    const InputEvent* event) {
+static void morse_flipper_key_evt( MorseFlipperApp* app, const InputEvent* event) {
     uint32_t now_ms = furi_get_tick();
     MorseFlipperInputGate g = morse_flipper_input_gate(app);
     bool btn_src = g.btn;
@@ -754,9 +743,9 @@ static void morse_flipper_sync_gpio_inputs(MorseFlipperApp* app, uint32_t now_ms
     bool dit_active = false;
     bool dah_active = false;
 
-    if(app->input_source == MorseFlipperInputSourceStraight) {
+    if(app->in_src == MorseFlipperInputSourceStraight) {
         straight_active = morse_flipper_straight_down();
-    } else if(app->input_source == MorseFlipperInputSourcePaddle) {
+    } else if(app->in_src == MorseFlipperInputSourcePaddle) {
         dit_active = morse_flipper_logical_dit_down(app);
         dah_active = morse_flipper_logical_dah_down(app);
     }
@@ -769,10 +758,8 @@ static void morse_flipper_sync_gpio_inputs(MorseFlipperApp* app, uint32_t now_ms
     }
 
     morse_flipper_set_note_source(app, 0U, MORSE_SOURCE_STRAIGHT_GPIO, straight_active);
-    morse_flipper_set_paddle_source(
-        app, MorseKeyerPaddleDit, MORSE_PADDLE_SOURCE_GPIO_DIT, dit_active, now_ms);
-    morse_flipper_set_paddle_source(
-        app, MorseKeyerPaddleDah, MORSE_PADDLE_SOURCE_GPIO_DAH, dah_active, now_ms);
+    morse_flipper_set_paddle_source( app, MorseKeyerPaddleDit, MORSE_PADDLE_SOURCE_GPIO_DIT, dit_active, now_ms);
+    morse_flipper_set_paddle_source( app, MorseKeyerPaddleDah, MORSE_PADDLE_SOURCE_GPIO_DAH, dah_active, now_ms);
 }
 
 static uint8_t morse_flipper_read_input_mask(const MorseFlipperApp* app) {
@@ -844,9 +831,9 @@ static void morse_flipper_tone_nudge(MorseFlipperApp* app, int dir) {
     }
 
     app->tone_idx = (uint8_t)idx;
-    app->preview_ticks = MORSE_FLIPPER_PREVIEW_TICKS;
+    app->prev_n = MORSE_FLIPPER_PREVIEW_TICKS;
 
-    if(app->tone_on && app->speaker_owned && furi_hal_speaker_is_mine()) {
+    if(app->tone_on && app->sp_owned && furi_hal_speaker_is_mine()) {
         furi_hal_speaker_start(morse_flipper_current_tone(app)->hz, MORSE_FLIPPER_VOLUME);
     }
 
@@ -858,7 +845,7 @@ static void morse_flipper_tone_nudge(MorseFlipperApp* app, int dir) {
 static void morse_flipper_poll(MorseFlipperApp* app) {
     uint32_t now_ms = furi_get_tick();
     bool old_tone = app->tone_on;
-    bool old_busy = app->speaker_busy;
+    bool old_busy = app->sp_busy;
     uint8_t old_mask = app->input_mask;
     bool old_transport = app->transport_connected;
     bool raw_straight;
@@ -883,10 +870,7 @@ static void morse_flipper_poll(MorseFlipperApp* app) {
 
     if(app->screen == MorseFlipperScreenSession && app->session_started &&
        morse_trainer_phase(&app->trainer) == MorseTrainerPhaseRepeat) {
-        morse_trainer_tick(
-            &app->trainer,
-            MORSE_FLIPPER_POLL_MS,
-            (uint32_t)app->trainer_answer_timeout_s * 1000U);
+        morse_trainer_tick( &app->trainer, MORSE_FLIPPER_POLL_MS, (uint32_t)app->trainer_to_s * 1000U);
     }
 
     morse_flipper_tick_session(app, now_ms);
@@ -909,20 +893,20 @@ static void morse_flipper_poll(MorseFlipperApp* app) {
         uint32_t gap = now_ms - app->gpio_edge_at;
         if(gap >= (morse_flipper_current_dit_ms(app) * 5U) / 2U) {
             morse_flipper_cw_decoder_feed_space(&app->gpio_decoder, (uint16_t)gap);
-            morse_flipper_decoder_drain_into(&app->gpio_decoder, app->gpio_text, sizeof(app->gpio_text));
+            morse_flipper_dec_drain(&app->gpio_decoder, app->gpio_text, sizeof(app->gpio_text));
             app->gpio_gap_flushed = true;
         }
     }
 
     raw_straight = morse_flipper_straight_answer_down(app);
     if(app->screen == MorseFlipperScreenStraight && !raw_straight &&
-       app->straight_mark_started_at != 0U && app->straight_key_down) {
-        app->straight_key_down = false;
-        morse_flipper_feed_straight_mark(app, (uint16_t)(now_ms - app->straight_mark_started_at));
+       app->straight_mark_started_at != 0U && app->sk_down) {
+        app->sk_down = false;
+        morse_flipper_feed_sk_mark(app, (uint16_t)(now_ms - app->straight_mark_started_at));
         app->straight_mark_started_at = 0U;
     } else if(app->screen == MorseFlipperScreenStraight && raw_straight &&
-              !app->straight_key_down && app->straight_wait_answer) {
-        app->straight_key_down = true;
+              !app->sk_down && app->sk_wait) {
+        app->sk_down = true;
         app->straight_mark_started_at = now_ms;
     }
 
@@ -933,7 +917,7 @@ static void morse_flipper_poll(MorseFlipperApp* app) {
         if(gap >= (morse_flipper_current_dit_ms(app) * 5U) / 2U) {
             if(morse_flipper_tx_decoder_allowed(app)) {
                 morse_flipper_cw_decoder_feed_space(&app->tx_decoder, (uint16_t)gap);
-                morse_flipper_decoder_drain_into(&app->tx_decoder, app->rf_tx_text, sizeof(app->rf_tx_text));
+                morse_flipper_dec_drain(&app->tx_decoder, app->rf_tx_text, sizeof(app->rf_tx_text));
             }
             app->rf_tx_gap_flushed = true;
         }
@@ -946,7 +930,7 @@ static void morse_flipper_poll(MorseFlipperApp* app) {
     morse_flipper_update_sidetone(app);
     morse_flipper_sync_backlight(app, now_ms);
 
-    if(old_tone != app->tone_on || old_busy != app->speaker_busy || old_mask != app->input_mask ||
+    if(old_tone != app->tone_on || old_busy != app->sp_busy || old_mask != app->input_mask ||
        old_transport != app->transport_connected) {
         morse_flipper_view_dirty(app);
     }
@@ -1025,7 +1009,7 @@ static bool morse_flipper_live_input(InputEvent* event, void* ctx) {
 
     if(app->screen == MorseFlipperScreenPc) {
         if(event->key == InputKeyLeft || event->key == InputKeyOk || event->key == InputKeyBack) {
-            morse_flipper_handle_active_keying_event(app, event);
+            morse_flipper_key_evt(app, event);
             return true;
         }
 
@@ -1070,13 +1054,13 @@ static bool morse_flipper_live_input(InputEvent* event, void* ctx) {
 
         if(event->key == InputKeyLeft &&
            (event->type == InputTypeShort || event->type == InputTypeRepeat)) {
-            morse_flipper_cycle_trainer_value(app, -1);
+            morse_flipper_cycle_train(app, -1);
             return true;
         }
 
         if(event->key == InputKeyRight &&
            (event->type == InputTypeShort || event->type == InputTypeRepeat)) {
-            morse_flipper_cycle_trainer_value(app, 1);
+            morse_flipper_cycle_train(app, 1);
             return true;
         }
 
@@ -1099,11 +1083,11 @@ static bool morse_flipper_live_input(InputEvent* event, void* ctx) {
             return true;
         }
 
-        if(app->straight_wait_answer && app->input_source == MorseFlipperInputSourceButtons &&
+        if(app->sk_wait && app->in_src == MorseFlipperInputSourceButtons &&
            event->key == InputKeyOk) {
             if(event->type == InputTypePress) {
                 app->ok_down = true;
-                app->straight_key_down = true;
+                app->sk_down = true;
                 app->straight_mark_started_at = now_ms;
                 morse_flipper_set_note_source(app, 0U, MORSE_SOURCE_STRAIGHT_BTN, true);
                 morse_flipper_view_dirty(app);
@@ -1112,19 +1096,19 @@ static bool morse_flipper_live_input(InputEvent* event, void* ctx) {
 
                 app->ok_down = false;
                 morse_flipper_set_note_source(app, 0U, MORSE_SOURCE_STRAIGHT_BTN, false);
-                if(app->straight_key_down && app->straight_mark_started_at != 0U)
+                if(app->sk_down && app->straight_mark_started_at != 0U)
                     dt = (uint16_t)(now_ms - app->straight_mark_started_at);
-                app->straight_key_down = false;
+                app->sk_down = false;
                 app->straight_mark_started_at = 0U;
                 if(dt != 0U) {
-                    morse_flipper_feed_straight_mark(app, dt);
+                    morse_flipper_feed_sk_mark(app, dt);
                     morse_flipper_view_dirty(app);
                 }
             }
             return true;
         }
 
-        if(!app->straight_playback_active && !app->straight_wait_answer && event->key == InputKeyOk &&
+        if(!app->straight_playback_active && !app->sk_wait && event->key == InputKeyOk &&
            (event->type == InputTypeShort || event->type == InputTypeLong)) {
             morse_flipper_start_straight_round(app, now_ms);
             return true;
@@ -1143,17 +1127,17 @@ static bool morse_flipper_live_input(InputEvent* event, void* ctx) {
             }
 
             if(event->key == InputKeyLeft && morse_flipper_session_left_exit_active(app)) {
-                morse_flipper_handle_active_keying_event(app, event);
+                morse_flipper_key_evt(app, event);
                 return true;
             }
 
             if(event->key == InputKeyOk && g.btn) {
-                morse_flipper_handle_active_keying_event(app, event);
+                morse_flipper_key_evt(app, event);
                 return true;
             }
 
             if(event->key == InputKeyBack && g.back_key) {
-                morse_flipper_handle_active_keying_event(app, event);
+                morse_flipper_key_evt(app, event);
                 return true;
             }
 
@@ -1173,12 +1157,12 @@ static bool morse_flipper_live_input(InputEvent* event, void* ctx) {
             }
 
             if(event->key == InputKeyLeft && morse_flipper_session_left_exit_active(app)) {
-                morse_flipper_handle_active_keying_event(app, event);
+                morse_flipper_key_evt(app, event);
                 return true;
             }
 
             if(event->key == InputKeyBack && g.back_key) {
-                morse_flipper_handle_active_keying_event(app, event);
+                morse_flipper_key_evt(app, event);
                 return true;
             }
 
@@ -1251,7 +1235,7 @@ static bool morse_flipper_live_input(InputEvent* event, void* ctx) {
     }
 
     if(app->screen == MorseFlipperScreenRf) {
-        if(app->rf_manual_active) {
+        if(app->rf_man) {
             if(event->key == InputKeyLeft &&
                (event->type == InputTypeShort || event->type == InputTypeRepeat)) {
                 app->rf_edit_digit = app->rf_edit_digit == 0U ? 5U : (app->rf_edit_digit - 1U);
@@ -1285,14 +1269,14 @@ static bool morse_flipper_live_input(InputEvent* event, void* ctx) {
             if(event->key == InputKeyOk &&
                (event->type == InputTypeShort || event->type == InputTypeLong)) {
                 morse_flipper_rf_set_manual_khz(&app->rf, app->rf_edit_khz);
-                app->rf_manual_active = false;
+                app->rf_man = false;
                 morse_flipper_view_dirty(app);
                 return true;
             }
 
             if(event->key == InputKeyBack &&
                (event->type == InputTypeShort || event->type == InputTypeLong)) {
-                app->rf_manual_active = false;
+                app->rf_man = false;
                 morse_flipper_view_dirty(app);
                 return true;
             }
@@ -1300,8 +1284,8 @@ static bool morse_flipper_live_input(InputEvent* event, void* ctx) {
             return false;
         }
 
-        if(app->rf_live_active) {
-            morse_flipper_handle_active_keying_event(app, event);
+        if(app->rf_live) {
+            morse_flipper_key_evt(app, event);
             return true;
         }
 
@@ -1328,8 +1312,8 @@ static bool morse_flipper_live_input(InputEvent* event, void* ctx) {
 
         if(event->key == InputKeyDown &&
            (event->type == InputTypeShort || event->type == InputTypeLong)) {
-            app->rf_live_active = true;
-            app->rf_tx_tail_until = 0U;
+            app->rf_live = true;
+            app->rf_tail_at = 0U;
             app->rf_tx_edge_at = 0U;
             app->rf_tx_level = false;
             app->rf_tx_gap_flushed = true;
@@ -1347,7 +1331,7 @@ static bool morse_flipper_live_input(InputEvent* event, void* ctx) {
             strncpy(app->rf_edit_khz, morse_flipper_rf_manual_khz_text(&app->rf), 6U);
             app->rf_edit_khz[6] = '\0';
             app->rf_edit_digit = 0U;
-            app->rf_manual_active = true;
+            app->rf_man = true;
             morse_flipper_view_dirty(app);
             return true;
         }
@@ -1362,12 +1346,12 @@ static bool morse_flipper_live_input(InputEvent* event, void* ctx) {
     }
 
     if(app->screen == MorseFlipperScreenRun) {
-        morse_flipper_handle_active_keying_event(app, event);
+        morse_flipper_key_evt(app, event);
         return true;
     }
 
     if(app->screen == MorseFlipperScreenTrace) {
-        morse_flipper_handle_active_keying_event(app, event);
+        morse_flipper_key_evt(app, event);
         return true;
     }
 
@@ -1407,12 +1391,12 @@ static bool morse_flipper_live_input(InputEvent* event, void* ctx) {
     return false;
 }
 
-static bool morse_flipper_custom_event_callback(void* context, uint32_t event) {
+static bool morse_flipper_custom_evt(void* context, uint32_t event) {
     MorseFlipperApp* app = context;
     return scene_manager_handle_custom_event(app->scene_manager, event);
 }
 
-static bool morse_flipper_back_event_callback(void* context) {
+static bool morse_flipper_back_evt(void* context) {
     MorseFlipperApp* app = context;
     return scene_manager_handle_back_event(app->scene_manager);
 }
@@ -1423,8 +1407,8 @@ static void morse_flipper_tick_callback(void* context) {
     morse_flipper_poll(app);
     morse_flipper_tick_trainer_playback(app, furi_get_tick());
 
-    if(app->preview_ticks > 0U) {
-        app->preview_ticks--;
+    if(app->prev_n > 0U) {
+        app->prev_n--;
         morse_flipper_update_sidetone(app);
     }
 

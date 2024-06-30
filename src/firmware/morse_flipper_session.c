@@ -19,7 +19,7 @@ static void morse_flipper_reset_session_state(MorseFlipperApp* app, uint32_t now
     app->trainer_playback_mark = false;
     app->session_log_pending = false;
 
-    morse_flipper_drop_live_keying_for_playback(app, now_ms);
+    morse_flipper_drop_live_play(app, now_ms);
     morse_flipper_reset_session_runtime(app);
     morse_trainer_reset_session(&app->trainer);
     app->rf_tx_text[0] = '\0';
@@ -54,19 +54,19 @@ static bool morse_flipper_session_live_keying(const MorseFlipperApp* app) {
     return app &&
            (app->paddle_sources[MorseKeyerPaddleDit] != 0U ||
             app->paddle_sources[MorseKeyerPaddleDah] != 0U ||
-            app->note_sources[0] != 0U || app->note_sources[1] != 0U ||
-            app->note_sources[2] != 0U);
+            app->note_src[0] != 0U || app->note_src[1] != 0U ||
+            app->note_src[2] != 0U);
 }
 
 static bool morse_flipper_session_wait_key_down(const MorseFlipperApp* app) {
     if(app == NULL) return false;
 
-    if(app->input_source == MorseFlipperInputSourceButtons) {
+    if(app->in_src == MorseFlipperInputSourceButtons) {
         if(morse_flipper_straight_like_mode(app)) return app->ok_down;
         return app->ok_down || app->back_down;
     }
 
-    if(app->input_source == MorseFlipperInputSourceStraight) return morse_flipper_straight_down();
+    if(app->in_src == MorseFlipperInputSourceStraight) return morse_flipper_straight_down();
 
     return morse_flipper_logical_dit_down(app) || morse_flipper_logical_dah_down(app);
 }
@@ -85,7 +85,7 @@ static void morse_flipper_queue_session_feedback(MorseFlipperApp* app, uint32_t 
     app->session_result_until = now_ms + MORSE_FLIPPER_SESSION_RESULT_MS;
     app->session_next_group_at =
         morse_trainer_session_active(&app->trainer) ?
-            (now_ms + ((uint32_t)app->trainer_group_pause_s * 1000U)) :
+            (now_ms + ((uint32_t)app->trainer_gap_s * 1000U)) :
             0U;
     app->session_wait_draw_s = 0xFFU;
     seq = &morse_flipper_led_good_twice;
@@ -98,23 +98,21 @@ static void morse_flipper_queue_session_feedback(MorseFlipperApp* app, uint32_t 
     morse_flipper_view_dirty(app);
 }
 
-static void morse_flipper_drop_live_keying_for_playback(MorseFlipperApp* app, uint32_t now_ms) {
+static void morse_flipper_drop_live_play(MorseFlipperApp* app, uint32_t now_ms) {
     if(app == NULL) return;
 
-    morse_flipper_clear_button_keying(app, now_ms);
+    morse_flipper_btn_clear(app, now_ms);
     morse_flipper_set_note_source(app, 0U, MORSE_SOURCE_STRAIGHT_GPIO, false);
-    morse_flipper_set_paddle_source(
-        app, MorseKeyerPaddleDit, MORSE_PADDLE_SOURCE_GPIO_DIT, false, now_ms);
-    morse_flipper_set_paddle_source(
-        app, MorseKeyerPaddleDah, MORSE_PADDLE_SOURCE_GPIO_DAH, false, now_ms);
+    morse_flipper_set_paddle_source( app, MorseKeyerPaddleDit, MORSE_PADDLE_SOURCE_GPIO_DIT, false, now_ms);
+    morse_flipper_set_paddle_source( app, MorseKeyerPaddleDah, MORSE_PADDLE_SOURCE_GPIO_DAH, false, now_ms);
 }
 
-static void morse_flipper_begin_group_playback(MorseFlipperApp* app, uint32_t now_ms) {
+static void morse_flipper_group_play(MorseFlipperApp* app, uint32_t now_ms) {
     if(app == NULL) {
         return;
     }
 
-    morse_flipper_drop_live_keying_for_playback(app, now_ms);
+    morse_flipper_drop_live_play(app, now_ms);
     app->trainer_playback_active = true;
     app->trainer_playback_mark = false;
     app->trainer_char_idx = 0U;
@@ -145,7 +143,7 @@ static void morse_flipper_start_session(MorseFlipperApp* app, uint32_t now_ms) {
     morse_trainer_start_session(&app->trainer);
     app->session_started = true;
     app->session_log_pending = true;
-    morse_flipper_begin_group_playback(app, now_ms);
+    morse_flipper_group_play(app, now_ms);
 }
 
 static void morse_flipper_tick_session(MorseFlipperApp* app, uint32_t now_ms) {
@@ -179,7 +177,7 @@ static void morse_flipper_tick_session(MorseFlipperApp* app, uint32_t now_ms) {
         app->session_next_group_at = 0U;
         app->session_wait_draw_s = 0xFFU;
         if(morse_trainer_next_session_group(&app->trainer)) {
-            morse_flipper_begin_group_playback(app, now_ms);
+            morse_flipper_group_play(app, now_ms);
         } else {
             morse_flipper_view_dirty(app);
         }
@@ -245,11 +243,7 @@ static uint8_t morse_flipper_session_slot_centers(uint8_t size, uint8_t* out) {
     return size;
 }
 
-static void morse_flipper_session_answer_text(
-    const MorseFlipperApp* app,
-    char* out,
-    size_t out_sz,
-    uint8_t max_chars) {
+static void morse_flipper_session_answer_text( const MorseFlipperApp* app, char* out, size_t out_sz, uint8_t max_chars) {
     char preview = 0;
     size_t wi = 0U;
     size_t i;
@@ -306,10 +300,7 @@ static uint8_t morse_flipper_session_answer_count(const char* answer) {
     return n;
 }
 
-static void morse_flipper_session_title(
-    const MorseFlipperApp* app,
-    char* out,
-    size_t out_sz) {
+static void morse_flipper_session_title( const MorseFlipperApp* app, char* out, size_t out_sz) {
     const char* chars;
     size_t i;
     size_t wi = 0U;
@@ -329,11 +320,7 @@ static void morse_flipper_session_title(
     chars = morse_trainer_charset(&app->trainer);
     len = strlen(chars);
     if(len > 12U) {
-        snprintf(
-            out,
-            out_sz,
-            "%s",
-            app->trainer.custom_name[0] ? app->trainer.custom_name : chars);
+        snprintf( out, out_sz, "%s", app->trainer.custom_name[0] ? app->trainer.custom_name : chars);
         return;
     }
 

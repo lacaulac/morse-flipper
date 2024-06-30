@@ -12,6 +12,7 @@ App(
         "src/firmware/morse_flipper_app.c",
         "src/firmware/morse_flipper_fap.c",
         "src/firmware/morse_flipper_gpio.c",
+        "src/firmware/morse_flipper_audio_pwm.c",
         "src/firmware/keyer.c",
         "src/firmware/morse_flipper_cw_decoder.c",
         "src/firmware/pc_keys.c",

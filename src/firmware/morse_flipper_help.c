@@ -191,7 +191,7 @@ static void morse_flipper_help_btn_cb(GuiButtonType result, InputType type, void
     view_dispatcher_send_custom_event(app->view_dispatcher, ev);
 }
 
-static void morse_flipper_help_rebuild_widget(MorseFlipperApp* app)
+static void morse_flipper_help_rebuild(MorseFlipperApp* app)
 {
     uint8_t n;
     char b[16];
@@ -221,7 +221,7 @@ static void morse_flipper_help_rebuild_widget(MorseFlipperApp* app)
 
 static void morse_flipper_help_open(MorseFlipperApp* app)
 {
-    morse_flipper_help_rebuild_widget(app);
+    morse_flipper_help_rebuild(app);
     view_dispatcher_switch_to_view(app->view_dispatcher, MorseFlipperViewWidget);
 }
 

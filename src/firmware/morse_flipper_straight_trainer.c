@@ -111,10 +111,7 @@ void morse_flipper_straight_trainer_init(MorseFlipperStraightTrainer* trainer)
     trainer->rng_state = 7;
 }
 
-void morse_flipper_straight_trainer_start(
-    MorseFlipperStraightTrainer* trainer,
-    const char* charset,
-    uint16_t dit_ms)
+void morse_flipper_straight_trainer_start( MorseFlipperStraightTrainer* trainer, const char* charset, uint16_t dit_ms)
 {
     size_t len;
     size_t i;
@@ -154,10 +151,7 @@ void morse_flipper_straight_trainer_start(
     trainer->active = true;
 }
 
-void morse_flipper_straight_trainer_feed(
-    MorseFlipperStraightTrainer* trainer,
-    char elem,
-    uint16_t mark_ms)
+void morse_flipper_straight_trainer_feed( MorseFlipperStraightTrainer* trainer, char elem, uint16_t mark_ms)
 {
     size_t len;
     size_t i;
