@@ -1277,43 +1277,6 @@ static void morse_flipper_toggle_source(MorseFlipperApp* app) {
     morse_flipper_view_dirty(app);
 }
 
-static void morse_flipper_cycle_pc_mode(MorseFlipperApp* app, int dir) {
-    int next = (int)app->pc_mode + dir;
-
-    if(next < (int)MorseFlipperPcModeOff) {
-        next = (int)MorseFlipperPcModeMidi;
-    } else if(next > (int)MorseFlipperPcModeMidi) {
-        next = (int)MorseFlipperPcModeOff;
-    }
-
-    morse_flipper_set_pc_mode(app, (uint8_t)next);
-    morse_flipper_view_dirty(app);
-}
-
-static void morse_flipper_cycle_pc_key_preset(MorseFlipperApp* app, int dir) {
-    int next;
-
-    if(app->pc_keys_row == 0U) {
-        next = (int)app->pc_paddle_preset + dir;
-        if(next < 0) {
-            next = (int)morse_pc_paddle_preset_count() - 1;
-        } else if(next >= (int)morse_pc_paddle_preset_count()) {
-            next = 0;
-        }
-        app->pc_paddle_preset = (uint8_t)next;
-    } else {
-        next = (int)app->pc_straight_preset + dir;
-        if(next < 0) {
-            next = (int)morse_pc_straight_preset_count() - 1;
-        } else if(next >= (int)morse_pc_straight_preset_count()) {
-            next = 0;
-        }
-        app->pc_straight_preset = (uint8_t)next;
-    }
-
-    morse_flipper_view_dirty(app);
-}
-
 static bool morse_flipper_training_playback_active(const MorseFlipperApp* app) {
     if(app == NULL) return false;
     if(app->screen == MorseFlipperScreenStraight) return app->straight_playback_active;
@@ -1563,16 +1526,6 @@ static void morse_flipper_cycle_mode(MorseFlipperApp* app) {
     morse_flipper_save_config(app);
     morse_flipper_refresh_keyer(app, now_ms);
     morse_flipper_view_dirty(app);
-}
-
-static void morse_flipper_midi_rx_ready(void* context) {
-    MorseFlipperApp* app = context;
-
-    if(app == NULL) {
-        return;
-    }
-
-    app->midi_rx_pending = true;
 }
 
 static void morse_flipper_toggle_handedness(MorseFlipperApp* app) {
