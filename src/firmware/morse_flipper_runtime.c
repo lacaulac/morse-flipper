@@ -153,48 +153,6 @@ static void morse_flipper_feed_sk_mark(MorseFlipperApp* app, uint16_t mark_ms) {
 }
 
 
-static void morse_flipper_drain_keyer_events(MorseFlipperApp* app) {
-    MorseKeyerEvent event;
-
-    while(morse_keyer_pop_event(&app->keyer, &event)) {
-        if((app->screen == MorseFlipperScreenTrainer ||
-            app->screen == MorseFlipperScreenSession) &&
-           event.type == MorseKeyerEventPress &&
-           morse_trainer_phase(&app->trainer) == MorseTrainerPhaseRepeat) {
-            morse_trainer_feed_element( &app->trainer, event.paddle == MorseKeyerPaddleDit ? '.' : '-');
-        }
-
-        if(app->screen == MorseFlipperScreenSession &&
-           morse_trainer_phase(&app->trainer) == MorseTrainerPhaseRepeat) {
-            app->session_last_input_at = furi_get_tick();
-        }
-
-        morse_flipper_set_note_source(
-            app,
-            morse_flipper_note_for_paddle(event.paddle),
-            morse_flipper_note_source_for_paddle(event.paddle),
-            event.type == MorseKeyerEventPress);
-    }
-}
-
-static void morse_flipper_set_paddle_source( MorseFlipperApp* app, uint8_t paddle, uint32_t source_mask, bool active, uint32_t now_ms) {
-    if(paddle >= MorseKeyerPaddleCount) {
-        return;
-    }
-
-    uint32_t before = app->paddle_sources[paddle];
-    uint32_t after = active ? (before | source_mask) : (before & ~source_mask);
-
-    if(before == after) {
-        return;
-    }
-
-    app->paddle_sources[paddle] = after;
-    morse_keyer_paddle_event(&app->keyer, paddle, after != 0U, now_ms);
-    morse_keyer_tick(&app->keyer, now_ms);
-    morse_flipper_drain_keyer_events(app);
-}
-
 static void morse_flipper_key_evt( MorseFlipperApp* app, const InputEvent* event) {
     uint32_t now_ms = furi_get_tick();
     MorseFlipperInputGate g = morse_flipper_input_gate(app);
@@ -268,22 +226,6 @@ static void morse_flipper_key_evt( MorseFlipperApp* app, const InputEvent* event
        (event->type == InputTypeShort || event->type == InputTypeLong)) {
         morse_flipper_scene_back(app);
     }
-}
-
-static void morse_flipper_refresh_keyer(MorseFlipperApp* app, uint32_t now_ms) {
-    morse_keyer_reset(&app->keyer);
-    morse_flipper_drain_keyer_events(app);
-    morse_keyer_set_mode(&app->keyer, morse_flipper_current_keyer_mode(app));
-    morse_keyer_set_dit_duration(&app->keyer, morse_flipper_current_dit_ms(app));
-
-    for(uint8_t paddle = 0; paddle < MorseKeyerPaddleCount; paddle++) {
-        if(app->paddle_sources[paddle] != 0U) {
-            morse_keyer_paddle_event(&app->keyer, paddle, true, now_ms);
-        }
-    }
-
-    morse_keyer_tick(&app->keyer, now_ms);
-    morse_flipper_drain_keyer_events(app);
 }
 
 static void morse_flipper_sync_gpio_inputs(MorseFlipperApp* app, uint32_t now_ms) {
