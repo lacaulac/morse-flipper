@@ -84,9 +84,10 @@ static void morse_flipper_scene_menu_settings_on_enter(void* context) {
     submenu_set_header(app->submenu, "Settings");
     submenu_add_item(app->submenu, "Main settings", MorseFlipperSceneHome, morse_flipper_scene_menu_pick, app);
     submenu_add_item(app->submenu, "Koch - LCWO", MorseFlipperSceneTrainer, morse_flipper_scene_menu_pick, app);
+    submenu_add_item(app->submenu, "Straight key", MorseFlipperSceneStraightCfg, morse_flipper_scene_menu_pick, app);
     submenu_add_item(app->submenu, "USB", MorseFlipperScenePc, morse_flipper_scene_menu_pick, app);
     submenu_add_item(app->submenu, "Trace menu", MorseFlipperSceneTrace, morse_flipper_scene_menu_pick, app);
-    if(sel != MorseFlipperSceneHome && sel != MorseFlipperSceneTrainer && sel != MorseFlipperScenePc &&
+    if(sel != MorseFlipperSceneHome && sel != MorseFlipperSceneTrainer && sel != MorseFlipperSceneStraightCfg && sel != MorseFlipperScenePc &&
        sel != MorseFlipperSceneTrace)
         sel = MorseFlipperSceneHome;
     submenu_set_selected_item(app->submenu, sel);
@@ -271,6 +272,7 @@ static const AppSceneOnEnterCallback morse_flipper_scene_on_enter_handlers[Morse
     morse_flipper_scene_browse_on_enter,
     morse_flipper_scene_home_on_enter,
     morse_flipper_scene_trainer_on_enter,
+    morse_flipper_scene_straight_cfg_on_enter,
     morse_flipper_scene_pc_on_enter,
     morse_flipper_scene_pc_keys_on_enter,
     morse_flipper_scene_trace_on_enter,
@@ -290,6 +292,7 @@ static const AppSceneOnEventCallback morse_flipper_scene_on_event_handlers[Morse
     morse_flipper_scene_live_on_event,
     morse_flipper_scene_live_on_event,
     morse_flipper_scene_home_on_event,
+    morse_flipper_scene_live_on_event,
     morse_flipper_scene_live_on_event,
     morse_flipper_scene_pc_on_event,
     morse_flipper_scene_live_on_event,
@@ -311,6 +314,7 @@ static const AppSceneOnExitCallback morse_flipper_scene_on_exit_handlers[MorseFl
     morse_flipper_scene_live_on_exit,
     morse_flipper_scene_home_on_exit,
     morse_flipper_scene_trainer_on_exit,
+    morse_flipper_scene_straight_cfg_on_exit,
     morse_flipper_scene_pc_on_exit,
     morse_flipper_scene_live_on_exit,
     morse_flipper_scene_live_on_exit,

@@ -32,7 +32,7 @@
 #define MORSE_FLIPPER_POLL_MS 5
 #define MORSE_FLIPPER_PREVIEW_TICKS 8
 #define MORSE_FLIPPER_CONFIG_PATH APP_DATA_PATH("config.bin")
-#define MORSE_FLIPPER_CONFIG_VERSION 6
+#define MORSE_FLIPPER_CONFIG_VERSION 7
 #define MORSE_FLIPPER_TONE_OFF_IDX 0xFFU
 #define MORSE_FLIPPER_DEFAULT_DIT_MS 100U
 #define MORSE_FLIPPER_SESSION_SETTLE_MS 1000U
@@ -47,6 +47,12 @@
 #define MORSE_FLIPPER_TRAINER_GROUP_PAUSE_MIN_S 3U
 #define MORSE_FLIPPER_TRAINER_GROUP_PAUSE_MAX_S 15U
 #define MORSE_FLIPPER_TRAINER_GROUP_PAUSE_DEFAULT_S 3U
+#define MORSE_FLIPPER_STRAIGHT_TIMEOUT_DEFAULT_S 6U
+#define MORSE_FLIPPER_STRAIGHT_TIMEOUT_MIN_S     3U
+#define MORSE_FLIPPER_STRAIGHT_TIMEOUT_MAX_S     10U
+#define MORSE_FLIPPER_STRAIGHT_NEXT_MIN_S        3U
+#define MORSE_FLIPPER_STRAIGHT_NEXT_MAX_S        15U
+#define MORSE_FLIPPER_STRAIGHT_NEXT_DEFAULT_S    3U
 
 #define MORSE_SOURCE_STRAIGHT_GPIO (1UL << 0)
 #define MORSE_SOURCE_STRAIGHT_BTN  (1UL << 1)
@@ -126,6 +132,7 @@ typedef enum {
     MorseFlipperSceneBrowse,
     MorseFlipperSceneHome,
     MorseFlipperSceneTrainer,
+    MorseFlipperSceneStraightCfg,
     MorseFlipperScenePc,
     MorseFlipperScenePcKeys,
     MorseFlipperSceneTrace,
@@ -309,6 +316,7 @@ typedef struct {
     VariableItemList* settings_list;
     Widget* widget;
     VariableItem* trainer_items[MorseFlipperTrainerSettingChars + 1U];
+    VariableItem* straight_cfg_items[3];
     View* live_view;
     Gui* gui;
     DialogsApp* dialogs;
@@ -354,6 +362,8 @@ typedef struct {
     uint8_t trainer_farn_wpm;
     uint8_t trainer_to_s;
     uint8_t trainer_gap_s;
+    uint8_t sk_to_s;
+    uint8_t sk_gap_s;
     uint8_t trainer_char_idx;
     uint8_t trainer_mark_idx;
     uint8_t session_wait_draw_s;
@@ -375,6 +385,7 @@ typedef struct {
     uint32_t straight_next_at;
     uint32_t straight_last_input_at;
     uint32_t straight_mark_started_at;
+    uint16_t straight_dit_ms;
     uint32_t session_last_input_at;
     uint32_t session_result_until;
     uint32_t session_next_group_at;
@@ -449,7 +460,9 @@ static void morse_flipper_release_all_notes(MorseFlipperApp* app);
 static void morse_flipper_load_config(MorseFlipperApp* app);
 static void morse_flipper_save_config(const MorseFlipperApp* app);
 static uint8_t morse_flipper_local_wpm(const MorseFlipperApp* app);
+static uint8_t morse_flipper_straight_wpm(const MorseFlipperApp* app);
 static void morse_flipper_train_fix(MorseFlipperApp* app);
+static void morse_flipper_sk_fix(MorseFlipperApp* app);
 static void morse_flipper_set_pc_mode(MorseFlipperApp* app, uint8_t mode);
 static void morse_flipper_handle_midi_rx(MorseFlipperApp* app);
 static void morse_flipper_update_sidetone(MorseFlipperApp* app);
@@ -506,6 +519,7 @@ static uint8_t morse_flipper_input_value_index(uint8_t source);
 static uint8_t morse_flipper_keyer_value_index(uint8_t mode);
 static uint16_t morse_flipper_wpm_to_dit_ms(uint8_t wpm);
 static uint16_t morse_flipper_current_dit_ms(const MorseFlipperApp* app);
+static uint16_t morse_flipper_sk_dit(const MorseFlipperApp* app);
 static uint32_t morse_flipper_note_source_for_paddle(uint8_t paddle);
 static uint8_t morse_flipper_note_for_paddle(uint8_t paddle);
 static const GpioPin* morse_flipper_gpio_pin_ptr(uint8_t pin_idx);
@@ -615,6 +629,29 @@ static void morse_flipper_set_local_wpm(MorseFlipperApp* app, uint8_t wpm) {
     morse_flipper_cw_decoder_init(&app->tx_decoder, morse_flipper_current_dit_ms(app));
     morse_flipper_cw_decoder_init(&app->gpio_decoder, morse_flipper_current_dit_ms(app));
     morse_flipper_refresh_keyer(app, furi_get_tick());
+}
+
+static uint8_t morse_flipper_straight_wpm(const MorseFlipperApp* app)
+{
+    uint16_t dit;
+    uint8_t wpm;
+
+    if(app == NULL) return 0U;
+    dit = app->straight_dit_ms ? app->straight_dit_ms : MORSE_FLIPPER_DEFAULT_DIT_MS;
+    wpm = (uint8_t)((1200U + (dit / 2U)) / dit);
+    if(wpm < 10U) wpm = 10U;
+    if(wpm > 30U) wpm = 30U;
+    return wpm;
+}
+
+static void morse_flipper_set_straight_wpm(MorseFlipperApp* app, uint8_t wpm)
+{
+    if(app == NULL) return;
+
+    if(wpm < 10U) wpm = 10U;
+    if(wpm > 30U) wpm = 30U;
+    app->straight_dit_ms = morse_flipper_wpm_to_dit_ms(wpm);
+    morse_flipper_sk_fix(app);
 }
 
 static uint16_t morse_flipper_trainer_farnsworth_unit_ms(const MorseFlipperApp* app) {
@@ -763,6 +800,12 @@ static uint16_t morse_flipper_current_dit_ms(const MorseFlipperApp* app) {
     }
 
     return app->trainer.local_dit_ms ? app->trainer.local_dit_ms : MORSE_FLIPPER_DEFAULT_DIT_MS;
+}
+
+static uint16_t morse_flipper_sk_dit(const MorseFlipperApp* app)
+{
+    if(app == NULL) return MORSE_FLIPPER_DEFAULT_DIT_MS;
+    return app->straight_dit_ms ? app->straight_dit_ms : MORSE_FLIPPER_DEFAULT_DIT_MS;
 }
 
 static uint8_t morse_flipper_current_wpm(const MorseFlipperApp* app) {
@@ -1129,7 +1172,7 @@ static void morse_flipper_start_straight_round(MorseFlipperApp* app, uint32_t no
     if(app == NULL) return;
 
     morse_flipper_reset_straight_state(app, now_ms);
-    morse_flipper_straight_trainer_start( &app->straight_trainer, morse_trainer_charset(&app->trainer), morse_flipper_current_dit_ms(app));
+    morse_flipper_straight_trainer_start( &app->straight_trainer, morse_trainer_charset(&app->trainer), morse_flipper_sk_dit(app));
     app->sk_started = true;
     app->straight_playback_active = true;
     app->sk_play_mark = false;
@@ -1201,7 +1244,7 @@ static void morse_flipper_tick_straight(MorseFlipperApp* app, uint32_t now_ms) {
 
     if(app->straight_playback_active && now_ms >= app->straight_next_at) {
         morse = morse_flipper_straight_trainer_target_morse(&app->straight_trainer);
-        dit_ms = morse_flipper_current_dit_ms(app);
+        dit_ms = morse_flipper_sk_dit(app);
         len = strlen(morse);
 
         if(!app->sk_play_mark) {
@@ -1234,7 +1277,7 @@ static void morse_flipper_tick_straight(MorseFlipperApp* app, uint32_t now_ms) {
 
     if(app->sk_wait &&
        morse_flipper_straight_trainer_answer(&app->straight_trainer)[0] != '\0') {
-        uint32_t settle = morse_flipper_current_dit_ms(app) * 6U;
+        uint32_t settle = morse_flipper_sk_dit(app) * 6U;
 
         if(settle < MORSE_FLIPPER_STRAIGHT_SETTLE_MS) settle = MORSE_FLIPPER_STRAIGHT_SETTLE_MS;
         if(now_ms - app->straight_last_input_at >= settle) {

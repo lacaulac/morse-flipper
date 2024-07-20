@@ -350,6 +350,72 @@ static void morse_flipper_trainer_group_pause_changed(VariableItem* item) {
     morse_flipper_save_config(app);
 }
 
+static void morse_flipper_straight_menu_refresh(MorseFlipperApp* app)
+{
+    VariableItem* it;
+    char txt[4];
+    uint8_t idx;
+
+    if(app == NULL) return;
+
+    morse_flipper_sk_fix(app);
+
+    it = app->straight_cfg_items[0];
+    if(it) {
+        idx = (uint8_t)(morse_flipper_straight_wpm(app) - 10U);
+        variable_item_set_current_value_index(it, idx);
+        snprintf(txt, sizeof(txt), "%u", (unsigned)(idx + 10U));
+        variable_item_set_current_value_text(it, txt);
+    }
+
+    it = app->straight_cfg_items[1];
+    if(it) {
+        idx = (uint8_t)(app->sk_to_s - MORSE_FLIPPER_STRAIGHT_TIMEOUT_MIN_S);
+        variable_item_set_current_value_index(it, idx);
+        snprintf(txt, sizeof(txt), "%u", (unsigned)app->sk_to_s);
+        variable_item_set_current_value_text(it, txt);
+    }
+
+    it = app->straight_cfg_items[2];
+    if(it) {
+        idx = (uint8_t)(app->sk_gap_s - MORSE_FLIPPER_STRAIGHT_NEXT_MIN_S);
+        variable_item_set_current_value_index(it, idx);
+        snprintf(txt, sizeof(txt), "%u", (unsigned)app->sk_gap_s);
+        variable_item_set_current_value_text(it, txt);
+    }
+}
+
+static void morse_flipper_straight_wpm_changed(VariableItem* item)
+{
+    MorseFlipperApp* app = variable_item_get_context(item);
+    uint8_t idx = variable_item_get_current_value_index(item);
+    uint8_t w = (uint8_t)(10U + idx);
+
+    morse_flipper_set_straight_wpm(app, w);
+    morse_flipper_straight_menu_refresh(app);
+    morse_flipper_save_config(app);
+}
+
+static void morse_flipper_straight_timeout_changed(VariableItem* item)
+{
+    MorseFlipperApp* app = variable_item_get_context(item);
+    uint8_t idx = variable_item_get_current_value_index(item);
+
+    app->sk_to_s = (uint8_t)(MORSE_FLIPPER_STRAIGHT_TIMEOUT_MIN_S + idx);
+    morse_flipper_straight_menu_refresh(app);
+    morse_flipper_save_config(app);
+}
+
+static void morse_flipper_straight_next_changed(VariableItem* item)
+{
+    MorseFlipperApp* app = variable_item_get_context(item);
+    uint8_t idx = variable_item_get_current_value_index(item);
+
+    app->sk_gap_s = (uint8_t)(MORSE_FLIPPER_STRAIGHT_NEXT_MIN_S + idx);
+    morse_flipper_straight_menu_refresh(app);
+    morse_flipper_save_config(app);
+}
+
 static void morse_flipper_trainer_group_size_changed(VariableItem* item) {
     MorseFlipperApp* app = variable_item_get_context(item);
     uint8_t idx = variable_item_get_current_value_index(item);
@@ -636,6 +702,56 @@ static void morse_flipper_scene_trainer_on_enter(void* context) {
 static void morse_flipper_scene_trainer_on_exit(void* context) {
     MorseFlipperApp* app = context;
     scene_manager_set_scene_state( app->scene_manager, MorseFlipperSceneTrainer, morse_flipper_settings_list_state(app->settings_list));
+    variable_item_list_reset(app->settings_list);
+}
+
+static void morse_flipper_scene_straight_cfg_on_enter(void* context)
+{
+    MorseFlipperApp* app = context;
+    VariableItem* item;
+    uint32_t sel = scene_manager_get_scene_state(app->scene_manager, MorseFlipperSceneStraightCfg);
+
+    morse_flipper_scene_enter_now(app, MorseFlipperSceneStraightCfg);
+    variable_item_list_reset(app->settings_list);
+    memset(app->straight_cfg_items, 0, sizeof(app->straight_cfg_items));
+    variable_item_list_set_enter_callback( app->settings_list, morse_flipper_settings_noop_enter, app);
+
+        item = variable_item_list_add( app->settings_list, "WPM", 21U, morse_flipper_straight_wpm_changed, app);
+    app->straight_cfg_items[0] = item;
+    variable_item_set_current_value_index(item, 0U);
+    variable_item_set_current_value_text(item, "10");
+
+    item = variable_item_list_add(
+        app->settings_list,
+        "Answer timeout",
+        (uint8_t)(MORSE_FLIPPER_STRAIGHT_TIMEOUT_MAX_S -
+                  MORSE_FLIPPER_STRAIGHT_TIMEOUT_MIN_S + 1U),
+        morse_flipper_straight_timeout_changed,
+        app);
+    app->straight_cfg_items[1] = item;
+    variable_item_set_current_value_index(item, 0U);
+    variable_item_set_current_value_text(item, "3");
+
+    item = variable_item_list_add(
+        app->settings_list,
+        "Next delay",
+        (uint8_t)(MORSE_FLIPPER_STRAIGHT_NEXT_MAX_S -
+                  MORSE_FLIPPER_STRAIGHT_NEXT_MIN_S + 1U),
+        morse_flipper_straight_next_changed,
+        app);
+    app->straight_cfg_items[2] = item;
+    variable_item_set_current_value_index(item, 0U);
+    variable_item_set_current_value_text(item, "3");
+
+    morse_flipper_straight_menu_refresh(app);
+    if((sel & 0xffU) > 2U) sel = 0U;
+    morse_flipper_settings_list_restore(app->settings_list, sel);
+}
+
+static void morse_flipper_scene_straight_cfg_on_exit(void* context)
+{
+    MorseFlipperApp* app = context;
+    scene_manager_set_scene_state( app->scene_manager, MorseFlipperSceneStraightCfg, morse_flipper_settings_list_state(app->settings_list));
     variable_item_list_reset(app->settings_list);
 }
 

@@ -67,6 +67,7 @@ static uint8_t morse_flipper_scene_view(uint32_t scene)
     switch(scene) {
     case MorseFlipperSceneHome:
     case MorseFlipperSceneTrainer:
+    case MorseFlipperSceneStraightCfg:
     case MorseFlipperScenePc:
     case MorseFlipperSceneGpio:
         return MorseFlipperViewSettings;
