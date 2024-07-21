@@ -185,7 +185,7 @@ static bool morse_flipper_straight_input( MorseFlipperApp* app, const InputEvent
             app->sk_down = false;
             app->straight_mark_started_at = 0U;
             if(dt != 0U) {
-                morse_flipper_feed_sk_mark(app, dt);
+                morse_flipper_feed_sk_mark(app, dt, now_ms);
                 morse_flipper_view_dirty(app);
             }
         }

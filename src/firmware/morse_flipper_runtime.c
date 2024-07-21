@@ -128,14 +128,19 @@ static void morse_flipper_feed_gpio_edge(MorseFlipperApp* app, bool level, uint3
     app->gpio_gap_flushed = level;
 }
 
-static void morse_flipper_feed_sk_mark(MorseFlipperApp* app, uint16_t mark_ms) {
+static void morse_flipper_feed_sk_mark(MorseFlipperApp* app, uint16_t mark_ms, uint32_t now_ms) {
     char elem;
+    uint16_t gap_ms = 0U;
 
     if(app == NULL || mark_ms == 0U) return;
 
-    elem = mark_ms >= (morse_flipper_current_dit_ms(app) * 2U) ? '-' : '.';
-    morse_flipper_straight_trainer_feed(&app->straight_trainer, elem, mark_ms);
-    app->straight_last_input_at = furi_get_tick();
+    if(app->straight_mark_started_at != 0U && app->straight_last_input_at != 0U &&
+       app->straight_mark_started_at > app->straight_last_input_at)
+        gap_ms = (uint16_t)(app->straight_mark_started_at - app->straight_last_input_at);
+
+    elem = mark_ms >= (morse_flipper_sk_dit(app) * 2U) ? '-' : '.';
+    morse_flipper_straight_trainer_feed(&app->straight_trainer, elem, mark_ms, gap_ms);
+    app->straight_last_input_at = now_ms;
 
     if(strlen(morse_flipper_straight_trainer_answer(&app->straight_trainer)) >=
        strlen(morse_flipper_straight_trainer_target_morse(&app->straight_trainer))) {
@@ -292,7 +297,7 @@ static void morse_flipper_poll(MorseFlipperApp* app) {
     if(app->screen == MorseFlipperScreenStraight && !raw_straight &&
        app->straight_mark_started_at != 0U && app->sk_down) {
         app->sk_down = false;
-        morse_flipper_feed_sk_mark(app, (uint16_t)(now_ms - app->straight_mark_started_at));
+        morse_flipper_feed_sk_mark(app, (uint16_t)(now_ms - app->straight_mark_started_at), now_ms);
         app->straight_mark_started_at = 0U;
     } else if(app->screen == MorseFlipperScreenStraight && raw_straight &&
               !app->sk_down && app->sk_wait) {
