@@ -141,20 +141,6 @@ static void morse_flipper_feed_sk_mark(MorseFlipperApp* app, uint16_t mark_ms, u
     elem = mark_ms >= (morse_flipper_sk_dit(app) * 2U) ? '-' : '.';
     morse_flipper_straight_trainer_feed(&app->straight_trainer, elem, mark_ms, gap_ms);
     app->straight_last_input_at = now_ms;
-
-    if(strlen(morse_flipper_straight_trainer_answer(&app->straight_trainer)) >=
-       strlen(morse_flipper_straight_trainer_target_morse(&app->straight_trainer))) {
-        app->sk_wait = false;
-        app->sk_done = true;
-        app->straight_trainer.active = false;
-        morse_trainer_note_straight_attempt(
-            &app->straight_stats,
-            morse_flipper_straight_trainer_target_char(&app->straight_trainer),
-            morse_flipper_straight_trainer_average_mark_error_ms(&app->straight_trainer),
-            morse_flipper_straight_trainer_average_drift_percent(&app->straight_trainer),
-            morse_flipper_straight_trainer_target_morse(&app->straight_trainer),
-            morse_flipper_straight_trainer_answer(&app->straight_trainer));
-    }
 }
 
 

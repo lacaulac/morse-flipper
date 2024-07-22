@@ -280,6 +280,8 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
             canvas_draw_str(canvas, 2, 64, "playing  Bk back");
         } else if(app->sk_wait) {
             canvas_draw_str(canvas, 2, 64, morse_flipper_straight_wait_hint(app, browse_line, sizeof(browse_line)));
+        } else if(app->sk_done) {
+            canvas_draw_str(canvas, 2, 64, "next soon  Bk back");
         } else {
             canvas_draw_str(canvas, 2, 64, "OK next  Bk back");
         }

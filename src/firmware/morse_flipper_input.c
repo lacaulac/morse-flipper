@@ -192,7 +192,8 @@ static bool morse_flipper_straight_input( MorseFlipperApp* app, const InputEvent
         return true;
     }
 
-    if(!app->straight_playback_active && !app->sk_wait && event->key == InputKeyOk &&
+    if(!app->straight_playback_active && !app->sk_wait && !app->sk_done &&
+       event->key == InputKeyOk &&
        (event->type == InputTypeShort || event->type == InputTypeLong)) {
         morse_flipper_start_straight_round(app, now_ms);
         return true;
