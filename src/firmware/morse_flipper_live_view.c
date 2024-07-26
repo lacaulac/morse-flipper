@@ -5,6 +5,102 @@ static void morse_flipper_draw_left_exit_hint(Canvas* canvas) {
     canvas_draw_box(canvas, 127, 29, 1, 7);
 }
 
+static uint8_t morse_flipper_straight_units_from_ms(uint16_t ms, uint16_t dit_ms)
+{
+    uint32_t u;
+
+    if(dit_ms == 0U) return 1U;
+    u = (ms + (dit_ms / 2U)) / dit_ms;
+    if(u == 0U) u = 1U;
+    if(u > 9U) u = 9U;
+    return (uint8_t)u;
+}
+
+static void morse_flipper_draw_sk_strip(
+    Canvas* canvas,
+    uint8_t x,
+    uint8_t y,
+    uint8_t w,
+    const char* code,
+    const uint16_t* marks_ms,
+    const uint16_t* spaces_ms,
+    uint16_t dit_ms,
+    uint8_t ref_units,
+    bool use_ms)
+{
+    uint8_t unit_px;
+    uint8_t low_y = y + 6U;
+    uint8_t hi_y = y + 1U;
+    uint8_t pos;
+    size_t i;
+
+    if(canvas == NULL || code == NULL || ref_units == 0U) return;
+    unit_px = w / (uint8_t)(ref_units + 1U);
+    if(unit_px < 2U) unit_px = 2U;
+    pos = x;
+
+    canvas_draw_line(canvas, pos, low_y, pos + unit_px, low_y);
+    pos = (uint8_t)(pos + unit_px);
+
+    for(i = 0U; code[i] != '\0'; i++) {
+        uint8_t u = 1U;
+        uint8_t px;
+
+        if(use_ms) {
+            if(marks_ms == NULL || marks_ms[i] == 0U) break;
+            u = morse_flipper_straight_units_from_ms(marks_ms[i], dit_ms);
+        } else {
+            u = code[i] == '-' ? 3U : 1U;
+        }
+
+        px = (uint8_t)(u * unit_px);
+        canvas_draw_line(canvas, pos, low_y, pos, hi_y);
+        canvas_draw_line(canvas, pos, hi_y, pos + px, hi_y);
+        pos = (uint8_t)(pos + px);
+        canvas_draw_line(canvas, pos, hi_y, pos, low_y);
+
+        if(code[i + 1U] == '\0') break;
+
+        if(use_ms) {
+            if(spaces_ms == NULL || spaces_ms[i] == 0U) break;
+            u = morse_flipper_straight_units_from_ms(spaces_ms[i], dit_ms);
+        } else {
+            u = 1U;
+        }
+
+        px = (uint8_t)(u * unit_px);
+        canvas_draw_line(canvas, pos, low_y, pos + px, low_y);
+        pos = (uint8_t)(pos + px);
+    }
+}
+
+static void morse_flipper_draw_sk_met(Canvas* canvas, const MorseFlipperApp* app)
+{
+    char line[32];
+    char cnt[24];
+    unsigned pct = 0U;
+
+    if(canvas == NULL || app == NULL) return;
+
+    canvas_set_font(canvas, FontKeyboard);
+    if(morse_flipper_straight_trainer_answer(&app->straight_trainer)[0] == '\0' && app->sk_done) {
+        snprintf(line, sizeof(line), "S -- di -- da -- r0.00");
+    } else {
+        snprintf(line, sizeof(line), "%s", morse_flipper_straight_trainer_metrics_line(&app->straight_trainer));
+    }
+
+    if(app->straight_session_total != 0U)
+        pct = ((unsigned)app->straight_session_good * 100U) / app->straight_session_total;
+    snprintf(cnt, sizeof(cnt), "%u/%u %u%%",
+        (unsigned)app->straight_session_good,
+        (unsigned)app->straight_session_total,
+        pct);
+
+    canvas_draw_str(canvas, 2, 46, line);
+    canvas_draw_str(canvas, 2, 56, app->straight_worst_line[0] ? app->straight_worst_line : "Wo: -");
+    canvas_draw_str(canvas, 2, 64, cnt);
+}
+
 static const char* morse_flipper_help_title(uint8_t idx) {
     switch(idx) {
     case MorseFlipperHelpFirstSteps:
@@ -240,51 +336,42 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
             return;
         }
 
-        snprintf(
-            trainer_line,
-            sizeof(trainer_line),
-            "1ch %c %s",
-            morse_flipper_straight_trainer_target_char(&app->straight_trainer),
-            morse_flipper_straight_trainer_target_morse(&app->straight_trainer));
-        snprintf(
-            trainer_line2,
-            sizeof(trainer_line2),
-            "ans %s",
-            morse_flipper_straight_trainer_answer(&app->straight_trainer));
-        snprintf(
-            trainer_line3,
-            sizeof(trainer_line3),
-            "err %u drift %u%%",
-            (unsigned)morse_flipper_straight_trainer_average_mark_error_ms(&app->straight_trainer),
-            (unsigned)morse_flipper_straight_trainer_average_drift_percent(&app->straight_trainer));
-        snprintf(
-            tone_line,
-            sizeof(tone_line),
-            "best %c/%u  worst %c/%u",
-            app->straight_stats.have_best ? app->straight_stats.best_char : '-',
-            (unsigned)app->straight_stats.best_error_ms,
-            app->straight_stats.have_worst ? app->straight_stats.worst_char : '-',
-            (unsigned)app->straight_stats.worst_error_ms);
-        canvas_draw_str(canvas, 2, 10, trainer_line);
-        canvas_draw_str(canvas, 2, 22, trainer_line2);
-        canvas_draw_str(canvas, 2, 34, trainer_line3);
+        canvas_draw_frame(canvas, 2, 2, 28, 28);
+        canvas_set_font(canvas, FontPrimary);
+        snprintf(trainer_line, sizeof(trainer_line), "%c", morse_flipper_straight_trainer_target_char(&app->straight_trainer));
         canvas_draw_str(
             canvas,
-            2,
-            46,
-            morse_flipper_straight_trainer_error_bars(&app->straight_trainer)[0] != '\0' ?
-                morse_flipper_straight_trainer_error_bars(&app->straight_trainer) :
-                morse_flipper_straight_trainer_timing_view(&app->straight_trainer));
-        canvas_draw_str(canvas, 2, 58, tone_line);
-        if(app->straight_playback_active) {
-            canvas_draw_str(canvas, 2, 64, "playing  Bk back");
-        } else if(app->sk_wait) {
-            canvas_draw_str(canvas, 2, 64, morse_flipper_straight_wait_hint(app, browse_line, sizeof(browse_line)));
-        } else if(app->sk_done) {
-            canvas_draw_str(canvas, 2, 64, "next soon  Bk back");
-        } else {
-            canvas_draw_str(canvas, 2, 64, "OK next  Bk back");
+            (uint8_t)(16U - (canvas_string_width(canvas, trainer_line) / 2U)),
+            19,
+            trainer_line);
+
+        morse_flipper_draw_sk_strip(
+            canvas,
+            34,
+            6,
+            90,
+            morse_flipper_straight_trainer_target_morse(&app->straight_trainer),
+            app->straight_trainer.target_marks_ms,
+            NULL,
+            morse_flipper_sk_dit(app),
+            morse_flipper_straight_trainer_ref_units_max(&app->straight_trainer),
+            false);
+
+        if(app->sk_done) {
+            morse_flipper_draw_sk_strip(
+                canvas,
+                34,
+                20,
+                90,
+                morse_flipper_straight_trainer_answer(&app->straight_trainer),
+                app->straight_trainer.answer_marks_ms,
+                app->straight_trainer.answer_spaces_ms,
+                morse_flipper_sk_dit(app),
+                morse_flipper_straight_trainer_ref_units_max(&app->straight_trainer),
+                true);
         }
+
+        morse_flipper_draw_sk_met(canvas, app);
         return;
     }
 

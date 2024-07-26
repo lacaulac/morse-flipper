@@ -548,7 +548,6 @@ static const char* morse_flipper_status_line( const MorseFlipperApp* app, char* 
 static const char* morse_flipper_free_practice_hint( const MorseFlipperApp* app, char* buf, size_t buf_sz);
 static const char* morse_flipper_trace_hint( const MorseFlipperApp* app, char* buf, size_t buf_sz);
 static const char* morse_flipper_pc_hint(const MorseFlipperApp* app, char* buf, size_t buf_sz);
-static const char* morse_flipper_straight_wait_hint( const MorseFlipperApp* app, char* buf, size_t buf_sz);
 static void morse_flipper_settings_noop_enter(void* context, uint32_t index);
 static void morse_flipper_settings_enter_callback(void* context, uint32_t index);
 static void morse_flipper_settings_wpm_changed(VariableItem* item);
@@ -1006,21 +1005,6 @@ static const char* morse_flipper_pc_hint(const MorseFlipperApp* app, char* buf, 
     }
 
     snprintf(buf, buf_sz, "gpio key U/D mode");
-    return buf;
-}
-
-static const char* morse_flipper_straight_wait_hint( const MorseFlipperApp* app, char* buf, size_t buf_sz) {
-    if(app->in_src == MorseFlipperInputSourceButtons) {
-        snprintf(buf, buf_sz, "OK key  Bk back");
-        return buf;
-    }
-
-    if(app->in_src == MorseFlipperInputSourceStraight) {
-        snprintf(buf, buf_sz, "%s key  Bk back", morse_flipper_gpio_name(app->gpio_straight_idx));
-        return buf;
-    }
-
-    snprintf(buf, buf_sz, "%s key  Bk back", morse_flipper_gpio_name(app->gpio_straight_idx));
     return buf;
 }
 
