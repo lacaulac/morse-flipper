@@ -76,17 +76,55 @@ static void morse_flipper_draw_sk_strip(
 
 static void morse_flipper_draw_sk_met(Canvas* canvas, const MorseFlipperApp* app)
 {
-    char line[32];
+    char s_txt[8];
+    char di_txt[8];
+    char da_txt[8];
+    char ra_txt[8];
     char cnt[24];
     unsigned pct = 0U;
+    uint8_t x;
 
     if(canvas == NULL || app == NULL) return;
 
-    canvas_set_font(canvas, FontKeyboard);
     if(morse_flipper_straight_trainer_answer(&app->straight_trainer)[0] == '\0' && app->sk_done) {
-        snprintf(line, sizeof(line), "S -- di -- da -- r0.00");
+        snprintf(s_txt, sizeof(s_txt), "--");
+        snprintf(di_txt, sizeof(di_txt), "--");
+        snprintf(da_txt, sizeof(da_txt), "--");
+        snprintf(ra_txt, sizeof(ra_txt), "0.00");
     } else {
-        snprintf(line, sizeof(line), "%s", morse_flipper_straight_trainer_metrics_line(&app->straight_trainer));
+        snprintf(
+            s_txt,
+            sizeof(s_txt),
+            "%s",
+            morse_flipper_straight_trainer_worst_space_score(&app->straight_trainer) >= 90U ?
+                "OK" :
+                "");
+        if(s_txt[0] == '\0')
+            snprintf(s_txt, sizeof(s_txt), "%u", (unsigned)morse_flipper_straight_trainer_worst_space_score(&app->straight_trainer));
+        snprintf(
+            di_txt,
+            sizeof(di_txt),
+            "%s",
+            morse_flipper_straight_trainer_worst_dit_score(&app->straight_trainer) >= 90U ?
+                "OK" :
+                "");
+        if(di_txt[0] == '\0')
+            snprintf(di_txt, sizeof(di_txt), "%u", (unsigned)morse_flipper_straight_trainer_worst_dit_score(&app->straight_trainer));
+        snprintf(
+            da_txt,
+            sizeof(da_txt),
+            "%s",
+            morse_flipper_straight_trainer_worst_dah_score(&app->straight_trainer) >= 90U ?
+                "OK" :
+                "");
+        if(da_txt[0] == '\0')
+            snprintf(da_txt, sizeof(da_txt), "%u", (unsigned)morse_flipper_straight_trainer_worst_dah_score(&app->straight_trainer));
+        snprintf(
+            ra_txt,
+            sizeof(ra_txt),
+            "%u.%02u",
+            (unsigned)(morse_flipper_straight_trainer_ratio_x100(&app->straight_trainer) / 100U),
+            (unsigned)(morse_flipper_straight_trainer_ratio_x100(&app->straight_trainer) % 100U));
     }
 
     if(app->straight_session_total != 0U)
@@ -96,9 +134,18 @@ static void morse_flipper_draw_sk_met(Canvas* canvas, const MorseFlipperApp* app
         (unsigned)app->straight_session_total,
         pct);
 
-    canvas_draw_str(canvas, 2, 46, line);
+    canvas_set_font(canvas, FontKeyboard);
+    canvas_draw_str(canvas, 2, 46, "S");
+    canvas_draw_str(canvas, 10, 46, s_txt);
+    canvas_draw_str(canvas, 28, 46, "di");
+    canvas_draw_str(canvas, 42, 46, di_txt);
+    canvas_draw_str(canvas, 62, 46, "da");
+    canvas_draw_str(canvas, 76, 46, da_txt);
+    canvas_draw_str(canvas, 96, 46, "r");
+    canvas_draw_str(canvas, 102, 46, ra_txt);
     canvas_draw_str(canvas, 2, 56, app->straight_worst_line[0] ? app->straight_worst_line : "Wo: -");
-    canvas_draw_str(canvas, 2, 64, cnt);
+    x = (uint8_t)(126U - canvas_string_width(canvas, cnt));
+    canvas_draw_str(canvas, x, 64, cnt);
 }
 
 static const char* morse_flipper_help_title(uint8_t idx) {
