@@ -73,6 +73,7 @@ const char* morse_trainer_phase_name(const MorseTrainer* trainer);
 int16_t morse_trainer_last_score(const MorseTrainer* trainer);
 bool morse_trainer_last_failed(const MorseTrainer* trainer);
 bool morse_trainer_session_active(const MorseTrainer* trainer);
+bool morse_trainer_session_has_next(const MorseTrainer* trainer);
 uint8_t morse_trainer_session_index(const MorseTrainer* trainer);
 uint8_t morse_trainer_session_total(const MorseTrainer* trainer);
 bool morse_trainer_session_aborted(const MorseTrainer* trainer);

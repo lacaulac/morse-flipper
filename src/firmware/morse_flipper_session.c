@@ -85,10 +85,8 @@ static void morse_flipper_queue_session_feedback(MorseFlipperApp* app, uint32_t 
     missed = morse_trainer_answer(&app->trainer)[0] == '\0';
     app->session_result_tone = !app->session_result_good;
     app->session_result_until = now_ms + MORSE_FLIPPER_SESSION_RESULT_MS;
-    app->session_next_group_at =
-        morse_trainer_session_active(&app->trainer) ?
-            (now_ms + ((uint32_t)app->trainer_gap_s * 1000U)) :
-            0U;
+    app->session_next_group_at = morse_trainer_session_has_next(&app->trainer) ?
+        (now_ms + ((uint32_t)app->trainer_gap_s * 1000U)) : 0U;
     app->session_wait_draw_s = 0xFFU;
     seq = &morse_flipper_led_good_twice;
     if(!app->session_result_good) {

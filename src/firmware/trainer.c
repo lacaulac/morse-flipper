@@ -466,6 +466,12 @@ bool morse_trainer_session_active(const MorseTrainer* trainer) {
     return trainer ? trainer->session_active : false;
 }
 
+bool morse_trainer_session_has_next(const MorseTrainer* trainer) {
+    if(trainer == NULL) return false;
+    if(!trainer->session_active) return false;
+    return trainer->session_index < trainer->session_groups;
+}
+
 uint8_t morse_trainer_session_index(const MorseTrainer* trainer) {
     return trainer ? trainer->session_index : 0U;
 }
