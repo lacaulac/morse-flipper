@@ -30,6 +30,30 @@ static void morse_trainer_note_session_result(MorseTrainer* trainer, bool missed
     }
 }
 
+static char morse_trainer_up(char ch) {
+    if(ch >= 'a' && ch <= 'z') return (char)(ch - ('a' - 'A'));
+    return ch;
+}
+
+static void morse_trainer_copy_reveal(MorseTrainer* trainer, const char* text) {
+    uint8_t wi = 0U;
+    uint8_t i = 0U;
+
+    if(trainer == NULL) return;
+
+    trainer->reveal[0] = '\0';
+    if(text == NULL) return;
+
+    while(text[i] != '\0' && wi + 1U < sizeof(trainer->reveal)) {
+        char ch = morse_trainer_up(text[i++]);
+
+        if(ch == ' ' || ch == '|') continue;
+        trainer->reveal[wi++] = ch;
+    }
+
+    trainer->reveal[wi] = '\0';
+}
+
 static uint32_t morse_trainer_rand(MorseTrainer* trainer) {
     trainer->rng_state = trainer->rng_state * 1664525U + 1013904223U;
     return trainer->rng_state;
@@ -326,6 +350,29 @@ int16_t morse_trainer_score_repeat(MorseTrainer* trainer) {
     return trainer->last_score;
 }
 
+int16_t morse_trainer_score_repeat_text(MorseTrainer* trainer, const char* text) {
+    size_t want_len;
+    size_t got_len;
+    size_t hit = 0U;
+    size_t i;
+
+    if(trainer == NULL) return -1;
+
+    morse_trainer_copy_reveal(trainer, text);
+    want_len = strlen(trainer->last_group);
+    got_len = strlen(trainer->reveal);
+
+    for(i = 0U; trainer->last_group[i] != '\0' && trainer->reveal[i] != '\0'; i++)
+        if(trainer->last_group[i] == trainer->reveal[i]) hit++;
+
+    trainer->last_score = want_len == 0U ? 0 : (int16_t)(((int32_t)hit * 100) / (int32_t)want_len);
+    trainer->last_failed =
+        trainer->reveal[0] == '\0' || want_len != got_len || strcmp(trainer->last_group, trainer->reveal) != 0;
+    trainer->phase = MorseTrainerPhaseDone;
+    morse_trainer_note_session_result(trainer, trainer->answer[0] == '\0');
+    return trainer->last_score;
+}
+
 void morse_trainer_reset_session(MorseTrainer* trainer) {
     if(trainer == NULL) return;
 
@@ -375,6 +422,10 @@ bool morse_trainer_next_session_group(MorseTrainer* trainer) {
 
 const char* morse_trainer_answer(const MorseTrainer* trainer) {
     return trainer ? trainer->answer : "";
+}
+
+const char* morse_trainer_reveal(const MorseTrainer* trainer) {
+    return trainer ? trainer->reveal : "";
 }
 
 MorseTrainerPhase morse_trainer_phase(const MorseTrainer* trainer) {

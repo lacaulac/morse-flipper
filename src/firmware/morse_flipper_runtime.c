@@ -143,6 +143,23 @@ static void morse_flipper_feed_sk_mark(MorseFlipperApp* app, uint16_t mark_ms, u
     app->straight_last_input_at = now_ms;
 }
 
+static uint32_t morse_flipper_straight_answer_settle_ms(const MorseFlipperApp* app)
+{
+    uint32_t dit_ms;
+    uint8_t target_symbols;
+    uint8_t answer_symbols;
+
+    if(app == NULL) return 0U;
+
+    dit_ms = morse_flipper_sk_dit(app);
+    target_symbols = morse_flipper_straight_trainer_target_symbol_count(&app->straight_trainer);
+    answer_symbols = morse_flipper_straight_trainer_answer_symbol_count(&app->straight_trainer);
+
+    if(answer_symbols == 0U) return 0U;
+    if(answer_symbols >= target_symbols) return dit_ms * 2U;
+    return dit_ms * 3U;
+}
+
 
 static void morse_flipper_sync_gpio_inputs(MorseFlipperApp* app, uint32_t now_ms) {
     bool straight_active = false;

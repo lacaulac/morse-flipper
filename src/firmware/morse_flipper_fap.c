@@ -32,7 +32,7 @@
 #define MORSE_FLIPPER_POLL_MS 5
 #define MORSE_FLIPPER_PREVIEW_TICKS 8
 #define MORSE_FLIPPER_CONFIG_PATH APP_DATA_PATH("config.bin")
-#define MORSE_FLIPPER_CONFIG_VERSION 7
+#define MORSE_FLIPPER_CONFIG_VERSION 8
 #define MORSE_FLIPPER_TONE_OFF_IDX 0xFFU
 #define MORSE_FLIPPER_DEFAULT_DIT_MS 100U
 #define MORSE_FLIPPER_SESSION_SETTLE_MS 1000U
@@ -79,7 +79,7 @@ static const GpioPin* const morse_flipper_gpio_pins[MORSE_FLIPPER_GPIO_PIN_COUNT
 static const GpioPin* morse_flipper_straight_pin = &gpio_ext_pa6;
 static const GpioPin* morse_flipper_dit_pin = &gpio_ext_pc3;
 static const GpioPin* morse_flipper_dah_pin = &gpio_ext_pb3;
-static const GpioPin* morse_flipper_ground_pin = &gpio_ext_pa7;
+static const GpioPin* morse_flipper_ground_pin = NULL;
 
 typedef struct MorseFlipperApp {
     const char* name;
@@ -146,6 +146,7 @@ typedef enum {
 typedef enum {
     MorseFlipperHelpFirstSteps = 0,
     MorseFlipperHelpInputKeys,
+    MorseFlipperHelpConnectingPaddle,
     MorseFlipperHelpLcwo,
     MorseFlipperHelpPrepping,
     MorseFlipperHelpContact,
@@ -724,6 +725,18 @@ static uint8_t morse_flipper_gpio_no_p2(uint8_t pin_idx, uint8_t def) {
     return pin_idx == MorseFlipperGpioPinP2 ? def : pin_idx;
 }
 
+static const GpioPin* morse_flipper_gpio_ground_pin_ptr(uint8_t pin_idx) {
+    if(pin_idx == MORSE_FLIPPER_GPIO_PIN_NONE) {
+        return NULL;
+    }
+
+    if(!morse_flipper_gpio_pin_valid(pin_idx)) {
+        return morse_flipper_gpio_pins[morse_flipper_gpio_default_ground()];
+    }
+
+    return morse_flipper_gpio_pins[pin_idx];
+}
+
 static void morse_flipper_gpio_bind_from_app(const MorseFlipperApp* app) {
     morse_flipper_straight_pin = morse_flipper_gpio_pin_ptr(
         morse_flipper_gpio_no_p2(app->gpio_straight_idx, morse_flipper_gpio_default_straight()));
@@ -731,7 +744,7 @@ static void morse_flipper_gpio_bind_from_app(const MorseFlipperApp* app) {
         morse_flipper_gpio_no_p2(app->gpio_dit_idx, morse_flipper_gpio_default_dit()));
     morse_flipper_dah_pin = morse_flipper_gpio_pin_ptr(
         morse_flipper_gpio_no_p2(app->gpio_dah_idx, morse_flipper_gpio_default_dah()));
-    morse_flipper_ground_pin = morse_flipper_gpio_pin_ptr(
+    morse_flipper_ground_pin = morse_flipper_gpio_ground_pin_ptr(
         morse_flipper_gpio_no_p2(app->gpio_ground_idx, morse_flipper_gpio_default_ground()));
 }
 
@@ -748,8 +761,10 @@ static void morse_flipper_gpio_apply(MorseFlipperApp* app) {
     furi_hal_gpio_init(morse_flipper_straight_pin, GpioModeInput, GpioPullUp, GpioSpeedLow);
     furi_hal_gpio_init(morse_flipper_dit_pin, GpioModeInput, GpioPullUp, GpioSpeedLow);
     furi_hal_gpio_init(morse_flipper_dah_pin, GpioModeInput, GpioPullUp, GpioSpeedLow);
-    furi_hal_gpio_init(morse_flipper_ground_pin, GpioModeOutputPushPull, GpioPullNo, GpioSpeedLow);
-    furi_hal_gpio_write(morse_flipper_ground_pin, false);
+    if(morse_flipper_ground_pin != NULL) {
+        furi_hal_gpio_init( morse_flipper_ground_pin, GpioModeOutputPushPull, GpioPullNo, GpioSpeedLow);
+        furi_hal_gpio_write(morse_flipper_ground_pin, false);
+    }
 }
 
 static void morse_flipper_gpio_alert(MorseFlipperApp* app, MorseFlipperGpioRule rule) {
@@ -1190,6 +1205,7 @@ static uint16_t morse_flipper_straight_attempt_sum(const MorseFlipperApp* app)
 
     if(app == NULL) return 0U;
     if(morse_flipper_straight_trainer_answer(&app->straight_trainer)[0] == '\0') return 0U;
+    if(!morse_flipper_straight_trainer_symbol_count_match(&app->straight_trainer)) return 0U;
     sum += morse_flipper_straight_trainer_worst_space_score(&app->straight_trainer);
     sum += morse_flipper_straight_trainer_worst_dit_score(&app->straight_trainer);
     sum += morse_flipper_straight_trainer_worst_dah_score(&app->straight_trainer);
@@ -1277,6 +1293,7 @@ static void morse_flipper_finish_sk(MorseFlipperApp* app, uint32_t now_ms)
     const char* answer;
     uint16_t err_ms;
     uint8_t drift_pct;
+    bool hard_fail;
 
     if(app == NULL) return;
 
@@ -1286,7 +1303,9 @@ static void morse_flipper_finish_sk(MorseFlipperApp* app, uint32_t now_ms)
     app->straight_next_at = now_ms + ((uint32_t)app->sk_gap_s * 1000U);
     morse_flipper_note_straight_session(app);
     answer = morse_flipper_straight_trainer_answer(&app->straight_trainer);
-    if(answer[0] == '\0') {
+    hard_fail = answer[0] == '\0' ||
+                !morse_flipper_straight_trainer_symbol_count_match(&app->straight_trainer);
+    if(hard_fail) {
         err_ms = 0xFFFFU;
         drift_pct = 100U;
     } else {
@@ -1411,10 +1430,10 @@ static void morse_flipper_tick_straight(MorseFlipperApp* app, uint32_t now_ms) {
 
     if(app->sk_wait &&
        morse_flipper_straight_trainer_answer(&app->straight_trainer)[0] != '\0') {
-        uint32_t settle = morse_flipper_sk_dit(app) * 6U;
+        uint32_t settle = morse_flipper_straight_answer_settle_ms(app);
 
-        if(settle < MORSE_FLIPPER_STRAIGHT_SETTLE_MS) settle = MORSE_FLIPPER_STRAIGHT_SETTLE_MS;
-        if(now_ms - app->straight_last_input_at >= settle) {
+        if(settle != 0U && !app->sk_down &&
+           now_ms - app->straight_last_input_at >= settle) {
             morse_flipper_finish_sk(app, now_ms);
             return;
         }

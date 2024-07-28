@@ -1,3 +1,5 @@
+static void morse_flipper_session_answer_text( const MorseFlipperApp* app, char* out, size_t out_sz, uint8_t max_chars);
+
 static void morse_flipper_reset_session_runtime(MorseFlipperApp* app) {
     if(app == NULL) return;
 
@@ -150,6 +152,7 @@ static void morse_flipper_tick_session(MorseFlipperApp* app, uint32_t now_ms) {
     uint32_t dt;
     uint32_t left_ms;
     uint8_t left_s;
+    char ans[MORSE_TRAINER_GROUP_CAP];
 
     if(app == NULL || app->screen != MorseFlipperScreenSession || !app->session_started) return;
 
@@ -204,7 +207,8 @@ static void morse_flipper_tick_session(MorseFlipperApp* app, uint32_t now_ms) {
 
     if(now_ms - app->session_last_input_at < dt) return;
 
-    morse_trainer_score_repeat(&app->trainer);
+    morse_flipper_session_answer_text(app, ans, sizeof(ans), morse_trainer_group_size(&app->trainer));
+    morse_trainer_score_repeat_text(&app->trainer, ans);
     morse_flipper_queue_session_feedback(app, now_ms);
 }
 
@@ -251,6 +255,18 @@ static void morse_flipper_session_answer_text( const MorseFlipperApp* app, char*
     if(out == NULL || out_sz == 0U) return;
     out[0] = '\0';
     if(app == NULL || max_chars == 0U) return;
+
+    if(morse_trainer_phase(&app->trainer) == MorseTrainerPhaseDone &&
+       morse_trainer_reveal(&app->trainer)[0] != '\0') {
+        uint8_t wi = 0U;
+        uint8_t i = 0U;
+
+        while(morse_trainer_reveal(&app->trainer)[i] != '\0' && wi + 1U < out_sz && wi < max_chars) {
+            out[wi++] = morse_trainer_reveal(&app->trainer)[i++];
+        }
+        out[wi] = '\0';
+        return;
+    }
 
     for(i = 0U; app->rf_tx_text[i] != '\0' && wi + 1U < out_sz && wi < max_chars; i++) {
         char ch = morse_flipper_upper_char(app->rf_tx_text[i]);

@@ -123,12 +123,13 @@ static void morse_flipper_scene_menu_help_on_enter(void* context) {
     submenu_set_header(app->submenu, "Help");
     submenu_add_item(app->submenu, "First steps", MorseFlipperHelpFirstSteps, morse_flipper_scene_menu_pick, app);
     submenu_add_item(app->submenu, "Input & keys", MorseFlipperHelpInputKeys, morse_flipper_scene_menu_pick, app);
+    submenu_add_item( app->submenu, "Connecting the paddle", MorseFlipperHelpConnectingPaddle, morse_flipper_scene_menu_pick, app);
     submenu_add_item(app->submenu, "LCWO", MorseFlipperHelpLcwo, morse_flipper_scene_menu_pick, app);
     submenu_add_item(app->submenu, "Prepping", MorseFlipperHelpPrepping, morse_flipper_scene_menu_pick, app);
     submenu_add_item(app->submenu, "A complete Morse contact", MorseFlipperHelpContact, morse_flipper_scene_menu_pick, app);
     submenu_add_item(app->submenu, "Contesting", MorseFlipperHelpContesting, morse_flipper_scene_menu_pick, app);
     submenu_add_item( app->submenu, "USB & live practice", MorseFlipperHelpUsbLive, morse_flipper_scene_menu_pick, app);
-	submenu_add_item( app->submenu, "Moving forward", MorseFlipperHelpMovingForward, morse_flipper_scene_menu_pick, app);
+    submenu_add_item( app->submenu, "Moving forward", MorseFlipperHelpMovingForward, morse_flipper_scene_menu_pick, app);
     if(sel >= MorseFlipperHelpCount) sel = MorseFlipperHelpFirstSteps;
     submenu_set_selected_item(app->submenu, sel);
 }

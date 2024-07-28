@@ -16,6 +16,10 @@ bool morse_flipper_gpio_pin_valid(uint8_t pin_idx) {
 }
 
 const char* morse_flipper_gpio_name(uint8_t pin_idx) {
+    if(pin_idx == MORSE_FLIPPER_GPIO_PIN_NONE) {
+        return "None";
+    }
+
     if(!morse_flipper_gpio_pin_valid(pin_idx)) {
         return "?";
     }
@@ -24,7 +28,7 @@ const char* morse_flipper_gpio_name(uint8_t pin_idx) {
 }
 
 uint8_t morse_flipper_gpio_default_straight(void) {
-    return MorseFlipperGpioPinP3;
+    return MorseFlipperGpioPinP7;
 }
 
 uint8_t morse_flipper_gpio_default_dit(void) {
@@ -41,7 +45,11 @@ uint8_t morse_flipper_gpio_default_ground(void) {
 
 MorseFlipperGpioRule morse_flipper_gpio_validate( uint8_t straight, uint8_t dit, uint8_t dah, uint8_t ground) {
     if(!morse_flipper_gpio_pin_valid(straight) || !morse_flipper_gpio_pin_valid(dit) ||
-       !morse_flipper_gpio_pin_valid(dah) || !morse_flipper_gpio_pin_valid(ground)) {
+       !morse_flipper_gpio_pin_valid(dah)) {
+        return MorseFlipperGpioRuleBadIndex;
+    }
+
+    if(ground != MORSE_FLIPPER_GPIO_PIN_NONE && !morse_flipper_gpio_pin_valid(ground)) {
         return MorseFlipperGpioRuleBadIndex;
     }
 
@@ -49,7 +57,8 @@ MorseFlipperGpioRule morse_flipper_gpio_validate( uint8_t straight, uint8_t dit,
         return MorseFlipperGpioRulePaddlesSharePin;
     }
 
-    if(ground == straight || ground == dit || ground == dah) {
+    if(ground != MORSE_FLIPPER_GPIO_PIN_NONE &&
+       (ground == straight || ground == dit || ground == dah)) {
         return MorseFlipperGpioRuleGroundShared;
     }
 

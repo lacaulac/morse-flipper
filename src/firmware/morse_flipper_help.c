@@ -36,6 +36,18 @@ static const char* const morse_help_input_keys[] = {
     "It is a compromise solution, but there is sadly no way around it - keyers want two buttons at once.",
 };
 
+static const char* const morse_help_connecting_paddle[] = {
+    "Use a 6.5 mm female jack, solder header pins on it, and plug it straight onto the Flipper. Simple is good here.",
+    "Use this wiring: P3 = gnd, P5 = sleeve = dah, P7 = tip = dit.",
+    "With this header layout, ground sits on P2 and P3. That is fine physically. The app should still use P3 as the default force ground.",
+    "The jack and cable should point outward, away from the screen and buttons. It is neater, sturdier, and less annoying than loose GPIO wires.",
+    "If your paddle uses a 3.5 mm plug, use a simple 3.5 mm to 6.5 mm adapter, just the usual audio sort.",
+    "A straight key fits the same header: P3 = gnd, P7 = key.",
+    "One adapter covers both cases: paddle on P3/P5/P7, straight key on P3/P7.",
+    "If your wiring does not match this layout, change it in Settings -> Main settings -> GPIO. You can move straight, dit, dah and the ground pin in there. This layout matches the female jack to the GPIO header with the least swaps.",
+    "Regardless of layout, you always need a ground. P3 can be reassigned if that is more convenient, or you can use the Flipper's normal ground pins. If your key has no ground contact, it will not work.",
+};
+
 static const char* const morse_help_lcwo[] = {
     "You can become perfectly competent at CW and still do most of your sending from a computer. I rarely touch my key unless I have to.",
     "LCWO.net is the gold standard for learning to tell letters apart by sound. It starts with two letters.",
@@ -141,6 +153,8 @@ static uint8_t morse_flipper_help_card_count(uint8_t t)
         return COUNT_OF(morse_help_first_steps);
     case MorseFlipperHelpInputKeys:
         return COUNT_OF(morse_help_input_keys);
+    case MorseFlipperHelpConnectingPaddle:
+        return COUNT_OF(morse_help_connecting_paddle);
     case MorseFlipperHelpLcwo:
         return COUNT_OF(morse_help_lcwo);
     case MorseFlipperHelpPrepping:
@@ -163,6 +177,8 @@ static const char* morse_flipper_help_card(uint8_t t, uint8_t i)
         return i < COUNT_OF(morse_help_first_steps) ? morse_help_first_steps[i] : "";
     case MorseFlipperHelpInputKeys:
         return i < COUNT_OF(morse_help_input_keys) ? morse_help_input_keys[i] : "";
+    case MorseFlipperHelpConnectingPaddle:
+        return i < COUNT_OF(morse_help_connecting_paddle) ? morse_help_connecting_paddle[i] : "";
     case MorseFlipperHelpLcwo:
         return i < COUNT_OF(morse_help_lcwo) ? morse_help_lcwo[i] : "";
     case MorseFlipperHelpPrepping:

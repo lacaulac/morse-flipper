@@ -48,5 +48,8 @@ uint16_t morse_flipper_straight_trainer_ratio_x100(const MorseFlipperStraightTra
 uint8_t morse_flipper_straight_trainer_target_total_units(const MorseFlipperStraightTrainer* trainer);
 uint8_t morse_flipper_straight_trainer_answer_total_units(const MorseFlipperStraightTrainer* trainer);
 uint8_t morse_flipper_straight_trainer_ref_units_max(const MorseFlipperStraightTrainer* trainer);
+uint8_t morse_flipper_straight_trainer_target_symbol_count(const MorseFlipperStraightTrainer* trainer);
+uint8_t morse_flipper_straight_trainer_answer_symbol_count(const MorseFlipperStraightTrainer* trainer);
+bool morse_flipper_straight_trainer_symbol_count_match(const MorseFlipperStraightTrainer* trainer);
 
 #endif

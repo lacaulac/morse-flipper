@@ -52,6 +52,16 @@ static uint8_t straight_units_total(const char* code)
     return total;
 }
 
+static uint8_t straight_symbol_count(const char* code)
+{
+    uint8_t n = 0U;
+
+    if(code == NULL) return 0U;
+
+    while(code[n] != '\0') n++;
+    return n;
+}
+
 static char straight_pick(MorseFlipperStraightTrainer* trainer, const char* charset)
 {
     uint32_t total = 0U;
@@ -376,4 +386,22 @@ uint8_t morse_flipper_straight_trainer_answer_total_units(const MorseFlipperStra
 uint8_t morse_flipper_straight_trainer_ref_units_max(const MorseFlipperStraightTrainer* trainer)
 {
     return trainer ? trainer->ref_units_max : 0U;
+}
+
+uint8_t morse_flipper_straight_trainer_target_symbol_count(const MorseFlipperStraightTrainer* trainer)
+{
+    return trainer ? straight_symbol_count(trainer->target_morse) : 0U;
+}
+
+uint8_t morse_flipper_straight_trainer_answer_symbol_count(const MorseFlipperStraightTrainer* trainer)
+{
+    return trainer ? straight_symbol_count(trainer->answer) : 0U;
+}
+
+bool morse_flipper_straight_trainer_symbol_count_match(const MorseFlipperStraightTrainer* trainer)
+{
+    if(trainer == NULL) return false;
+
+    return morse_flipper_straight_trainer_target_symbol_count(trainer) ==
+           morse_flipper_straight_trainer_answer_symbol_count(trainer);
 }
