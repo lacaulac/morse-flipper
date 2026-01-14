@@ -324,6 +324,10 @@ static void morse_flipper_session_title( const MorseFlipperApp* app, char* out, 
     if(out == NULL || out_sz < 2U) return;
     out[0] = '\0';
     if(app == NULL) return;
+    if(morse_trainer_session_completed(&app->trainer)) {
+        snprintf(out, out_sz, "Training complete");
+        return;
+    }
 
     if(app->trainer.custom_set_idx == 0U) {
         morse_trainer_lesson_label(morse_trainer_lesson(&app->trainer), lesson_label, sizeof(lesson_label));
