@@ -23,6 +23,8 @@ static void morse_trainer_note_session_result(MorseTrainer* trainer, bool missed
 
     trainer->session_score_sum = (uint16_t)(trainer->session_score_sum + trainer->last_score);
     trainer->session_scored_groups++;
+    if(!trainer->session_aborted && trainer->session_scored_groups >= trainer->session_groups)
+        trainer->session_active = false;
 
     if(trainer->session_consecutive_missed >= 4U) {
         trainer->session_aborted = true;

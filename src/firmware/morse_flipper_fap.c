@@ -811,6 +811,10 @@ static bool morse_flipper_gpio_try_apply(
 }
 
 static uint8_t morse_flipper_current_keyer_mode(const MorseFlipperApp* app) {
+    if(app != NULL && app->screen == MorseFlipperScreenStraight) {
+        return MorseKeyerModeStraight;
+    }
+
     if(app->vail_mode_active) {
         return app->vail_keyer_mode;
     }
@@ -1063,7 +1067,10 @@ static bool morse_flipper_session_running_view(const MorseFlipperApp* app) {
 #include "morse_flipper_help.c"
 
 static void morse_flipper_enter_screen( MorseFlipperApp* app, uint8_t screen, uint32_t now_ms) {
+    uint8_t old_screen;
+
     if(app->screen == screen) return;
+    old_screen = app->screen;
 
     if(app->screen == MorseFlipperScreenSession && screen != MorseFlipperScreenSession) {
         morse_flipper_reset_session_state(app, now_ms);
@@ -1118,6 +1125,9 @@ static void morse_flipper_enter_screen( MorseFlipperApp* app, uint8_t screen, ui
     }
 
     app->screen = screen;
+    if(old_screen == MorseFlipperScreenStraight || screen == MorseFlipperScreenStraight) {
+        morse_flipper_refresh_keyer(app, now_ms);
+    }
     if(screen == MorseFlipperScreenHome) {
         morse_flipper_poll(app);
     }
