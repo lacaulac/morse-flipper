@@ -297,6 +297,11 @@ static void morse_flipper_poll(MorseFlipperApp* app) {
     }
 
     raw_straight = morse_flipper_straight_answer_down(app);
+    if(app->screen == MorseFlipperScreenSession && !app->session_started && !app->trainer_playback_active &&
+       app->in_src != MorseFlipperInputSourceButtons && morse_flipper_session_wait_key_down(app)) {
+        morse_flipper_start_session(app, now_ms);
+        raw_straight = false;
+    }
     if(app->screen == MorseFlipperScreenStraight && !app->sk_started && !app->straight_playback_active &&
        !app->sk_wait && !app->sk_done && raw_straight) {
         morse_flipper_start_straight_round(app, now_ms);

@@ -143,7 +143,14 @@ static void morse_flipper_start_session(MorseFlipperApp* app, uint32_t now_ms) {
     morse_trainer_start_session(&app->trainer);
     app->session_started = true;
     app->session_log_pending = true;
-    morse_flipper_group_play(app, now_ms);
+    app->session_round_pending = false;
+    app->session_result_hold = true;
+    app->session_result_tone = false;
+    app->session_result_good = false;
+    app->session_result_until = 0U;
+    app->session_next_group_at = now_ms + ((uint32_t)app->trainer_gap_s * 1000U);
+    app->session_wait_draw_s = 0xFFU;
+    morse_flipper_view_dirty(app);
 }
 
 static void morse_flipper_tick_session(MorseFlipperApp* app, uint32_t now_ms) {
@@ -177,7 +184,11 @@ static void morse_flipper_tick_session(MorseFlipperApp* app, uint32_t now_ms) {
     if(app->session_next_group_at != 0U && now_ms >= app->session_next_group_at) {
         app->session_next_group_at = 0U;
         app->session_wait_draw_s = 0xFFU;
-        if(morse_trainer_next_session_group(&app->trainer)) {
+        if(!app->session_round_pending && !app->trainer_playback_active &&
+           morse_trainer_phase(&app->trainer) == MorseTrainerPhaseListen) {
+            app->session_result_hold = false;
+            morse_flipper_group_play(app, now_ms);
+        } else if(morse_trainer_next_session_group(&app->trainer)) {
             morse_flipper_group_play(app, now_ms);
         } else {
             morse_flipper_view_dirty(app);
@@ -398,6 +409,19 @@ static void morse_flipper_draw_session_rows(Canvas* canvas, const MorseFlipperAp
     done = !idle && app->session_started && !app->trainer_playback_active &&
            morse_trainer_phase(&app->trainer) == MorseTrainerPhaseDone;
 
+    if(idle) {
+        canvas_set_font(canvas, FontPrimary);
+        canvas_draw_str_aligned(canvas, 64, 14, AlignCenter, AlignCenter, "Koch - LCWO");
+        canvas_set_font(canvas, FontSecondary);
+        if(app->in_src == MorseFlipperInputSourceButtons) {
+            canvas_draw_str_aligned(canvas, 64, 38, AlignCenter, AlignCenter, "Press OK to start");
+        } else {
+            canvas_draw_str_aligned(canvas, 64, 32, AlignCenter, AlignCenter, "Press OK to start");
+            canvas_draw_str_aligned(canvas, 64, 44, AlignCenter, AlignCenter, "Press your key to start");
+        }
+        return;
+    }
+
     canvas_set_font(canvas, row_font);
 
     for(i = 0U; i < size; i++) {
@@ -489,6 +513,7 @@ static void morse_flipper_draw_session_bottom(Canvas* canvas, const MorseFlipper
     morse_flipper_session_title(app, lesson_line, sizeof(lesson_line));
     now_ms = furi_get_tick();
     wait = app->session_result_hold && app->session_next_group_at > now_ms;
+    if(morse_flipper_session_idle_view(app)) return;
 
     if(app->session_started) {
         asked = morse_trainer_session_index(&app->trainer);
