@@ -7,6 +7,80 @@ static void morse_flipper_draw_left_exit_hint(Canvas* canvas) {
     canvas_draw_box(canvas, 127, 29, 1, 7);
 }
 
+static void morse_flipper_gpio_probe_pair_text( const MorseFlipperApp* app, uint8_t pin_idx, char* out, size_t out_sz) {
+    if(app == NULL || out == NULL || out_sz == 0U) return;
+    snprintf(
+        out,
+        out_sz,
+        "%s - %s",
+        morse_flipper_gpio_name(app->gpio_ground_idx),
+        morse_flipper_gpio_name(pin_idx));
+}
+
+static void morse_flipper_draw_gpio_probe_overlay(Canvas* canvas, const MorseFlipperApp* app) {
+    char pair_a[24];
+    char pair_b[32];
+
+    if(canvas == NULL || app == NULL) return;
+
+    canvas_set_font(canvas, FontPrimary);
+    if(morse_flipper_gpio_probe_blocks_start(app)) {
+        canvas_draw_str_aligned(canvas, 64, 14, AlignCenter, AlignCenter, "Short circuit");
+        canvas_set_font(canvas, FontSecondary);
+        if(app->gpio_probe_state == MorseFlipperGpioProbeGroundToBoth) {
+            morse_flipper_gpio_probe_pair_text(app, app->gpio_dah_idx, pair_a, sizeof(pair_a));
+            morse_flipper_gpio_probe_pair_text(app, app->gpio_dit_idx, pair_b, sizeof(pair_b));
+            canvas_draw_str_aligned(canvas, 64, 30, AlignCenter, AlignCenter, pair_a);
+            canvas_draw_str_aligned(canvas, 64, 42, AlignCenter, AlignCenter, pair_b);
+        } else {
+            morse_flipper_gpio_probe_pair_text(app, app->gpio_dit_idx, pair_a, sizeof(pair_a));
+            canvas_draw_str_aligned(canvas, 64, 36, AlignCenter, AlignCenter, pair_a);
+        }
+        canvas_set_font(canvas, FontSecondary);
+        canvas_draw_str_aligned(canvas, 64, 58, AlignCenter, AlignCenter, "Do not press the paddles");
+        return;
+    }
+
+    morse_flipper_gpio_probe_pair_text(app, app->gpio_dah_idx, pair_a, sizeof(pair_a));
+    snprintf(pair_b, sizeof(pair_b), "%s shorted", pair_a);
+    canvas_draw_str_aligned(canvas, 64, 18, AlignCenter, AlignCenter, pair_b);
+    canvas_set_font(canvas, FontSecondary);
+    canvas_draw_str_aligned(canvas, 64, 32, AlignCenter, AlignCenter, "Mono jack in stereo plug?");
+    canvas_draw_str_aligned(canvas, 64, 40, AlignCenter, AlignCenter, "Switching to SK mode");
+}
+
+static void morse_flipper_draw_startup_gpio_probe(Canvas* canvas, const MorseFlipperApp* app) {
+    char pair_a[24];
+    char pair_b[24];
+
+    if(canvas == NULL || app == NULL) return;
+
+    canvas_set_font(canvas, FontPrimary);
+    canvas_draw_str_aligned(canvas, 64, 14, AlignCenter, AlignCenter, "Short circuit");
+    canvas_set_font(canvas, FontSecondary);
+
+    if(app->boot_probe == MorseFlipperGpioProbeGroundToBoth) {
+        morse_flipper_gpio_probe_pair_text(app, app->gpio_dah_idx, pair_a, sizeof(pair_a));
+        morse_flipper_gpio_probe_pair_text(app, app->gpio_dit_idx, pair_b, sizeof(pair_b));
+        canvas_draw_str_aligned(canvas, 64, 30, AlignCenter, AlignCenter, pair_a);
+        canvas_draw_str_aligned(canvas, 64, 42, AlignCenter, AlignCenter, pair_b);
+    } else if(app->boot_probe == MorseFlipperGpioProbeGroundToDah) {
+        morse_flipper_gpio_probe_pair_text(app, app->gpio_dah_idx, pair_a, sizeof(pair_a));
+        canvas_draw_str_aligned(canvas, 64, 36, AlignCenter, AlignCenter, pair_a);
+    } else if(app->boot_probe == MorseFlipperGpioProbeGroundToDit) {
+        morse_flipper_gpio_probe_pair_text(app, app->gpio_dit_idx, pair_a, sizeof(pair_a));
+        canvas_draw_str_aligned(canvas, 64, 36, AlignCenter, AlignCenter, pair_a);
+    }
+
+    if(!morse_flipper_probe_sk(app->boot_probe)) {
+        canvas_draw_str_aligned(canvas, 64, 58, AlignCenter, AlignCenter, "Press back to continue");
+        return;
+    }
+
+    canvas_draw_str_aligned(canvas, 64, 46, AlignCenter, AlignCenter, "Mono jack in stereo plug?");
+    canvas_draw_str_aligned(canvas, 64, 58, AlignCenter, AlignCenter, "Press OK to switch to SK mode");
+}
+
 static uint8_t morse_flipper_straight_units_from_ms(uint16_t ms, uint16_t dit_ms)
 {
     uint32_t u;
@@ -307,6 +381,11 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
         return;
     }
 
+    if(app->screen == MorseFlipperScreenStartupProbe) {
+        morse_flipper_draw_startup_gpio_probe(canvas, app);
+        return;
+    }
+
     if(app->screen == MorseFlipperScreenRun) {
         snprintf(
             run_line,
@@ -432,6 +511,11 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
     }
 
     if(app->screen == MorseFlipperScreenStraight) {
+        if(morse_flipper_gpio_probe_blocks_start(app)) {
+            morse_flipper_draw_gpio_probe_overlay(canvas, app);
+            return;
+        }
+
         if(!app->sk_started) {
             canvas_set_font(canvas, FontPrimary);
             canvas_draw_str_aligned(canvas, 64, 14, AlignCenter, AlignCenter, "Straight Trainer");
@@ -480,6 +564,11 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
     }
 
     if(app->screen == MorseFlipperScreenSession) {
+        if(morse_flipper_probe_note(app) || morse_flipper_gpio_probe_blocks_start(app)) {
+            morse_flipper_draw_gpio_probe_overlay(canvas, app);
+            return;
+        }
+
         morse_flipper_draw_session_rows(canvas, app);
         morse_flipper_draw_session_bottom(canvas, app);
         if(morse_flipper_live_left_hint(app)) {

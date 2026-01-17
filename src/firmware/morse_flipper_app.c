@@ -57,6 +57,8 @@ MorseFlipperApp* morse_flipper_boot(void)
         .gpio_edit_dit_idx = MorseFlipperGpioPinP7,
         .gpio_edit_dah_idx = MorseFlipperGpioPinP5,
         .gpio_edit_ground_idx = MorseFlipperGpioPinP3,
+        .gpio_probe_state = MorseFlipperGpioProbeOk,
+        .boot_probe = MorseFlipperGpioProbeOk,
         .sk_to_s = MORSE_FLIPPER_STRAIGHT_TIMEOUT_DEFAULT_S,
         .sk_gap_s = MORSE_FLIPPER_STRAIGHT_NEXT_DEFAULT_S,
         .trainer_row = 0U,
@@ -87,6 +89,7 @@ MorseFlipperApp* morse_flipper_boot(void)
         .rf_tail_at = 0U,
         .rf_tx_edge_at = 0U,
         .gpio_edge_at = 0U,
+        .gpio_probe_notice_until = 0U,
         .paddle_sources = {0U, 0U},
         .note_src = {0U, 0U, 0U},
         .trainer = {0},
@@ -146,6 +149,7 @@ MorseFlipperApp* morse_flipper_boot(void)
     morse_flipper_cw_decoder_init(&app.gpio_decoder, morse_flipper_current_dit_ms(&app));
     morse_keyer_init(&app.keyer, app.keyer_mode, morse_flipper_current_dit_ms(&app));
     morse_flipper_gpio_init(&app);
+    app.boot_probe = morse_flipper_gpio_probe_sample_raw(&app);
     morse_flipper_set_pc_mode(&app, app.pc_pref);
     app.view_dispatcher = view_dispatcher_alloc();
     view_dispatcher_set_event_callback_context(app.view_dispatcher, &app);
@@ -177,7 +181,11 @@ MorseFlipperApp* morse_flipper_boot(void)
     view_set_input_callback(app.live_view, morse_flipper_live_input);
     view_dispatcher_add_view(app.view_dispatcher, MorseFlipperViewLive, app.live_view);
 
-    scene_manager_next_scene(app.scene_manager, MorseFlipperSceneMenuMain);
+    if(morse_flipper_gpio_probe_any_short(app.boot_probe)) {
+        scene_manager_next_scene(app.scene_manager, MorseFlipperSceneStartupProbe);
+    } else {
+        scene_manager_next_scene(app.scene_manager, MorseFlipperSceneMenuMain);
+    }
     return &app;
 }
 

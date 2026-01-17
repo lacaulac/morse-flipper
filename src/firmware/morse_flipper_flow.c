@@ -59,6 +59,8 @@ static uint8_t morse_flipper_scene_screen(uint32_t scene)
         return MorseFlipperScreenHelp;
     case MorseFlipperSceneAbout:
         return MorseFlipperScreenAbout;
+    case MorseFlipperSceneStartupProbe:
+        return MorseFlipperScreenStartupProbe;
     default:
         return MorseFlipperScreenMenu;
     }

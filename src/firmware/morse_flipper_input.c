@@ -34,6 +34,28 @@ static bool morse_flipper_about_input(MorseFlipperApp* app, const InputEvent* ev
     return false;
 }
 
+static bool morse_flipper_startup_probe_input(MorseFlipperApp* app, const InputEvent* event)
+{
+    if(app->screen != MorseFlipperScreenStartupProbe) return false;
+
+    if(!morse_flipper_probe_sk(app->boot_probe)) {
+        return false;
+    }
+
+    if(event->key == InputKeyOk &&
+       (event->type == InputTypeShort || event->type == InputTypeLong)) {
+        app->in_src = MorseFlipperInputSourceStraight;
+        app->boot_probe = MorseFlipperGpioProbeOk;
+        morse_flipper_save_config(app);
+        morse_flipper_refresh_keyer(app, furi_get_tick());
+        morse_flipper_poll(app);
+        scene_manager_search_and_switch_to_another_scene(app->scene_manager, MorseFlipperSceneMenuMain);
+        return true;
+    }
+
+    return false;
+}
+
 static bool morse_flipper_pc_keys_input(MorseFlipperApp* app, const InputEvent* event)
 {
     if(app->screen != MorseFlipperScreenPcKeys) return false;
@@ -105,6 +127,7 @@ static bool morse_flipper_input_chunk_a(MorseFlipperApp* app, InputEvent* event)
 {
     if(morse_flipper_help_input(app, event)) return true;
     if(morse_flipper_about_input(app, event)) return true;
+    if(morse_flipper_startup_probe_input(app, event)) return true;
     if(morse_flipper_pc_keys_input(app, event)) return true;
     if(morse_flipper_pc_input(app, event)) return true;
     return false;
@@ -167,6 +190,10 @@ static bool morse_flipper_straight_input( MorseFlipperApp* app, const InputEvent
         return true;
     }
 
+    if(morse_flipper_gpio_probe_blocks_start(app)) {
+        return true;
+    }
+
     if(app->sk_wait && app->in_src == MorseFlipperInputSourceButtons &&
        event->key == InputKeyOk) {
         if(event->type == InputTypePress) {
@@ -208,6 +235,17 @@ static bool morse_flipper_session_input( MorseFlipperApp* app, const InputEvent*
 
     if(app->screen != MorseFlipperScreenSession) return false;
     g = morse_flipper_input_gate(app);
+
+    if((morse_flipper_probe_note(app) || morse_flipper_gpio_probe_blocks_start(app)) &&
+       event->key == InputKeyBack &&
+       (event->type == InputTypeShort || event->type == InputTypeLong)) {
+        morse_flipper_leave_session(app, now_ms);
+        return true;
+    }
+
+    if(morse_flipper_probe_note(app) || morse_flipper_gpio_probe_blocks_start(app)) {
+        return true;
+    }
 
     if(morse_flipper_session_repeat_active(app)) {
         if(event->key == InputKeyLeft && event->type == InputTypeLong) {

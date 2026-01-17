@@ -169,8 +169,12 @@ static void morse_flipper_sync_gpio_inputs(MorseFlipperApp* app, uint32_t now_ms
     if(app->in_src == MorseFlipperInputSourceStraight) {
         straight_active = morse_flipper_straight_down();
     } else if(app->in_src == MorseFlipperInputSourcePaddle) {
-        dit_active = morse_flipper_logical_dit_down(app);
-        dah_active = morse_flipper_logical_dah_down(app);
+        if(morse_flipper_gpio_probe_use_straight(app)) {
+            straight_active = !furi_hal_gpio_read(morse_flipper_dit_pin);
+        } else if(!morse_flipper_gpio_probe_blocks_start(app)) {
+            dit_active = morse_flipper_logical_dit_down(app);
+            dah_active = morse_flipper_logical_dah_down(app);
+        }
     }
 
     if(morse_flipper_training_playback_active(app) || app->screen == MorseFlipperScreenSessionEnd ||
@@ -274,6 +278,7 @@ static void morse_flipper_poll(MorseFlipperApp* app) {
 
     morse_flipper_tick_session(app, now_ms);
     morse_flipper_tick_straight(app, now_ms);
+    morse_flipper_gpio_probe_tick(app, now_ms);
 
     app->transport_connected = morse_flipper_transport_connected(app);
     if(!old_transport && app->transport_connected) {

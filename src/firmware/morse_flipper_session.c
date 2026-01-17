@@ -64,6 +64,8 @@ static bool morse_flipper_session_live_keying(const MorseFlipperApp* app) {
 
 static bool morse_flipper_session_wait_key_down(const MorseFlipperApp* app) {
     if(app == NULL) return false;
+    if(morse_flipper_probe_note(app)) return false;
+    if(morse_flipper_gpio_probe_blocks_start(app)) return false;
 
     if(app->in_src == MorseFlipperInputSourceButtons) {
         if(morse_flipper_straight_like_mode(app)) return app->ok_down;
@@ -71,6 +73,7 @@ static bool morse_flipper_session_wait_key_down(const MorseFlipperApp* app) {
     }
 
     if(app->in_src == MorseFlipperInputSourceStraight) return morse_flipper_straight_down();
+    if(morse_flipper_gpio_probe_use_straight(app)) return !furi_hal_gpio_read(morse_flipper_dit_pin);
 
     return morse_flipper_logical_dit_down(app) || morse_flipper_logical_dah_down(app);
 }
