@@ -362,6 +362,7 @@ typedef struct {
     uint8_t trainer_row;
     uint8_t help_topic;
     uint8_t help_page;
+    uint8_t about_ok_count;
     uint8_t trainer_farn_wpm;
     uint8_t trainer_to_s;
     uint8_t trainer_gap_s;

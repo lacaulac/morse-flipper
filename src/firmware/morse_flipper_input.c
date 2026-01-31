@@ -26,7 +26,17 @@ static bool morse_flipper_about_input(MorseFlipperApp* app, const InputEvent* ev
 {
     if(app->screen != MorseFlipperScreenAbout) return false;
 
+    if(event->key == InputKeyOk && event->type == InputTypeShort) {
+        app->about_ok_count++;
+        if(app->about_ok_count >= 3U) {
+            app->about_ok_count = 0U;
+            morse_flipper_scene_open(app, MorseFlipperSceneTrace);
+        }
+        return true;
+    }
+
     if(event->key == InputKeyBack && (event->type == InputTypeShort || event->type == InputTypeLong)) {
+        app->about_ok_count = 0U;
         morse_flipper_scene_back(app);
         return true;
     }

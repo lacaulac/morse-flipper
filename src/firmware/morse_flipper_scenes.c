@@ -85,9 +85,8 @@ static void morse_flipper_scene_menu_settings_on_enter(void* context) {
     submenu_add_item(app->submenu, "Koch - LCWO", MorseFlipperSceneTrainer, morse_flipper_scene_menu_pick, app);
     submenu_add_item(app->submenu, "Straight key", MorseFlipperSceneStraightCfg, morse_flipper_scene_menu_pick, app);
     submenu_add_item(app->submenu, "USB", MorseFlipperScenePc, morse_flipper_scene_menu_pick, app);
-    submenu_add_item(app->submenu, "Trace menu", MorseFlipperSceneTrace, morse_flipper_scene_menu_pick, app);
-    if(sel != MorseFlipperSceneHome && sel != MorseFlipperSceneTrainer && sel != MorseFlipperSceneStraightCfg && sel != MorseFlipperScenePc &&
-       sel != MorseFlipperSceneTrace)
+    if(sel != MorseFlipperSceneHome && sel != MorseFlipperSceneTrainer &&
+       sel != MorseFlipperSceneStraightCfg && sel != MorseFlipperScenePc)
         sel = MorseFlipperSceneHome;
     submenu_set_selected_item(app->submenu, sel);
 }
@@ -216,6 +215,7 @@ static void morse_flipper_scene_help_on_enter(void* context) {
 static void morse_flipper_scene_about_on_enter(void* context) {
     MorseFlipperApp* app = context;
     morse_flipper_scene_enter_now(app, MorseFlipperSceneAbout);
+    app->about_ok_count = 0U;
     morse_flipper_about_open(app);
 }
 
