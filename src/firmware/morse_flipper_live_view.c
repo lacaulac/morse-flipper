@@ -387,26 +387,24 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
         snprintf(
             run_line,
             sizeof(run_line),
-            "%s %s %s",
-            morse_flipper_tone_name(app),
-            morse_keyer_mode_name(morse_flipper_current_keyer_mode(app)),
-            morse_flipper_hand_name(app));
+            "%u wpm  %s",
+            (unsigned)morse_flipper_current_wpm(app),
+            morse_flipper_run_input_name(app));
+        snprintf(
+            browse_line,
+            sizeof(browse_line),
+            "%s  %s",
+            morse_flipper_run_keyer_name(app),
+            morse_flipper_run_usb_name(app));
 
-        canvas_set_font(canvas, FontPrimary);
-        canvas_draw_str(canvas, 8, 14, "Free Practice");
         canvas_set_font(canvas, FontSecondary);
-        canvas_draw_str(canvas, 8, 28, run_line);
-        if(app->in_src == MorseFlipperInputSourceButtons &&
-           morse_flipper_button_paddle_keying_active(app)) {
-            canvas_draw_str(canvas, 8, 40, morse_flipper_button_map_line(app));
-        } else {
-            canvas_draw_str( canvas, 8, 40, morse_flipper_free_practice_hint(app, browse_line, sizeof(browse_line)));
-        }
-        canvas_draw_str(canvas, 8, 52, morse_flipper_input_line(app, input_line, sizeof(input_line)));
-        canvas_draw_str(canvas, 8, 62, morse_flipper_status_line(app, browse_line, sizeof(browse_line)));
-        if(morse_flipper_live_left_hint(app)) {
-            morse_flipper_draw_left_exit_hint(canvas);
-        }
+        canvas_draw_str(canvas, 3, 10, app->run_history.line[0]);
+        canvas_draw_str(canvas, 3, 20, app->run_history.line[1]);
+        canvas_draw_str(canvas, 3, 30, app->run_history.line[2]);
+        canvas_draw_line(canvas, 0, 34, 127, 34);
+        canvas_draw_str(canvas, 3, 44, run_line);
+        canvas_draw_str(canvas, 3, 54, browse_line);
+        canvas_draw_str(canvas, 3, 64, morse_flipper_run_hint(app, input_line, sizeof(input_line)));
         return;
     }
 

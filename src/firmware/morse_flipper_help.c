@@ -143,9 +143,6 @@ static const char* const morse_help_moving_forward[] = {
     "If you do get licensed, send me a note at yo3gnd.dev.fzcw@yo3gnd.ro. I would be glad to hear how it went.\n\n\n\nIf you read this far, there is a QSL waiting for you. Send in the secret code 821073",
 };
 
-static const char* morse_flipper_about_card =
-    "Nothing here yet.\n\nThat is the whole point for now.";
-
 static uint8_t morse_flipper_help_card_count(uint8_t t)
 {
     switch(t) {
@@ -243,9 +240,5 @@ static void morse_flipper_help_open(MorseFlipperApp* app)
 
 static void morse_flipper_about_open(MorseFlipperApp* app)
 {
-    widget_reset(app->widget);
-    furi_string_set(app->help_text, morse_flipper_about_card);
-    furi_string_cat(app->help_text, "\n");
-    widget_add_text_scroll_element(app->widget, 0, 0, 128, 52, furi_string_get_cstr(app->help_text));
-    view_dispatcher_switch_to_view(app->view_dispatcher, MorseFlipperViewWidget);
+    UNUSED(app);
 }

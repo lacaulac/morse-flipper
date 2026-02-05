@@ -66,6 +66,21 @@ static void morse_flipper_dec_drain( MorseFlipperCwDecoder* decoder, char* out, 
     }
 }
 
+static void morse_flipper_drain_tx_decoder(MorseFlipperApp* app) {
+    const char* out;
+
+    if(app == NULL) return;
+    out = morse_flipper_cw_decoder_output(&app->tx_decoder);
+    if(out[0] == '\0') return;
+
+    morse_flipper_append_text(app->rf_tx_text, sizeof(app->rf_tx_text), out);
+    if(app->screen == MorseFlipperScreenRun) {
+        morse_flipper_run_history_append(&app->run_history, out);
+        morse_flipper_view_dirty(app);
+    }
+    morse_flipper_cw_decoder_clear_output(&app->tx_decoder);
+}
+
 static char morse_flipper_tx_symbol(const MorseFlipperApp* app) {
     if(app->note_src[1] != 0U) return '.';
     if(app->note_src[2] != 0U) return '-';
@@ -95,7 +110,7 @@ static void morse_flipper_feed_tx_edge(MorseFlipperApp* app, bool level, uint32_
             } else {
                 morse_flipper_cw_decoder_feed_space(&app->tx_decoder, (uint16_t)dt);
             }
-            morse_flipper_dec_drain(&app->tx_decoder, app->rf_tx_text, sizeof(app->rf_tx_text));
+            morse_flipper_drain_tx_decoder(app);
         }
     }
 
@@ -320,7 +335,7 @@ static void morse_flipper_poll(MorseFlipperApp* app) {
         if(gap >= (morse_flipper_current_dit_ms(app) * 5U) / 2U) {
             if(morse_flipper_tx_decoder_allowed(app)) {
                 morse_flipper_cw_decoder_feed_space(&app->tx_decoder, (uint16_t)gap);
-                morse_flipper_dec_drain(&app->tx_decoder, app->rf_tx_text, sizeof(app->rf_tx_text));
+                morse_flipper_drain_tx_decoder(app);
             }
             app->rf_tx_gap_flushed = true;
         }

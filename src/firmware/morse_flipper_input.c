@@ -513,6 +513,8 @@ static void morse_flipper_key_evt( MorseFlipperApp* app, const InputEvent* event
         return;
     }
 
+    if(app->screen == MorseFlipperScreenRun) return;
+
     if(event->key == InputKeyUp && event->type == InputTypeShort) {
         morse_flipper_toggle_source(app);
         return;
