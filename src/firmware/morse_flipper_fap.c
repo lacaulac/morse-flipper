@@ -1103,14 +1103,14 @@ static const char* morse_flipper_hand_name(const MorseFlipperApp* app) {
     return (app->handedness == MorseFlipperHandednessSwapped) ? "swp" : "norm";
 }
 
-static uint8_t morse_flipper_button_ok_paddle(const MorseFlipperApp* app) {
-    return (app->handedness == MorseFlipperHandednessSwapped) ? MorseKeyerPaddleDah :
-                                                                MorseKeyerPaddleDit;
-}
-
-static uint8_t morse_flipper_button_back_paddle(const MorseFlipperApp* app) {
+static uint8_t morse_flipper_ok_button_paddle(const MorseFlipperApp* app) {
     return (app->handedness == MorseFlipperHandednessSwapped) ? MorseKeyerPaddleDit :
                                                                 MorseKeyerPaddleDah;
+}
+
+static uint8_t morse_flipper_back_button_paddle(const MorseFlipperApp* app) {
+    return (app->handedness == MorseFlipperHandednessSwapped) ? MorseKeyerPaddleDah :
+                                                                MorseKeyerPaddleDit;
 }
 
 static const char* morse_flipper_run_hint(const MorseFlipperApp* app, char* buf, size_t buf_sz) {

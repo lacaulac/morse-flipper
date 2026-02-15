@@ -253,20 +253,33 @@ static void morse_flipper_btn_pad_clear(MorseFlipperApp* app, uint32_t now_ms)
 
 static void morse_flipper_resync_button_paddles(MorseFlipperApp* app, uint32_t now_ms)
 {
-    morse_flipper_btn_pad_clear(app, now_ms);
+    uint8_t ok_paddle = morse_flipper_ok_button_paddle(app);
+    uint8_t back_paddle = morse_flipper_back_button_paddle(app);
 
-    if(app->ok_down) {
-        morse_flipper_set_paddle_source( app, morse_flipper_button_ok_paddle(app), MORSE_PADDLE_SOURCE_BTN_OK, true, now_ms);
-    }
-
-    if(app->back_down) {
-        morse_flipper_set_paddle_source(
-            app,
-            morse_flipper_button_back_paddle(app),
-            MORSE_PADDLE_SOURCE_BTN_BACK,
-            true,
-            now_ms);
-    }
+    morse_flipper_set_paddle_source(
+        app,
+        MorseKeyerPaddleDit,
+        MORSE_PADDLE_SOURCE_BTN_OK,
+        app->ok_down && ok_paddle == MorseKeyerPaddleDit,
+        now_ms);
+    morse_flipper_set_paddle_source(
+        app,
+        MorseKeyerPaddleDah,
+        MORSE_PADDLE_SOURCE_BTN_OK,
+        app->ok_down && ok_paddle == MorseKeyerPaddleDah,
+        now_ms);
+    morse_flipper_set_paddle_source(
+        app,
+        MorseKeyerPaddleDit,
+        MORSE_PADDLE_SOURCE_BTN_BACK,
+        app->back_down && back_paddle == MorseKeyerPaddleDit,
+        now_ms);
+    morse_flipper_set_paddle_source(
+        app,
+        MorseKeyerPaddleDah,
+        MORSE_PADDLE_SOURCE_BTN_BACK,
+        app->back_down && back_paddle == MorseKeyerPaddleDah,
+        now_ms);
 }
 
 static void morse_flipper_btn_clear(MorseFlipperApp* app, uint32_t now_ms)
