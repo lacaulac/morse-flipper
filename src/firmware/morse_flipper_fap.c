@@ -24,6 +24,7 @@
 #include "morse_flipper_radio.h"
 #include "morse_flipper_run_history.h"
 #include "morse_flipper_rf.h"
+#include "morse_flipper_straight_filter.h"
 #include "morse_flipper_straight_trainer.h"
 #include "pc_keys.h"
 #include "trainer.h"
@@ -40,6 +41,7 @@
 #define MORSE_FLIPPER_SESSION_SETTLE_MS 1000U
 #define MORSE_FLIPPER_SESSION_RESULT_MS 160U
 #define MORSE_FLIPPER_STRAIGHT_SETTLE_MS 700U
+#define MORSE_FLIPPER_STRAIGHT_RELEASE_DEBOUNCE_MS 15U
 #define MORSE_FLIPPER_RF_TX_TAIL_DITS 2U
 #define MORSE_FLIPPER_RF_LIVE_DECODERS 0U
 #define _SHOW_ANSWER_WHILE_TRAINING_LCWO 1U
@@ -429,6 +431,7 @@ typedef struct {
     char gpio_text[64];
     MorseFlipperAudioPwm audio_pwm;
     MorseFlipperRunHistory run_history;
+    MorseFlipperStraightFilter straight_filter;
     MorseFlipperRf rf;
     MorseFlipperRadio radio;
     MorseFlipperCwDecoder rf_decoder;
@@ -1249,6 +1252,7 @@ static void morse_flipper_reset_run_state(MorseFlipperApp* app) {
     if(app == NULL) return;
 
     morse_flipper_run_history_reset(&app->run_history);
+    morse_flipper_straight_filter_reset(&app->straight_filter);
     app->rf_tx_text[0] = '\0';
     morse_flipper_cw_decoder_init(&app->tx_decoder, morse_flipper_current_dit_ms(app));
     app->rf_tx_edge_at = 0U;

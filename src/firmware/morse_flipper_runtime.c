@@ -174,6 +174,12 @@ static uint32_t morse_flipper_straight_answer_settle_ms(const MorseFlipperApp* a
     return dit_ms * 3U;
 }
 
+static bool morse_flipper_live_straight_active( MorseFlipperApp* app, bool raw_down, uint32_t now_ms)
+{
+    if(app == NULL) return raw_down;
+    return morse_flipper_straight_filter_update( &app->straight_filter, raw_down, now_ms, MORSE_FLIPPER_STRAIGHT_RELEASE_DEBOUNCE_MS);
+}
+
 
 static void morse_flipper_sync_gpio_inputs(MorseFlipperApp* app, uint32_t now_ms) {
     bool straight_active = false;
@@ -181,18 +187,22 @@ static void morse_flipper_sync_gpio_inputs(MorseFlipperApp* app, uint32_t now_ms
     bool dah_active = false;
 
     if(app->in_src == MorseFlipperInputSourceStraight) {
-        straight_active = morse_flipper_straight_down();
+        straight_active = morse_flipper_live_straight_active(app, morse_flipper_straight_down(), now_ms);
     } else if(app->in_src == MorseFlipperInputSourcePaddle) {
         if(morse_flipper_gpio_probe_use_straight(app)) {
-            straight_active = !furi_hal_gpio_read(morse_flipper_dit_pin);
+            straight_active = morse_flipper_live_straight_active( app, !furi_hal_gpio_read(morse_flipper_dit_pin), now_ms);
         } else if(!morse_flipper_gpio_probe_blocks_start(app)) {
+            morse_flipper_straight_filter_reset(&app->straight_filter);
             dit_active = morse_flipper_logical_dit_down(app);
             dah_active = morse_flipper_logical_dah_down(app);
         }
+    } else {
+        morse_flipper_straight_filter_reset(&app->straight_filter);
     }
 
     if(morse_flipper_training_playback_active(app) || app->screen == MorseFlipperScreenSessionEnd ||
        (app->screen == MorseFlipperScreenSession && !morse_flipper_session_repeat_active(app))) {
+        morse_flipper_straight_filter_reset(&app->straight_filter);
         straight_active = false;
         dit_active = false;
         dah_active = false;
