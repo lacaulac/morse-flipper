@@ -43,6 +43,10 @@ static uint8_t morse_flipper_scene_screen(uint32_t scene)
         return MorseFlipperScreenRun;
     case MorseFlipperSceneRf:
         return MorseFlipperScreenRf;
+    case MorseFlipperSceneRfRx:
+        return MorseFlipperScreenRfRx;
+    case MorseFlipperSceneRfFreq:
+        return MorseFlipperScreenRfFreq;
     case MorseFlipperSceneSession:
         return MorseFlipperScreenSession;
     case MorseFlipperSceneStraight:

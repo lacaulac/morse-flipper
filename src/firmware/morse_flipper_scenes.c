@@ -163,7 +163,11 @@ static void morse_flipper_scene_menu_rf_on_enter(void* context) {
     morse_flipper_scene_enter_now(app, MorseFlipperSceneMenuRf);
     submenu_set_header(app->submenu, "Radio TX");
     submenu_add_item( app->submenu, "Start transmitting", MorseFlipperSceneRf, morse_flipper_scene_menu_pick, app);
-    if(sel != MorseFlipperSceneRf) sel = MorseFlipperSceneRf;
+    submenu_add_item( app->submenu, "Start receiving", MorseFlipperSceneRfRx, morse_flipper_scene_menu_pick, app);
+    submenu_add_item( app->submenu, "Set frequency", MorseFlipperSceneRfFreq, morse_flipper_scene_menu_pick, app);
+    if(sel != MorseFlipperSceneRf && sel != MorseFlipperSceneRfRx &&
+       sel != MorseFlipperSceneRfFreq)
+        sel = MorseFlipperSceneRf;
     submenu_set_selected_item(app->submenu, sel);
 }
 
@@ -212,6 +216,16 @@ static void morse_flipper_scene_run_on_enter(void* context) {
 static void morse_flipper_scene_rf_on_enter(void* context) {
     MorseFlipperApp* app = context;
     morse_flipper_scene_enter_now(app, MorseFlipperSceneRf);
+}
+
+static void morse_flipper_scene_rf_rx_on_enter(void* context) {
+    MorseFlipperApp* app = context;
+    morse_flipper_scene_enter_now(app, MorseFlipperSceneRfRx);
+}
+
+static void morse_flipper_scene_rf_freq_on_enter(void* context) {
+    MorseFlipperApp* app = context;
+    morse_flipper_scene_enter_now(app, MorseFlipperSceneRfFreq);
 }
 
 static void morse_flipper_scene_session_on_enter(void* context) {
@@ -313,6 +327,8 @@ static const AppSceneOnEnterCallback morse_flipper_scene_on_enter_handlers[Morse
     morse_flipper_scene_menu_rf_on_enter,
     morse_flipper_scene_run_on_enter,
     morse_flipper_scene_rf_on_enter,
+    morse_flipper_scene_rf_rx_on_enter,
+    morse_flipper_scene_rf_freq_on_enter,
     morse_flipper_scene_session_on_enter,
     morse_flipper_scene_straight_on_enter,
     morse_flipper_scene_session_end_on_enter,
@@ -338,6 +354,8 @@ static const AppSceneOnEventCallback morse_flipper_scene_on_event_handlers[Morse
     morse_flipper_scene_live_on_event,
     morse_flipper_scene_live_on_event,
     morse_flipper_scene_live_on_event,
+    morse_flipper_scene_live_on_event,
+    morse_flipper_scene_live_on_event,
     morse_flipper_scene_home_on_event,
     morse_flipper_scene_live_on_event,
     morse_flipper_scene_live_on_event,
@@ -355,6 +373,8 @@ static const AppSceneOnExitCallback morse_flipper_scene_on_exit_handlers[MorseFl
     morse_flipper_scene_menu_settings_on_exit,
     morse_flipper_scene_menu_help_on_exit,
     morse_flipper_scene_menu_rf_on_exit,
+    morse_flipper_scene_live_on_exit,
+    morse_flipper_scene_live_on_exit,
     morse_flipper_scene_live_on_exit,
     morse_flipper_scene_live_on_exit,
     morse_flipper_scene_live_on_exit,

@@ -285,10 +285,77 @@ static bool morse_flipper_session_end_input( MorseFlipperApp* app, const InputEv
     return false;
 }
 
+static bool morse_flipper_rf_freq_input(MorseFlipperApp* app, const InputEvent* event)
+{
+    if(app->screen != MorseFlipperScreenRfFreq) return false;
+
+    if(event->key == InputKeyBack &&
+       (event->type == InputTypeShort || event->type == InputTypeLong)) {
+        morse_flipper_rf_commit_edit(app);
+        morse_flipper_scene_back(app);
+        return true;
+    }
+
+    if(event->type != InputTypeShort && event->type != InputTypeRepeat) return true;
+
+    if(event->key == InputKeyLeft) {
+        morse_flipper_rf_bump_focus(app, -1);
+        morse_flipper_view_dirty(app);
+        return true;
+    }
+
+    if(event->key == InputKeyRight) {
+        morse_flipper_rf_bump_focus(app, 1);
+        morse_flipper_view_dirty(app);
+        return true;
+    }
+
+    if(event->key == InputKeyUp) {
+        morse_flipper_rf_bump_digit(app, 1);
+        morse_flipper_view_dirty(app);
+        return true;
+    }
+
+    if(event->key == InputKeyDown) {
+        morse_flipper_rf_bump_digit(app, -1);
+        morse_flipper_view_dirty(app);
+        return true;
+    }
+
+    return true;
+}
+
 static bool morse_flipper_rf_input(MorseFlipperApp* app, const InputEvent* event)
 {
     if(app->screen != MorseFlipperScreenRf) return false;
     morse_flipper_key_evt(app, event);
+    return true;
+}
+
+static bool morse_flipper_rf_rx_input(MorseFlipperApp* app, const InputEvent* event)
+{
+    if(app->screen != MorseFlipperScreenRfRx) return false;
+
+    if((event->key == InputKeyLeft || event->key == InputKeyRight) &&
+       (event->type == InputTypeShort || event->type == InputTypeRepeat)) {
+        int dir = event->key == InputKeyLeft ? -1 : 1;
+
+        app->rf_mon_thr_dbm =
+            morse_flipper_rf_clamp_dbm((int8_t)(app->rf_mon_thr_dbm + dir));
+        app->rf_mon_tone =
+            (app->rf_cs && app->rf_rssi_valid) ||
+            (app->rf_rssi_valid && (app->rf_rssi_dbm >= app->rf_mon_thr_dbm));
+        morse_flipper_update_sidetone(app);
+        morse_flipper_view_dirty(app);
+        return true;
+    }
+
+    if(event->key == InputKeyBack &&
+       (event->type == InputTypeShort || event->type == InputTypeLong)) {
+        morse_flipper_scene_back(app);
+        return true;
+    }
+
     return true;
 }
 
@@ -346,6 +413,8 @@ static bool morse_flipper_input_chunk_b( MorseFlipperApp* app, InputEvent* event
     if(morse_flipper_straight_input(app, event, now_ms)) return true;
     if(morse_flipper_session_input(app, event, now_ms)) return true;
     if(morse_flipper_session_end_input(app, event, now_ms)) return true;
+    if(morse_flipper_rf_freq_input(app, event)) return true;
+    if(morse_flipper_rf_rx_input(app, event)) return true;
     if(morse_flipper_rf_input(app, event)) return true;
     if(morse_flipper_run_trace_home_input(app, event)) return true;
     return false;

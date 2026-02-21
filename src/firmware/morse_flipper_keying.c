@@ -91,7 +91,7 @@ static void morse_flipper_update_sidetone(MorseFlipperApp* app)
 {
     bool want_tx_tone = morse_flipper_any_active_notes(app) || (app->prev_n > 0U);
     bool want_aux_tone = app->trainer_playback_mark || app->sk_play_mark ||
-                         app->session_result_tone;
+                         app->session_result_tone || app->rf_mon_tone;
     bool want_tone = want_aux_tone ||
                      (want_tx_tone && !morse_flipper_use_pwm_buzzer(app) &&
                       morse_flipper_buzz_ok(app));
@@ -154,7 +154,12 @@ static void morse_flipper_set_note_source( MorseFlipperApp* app, uint8_t note, u
             now_ms + ((uint32_t)morse_flipper_current_dit_ms(app) * MORSE_FLIPPER_RF_TX_TAIL_DITS);
 
         if(morse_flipper_any_active_notes(app) && !app->radio.tx_on) {
-            morse_flipper_radio_sync_live( &app->radio, morse_flipper_rf_frequency_hz(&app->rf), true, true);
+            morse_flipper_radio_sync_live(
+                &app->radio,
+                morse_flipper_rf_frequency_hz(&app->rf),
+                true,
+                true,
+                MorseFlipperRadioProfileOokData);
         }
         morse_flipper_radio_set_tx_level(&app->radio, morse_flipper_any_active_notes(app));
     }

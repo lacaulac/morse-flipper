@@ -201,6 +201,7 @@ static void morse_flipper_sync_gpio_inputs(MorseFlipperApp* app, uint32_t now_ms
     }
 
     if(morse_flipper_training_playback_active(app) || app->screen == MorseFlipperScreenSessionEnd ||
+       app->screen == MorseFlipperScreenRfRx ||
        (app->screen == MorseFlipperScreenSession && !morse_flipper_session_repeat_active(app))) {
         morse_flipper_straight_filter_reset(&app->straight_filter);
         straight_active = false;

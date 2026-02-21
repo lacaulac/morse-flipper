@@ -43,7 +43,7 @@ void morse_flipper_rf_init(MorseFlipperRf* rf)
     if(!rf) return;
     memset(rf, 0, sizeof(*rf));
     morse_flipper_rf_timing_init(&rf->rx_timing);
-    rf->frequency_hz = 434150000u;
+    rf->frequency_hz = MORSE_FLIPPER_RF_DEFAULT_FREQUENCY_HZ;
     rf_refresh_text(rf);
 }
 
@@ -92,6 +92,11 @@ void morse_flipper_rf_capture_rx_timing(MorseFlipperRf* rf, bool mark, uint16_t 
 uint32_t morse_flipper_rf_frequency_hz(const MorseFlipperRf* rf)
 {
     return rf ? rf->frequency_hz : 0;
+}
+
+uint32_t morse_flipper_rf_frequency_khz(const MorseFlipperRf* rf)
+{
+    return rf ? (rf->frequency_hz / 1000u) : 0;
 }
 
 const char* morse_flipper_rf_frequency_text(const MorseFlipperRf* rf)

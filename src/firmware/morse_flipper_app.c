@@ -63,6 +63,7 @@ MorseFlipperApp* morse_flipper_boot(void)
         .trainer_mark_idx = 0U,
         .session_wait_draw_s = 0xFFU,
         .about_ok_count = 0U,
+        .rf_freq_focus = 0U,
         .vail_mode_active = false,
         .vail_speed_active = false,
         .vail_tone_active = false,
@@ -87,8 +88,12 @@ MorseFlipperApp* morse_flipper_boot(void)
         .session_next_group_at = 0U,
         .rf_tail_at = 0U,
         .rf_tx_edge_at = 0U,
+        .rf_rssi_next_at = 0U,
+        .rf_rssi_peak_decay_at = 0U,
         .gpio_edge_at = 0U,
         .gpio_probe_notice_until = 0U,
+        .rf_edit_khz = MORSE_FLIPPER_RF_DEFAULT_FREQUENCY_KHZ,
+        .rf_rssi_sum_dbm = 0,
         .paddle_sources = {0U, 0U},
         .note_src = {0U, 0U, 0U},
         .trainer = {0},
@@ -106,10 +111,16 @@ MorseFlipperApp* morse_flipper_boot(void)
         .rf_live = false,
         .rf_tx_level = false,
         .rf_tx_gap_flushed = true,
+        .rf_cs = false,
+        .rf_mon_tone = false,
         .gpio_level = false,
         .gpio_gap_flushed = true,
         .sk_mark_i = 0U,
         .backlight = MorseFlipperBacklightAuto,
+        .rf_mon_thr_dbm = -85,
+        .rf_rssi_n = 0U,
+        .rf_edge_n = 0U,
+        .rf_act = 0U,
         .rf_rx_text = {0},
         .rf_tx_text = {0},
         .gpio_text = {0},
@@ -136,6 +147,7 @@ MorseFlipperApp* morse_flipper_boot(void)
    morse_trainer_load_straight_stats(&app.straight_stats);
     morse_flipper_pick_charset(&app);
     morse_flipper_load_config(&app);
+    morse_flipper_load_rf_config(&app);
     morse_flipper_pick_charset(&app);
     morse_flipper_cw_decoder_init(&app.rf_decoder, morse_flipper_current_dit_ms(&app));
     morse_flipper_cw_decoder_init(&app.tx_decoder, morse_flipper_current_dit_ms(&app));
@@ -194,7 +206,12 @@ void morse_flipper_shutdown(MorseFlipperApp* app)
 
     morse_flipper_btn_clear(app, furi_get_tick());
     morse_flipper_set_pc_mode(app, MorseFlipperPcModeOff);
-    morse_flipper_radio_sync_live(&app->radio, morse_flipper_rf_frequency_hz(&app->rf), false, false);
+    morse_flipper_radio_sync_live(
+        &app->radio,
+        morse_flipper_rf_frequency_hz(&app->rf),
+        false,
+        false,
+        MorseFlipperRadioProfileOokData);
     morse_flipper_radio_set_tx_level(&app->radio, false);
     morse_flipper_radio_deinit(&app->radio);
     morse_flipper_audio_pwm_stop(&app->audio_pwm);
@@ -209,6 +226,7 @@ void morse_flipper_shutdown(MorseFlipperApp* app)
         notification_message(app->notifications, &sequence_reset_red);
     }
     morse_flipper_save_config(app);
+    morse_flipper_save_rf_config(app);
 
     morse_flipper_gpio_deinit();
     if(app->view_dispatcher) {

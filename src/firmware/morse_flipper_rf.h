@@ -7,6 +7,9 @@
 
 #include "morse_flipper_rf_timing.h"
 
+#define MORSE_FLIPPER_RF_DEFAULT_FREQUENCY_HZ  433150000u
+#define MORSE_FLIPPER_RF_DEFAULT_FREQUENCY_KHZ 433150u
+
 typedef struct
 {
     uint32_t frequency_hz;
@@ -25,6 +28,7 @@ void morse_flipper_rf_reset_live(MorseFlipperRf* rf);
 void morse_flipper_rf_handle_tx(MorseFlipperRf* rf, bool active, char symbol);
 void morse_flipper_rf_capture_rx_timing(MorseFlipperRf* rf, bool mark, uint16_t duration_ms);
 uint32_t morse_flipper_rf_frequency_hz(const MorseFlipperRf* rf);
+uint32_t morse_flipper_rf_frequency_khz(const MorseFlipperRf* rf);
 const char* morse_flipper_rf_frequency_text(const MorseFlipperRf* rf);
 size_t morse_flipper_rf_tx_log_count(const MorseFlipperRf* rf);
 const char* morse_flipper_rf_tx_log_line(const MorseFlipperRf* rf, size_t idx);

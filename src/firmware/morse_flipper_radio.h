@@ -4,6 +4,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+typedef enum {
+    MorseFlipperRadioProfileOokData = 0,
+    MorseFlipperRadioProfileCarrierSense = 1,
+} MorseFlipperRadioProfile;
+
 typedef struct
 {
     bool ready;
@@ -12,6 +17,7 @@ typedef struct
     bool tx_level;
     uint32_t freq_hz;
     uint32_t tuned_hz;
+    MorseFlipperRadioProfile profile;
     void (*rx_cb)(void* ctx, bool level, uint16_t duration_ms);
     void* rx_ctx;
     bool rx_mark[64];
@@ -26,8 +32,9 @@ void morse_flipper_radio_set_rx_callback(
     MorseFlipperRadio* radio,
     void (*cb)(void* ctx, bool level, uint16_t duration_ms),
     void* ctx);
-void morse_flipper_radio_sync_live( MorseFlipperRadio* radio, uint32_t freq_hz, bool active, bool tx_on);
+void morse_flipper_radio_sync_live( MorseFlipperRadio* radio, uint32_t freq_hz, bool active, bool tx_on, MorseFlipperRadioProfile profile);
 void morse_flipper_radio_drain_rx(MorseFlipperRadio* radio);
 void morse_flipper_radio_set_tx_level(MorseFlipperRadio* radio, bool level);
+bool morse_flipper_radio_read_rx_level(const MorseFlipperRadio* radio);
 
 #endif

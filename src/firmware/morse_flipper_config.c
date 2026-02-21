@@ -395,6 +395,23 @@ static void morse_flipper_load_config(MorseFlipperApp* app)
     furi_record_close(RECORD_STORAGE);
 }
 
+static void morse_flipper_load_rf_config(MorseFlipperApp* app)
+{
+    Storage* storage = furi_record_open(RECORD_STORAGE);
+    File* file = storage_file_alloc(storage);
+    uint32_t hz = 0U;
+
+    if(storage_file_open(file, MORSE_FLIPPER_RF_CONFIG_PATH, FSAM_READ, FSOM_OPEN_EXISTING)) {
+        if(storage_file_read(file, &hz, sizeof(hz)) == sizeof(hz) &&
+           furi_hal_subghz_is_frequency_valid(hz))
+            morse_flipper_rf_set_frequency_hz(&app->rf, hz);
+    }
+
+    storage_file_close(file);
+    storage_file_free(file);
+    furi_record_close(RECORD_STORAGE);
+}
+
 static void morse_flipper_save_config(const MorseFlipperApp* app)
 {
     Storage* storage = furi_record_open(RECORD_STORAGE);
@@ -428,6 +445,20 @@ static void morse_flipper_save_config(const MorseFlipperApp* app)
 
     if(storage_file_open(file, MORSE_FLIPPER_CONFIG_PATH, FSAM_WRITE, FSOM_CREATE_ALWAYS))
         storage_file_write(file, &config, sizeof(config));
+
+    storage_file_close(file);
+    storage_file_free(file);
+    furi_record_close(RECORD_STORAGE);
+}
+
+static void morse_flipper_save_rf_config(const MorseFlipperApp* app)
+{
+    Storage* storage = furi_record_open(RECORD_STORAGE);
+    File* file = storage_file_alloc(storage);
+    uint32_t hz = morse_flipper_rf_frequency_hz(&app->rf);
+
+    if(storage_file_open(file, MORSE_FLIPPER_RF_CONFIG_PATH, FSAM_WRITE, FSOM_CREATE_ALWAYS))
+        storage_file_write(file, &hz, sizeof(hz));
 
     storage_file_close(file);
     storage_file_free(file);
