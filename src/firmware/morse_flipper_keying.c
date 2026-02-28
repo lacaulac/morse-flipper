@@ -17,12 +17,20 @@ static const char* morse_flipper_tone_name(const MorseFlipperApp* app)
     return morse_flipper_current_tone(app)->name;
 }
 
+static const MorseFlipperTone* morse_flipper_tone_pick(const MorseFlipperApp* app)
+{
+    const MorseFlipperTone* tone = morse_flipper_current_tone(app);
+
+    if(tone->hz > 0.0f) return tone;
+    return &morse_flipper_tones[1];
+}
+
 static float morse_flipper_active_tone_hz(const MorseFlipperApp* app)
 {
-    float hz = morse_flipper_current_tone(app)->hz;
+    float hz = morse_flipper_tone_pick(app)->hz;
 
     if(app != NULL && app->vail_tone_active && app->vail_tone_idx < COUNT_OF(morse_flipper_tones))
-        hz = morse_flipper_tones[app->vail_tone_idx].hz;
+        hz = morse_flipper_tone_pick(app)->hz;
 
     return hz;
 }
@@ -92,9 +100,9 @@ static void morse_flipper_update_sidetone(MorseFlipperApp* app)
     bool want_tx_tone = morse_flipper_any_active_notes(app) || (app->prev_n > 0U);
     bool want_aux_tone = app->trainer_playback_mark || app->sk_play_mark ||
                          app->session_result_tone || app->rf_mon_tone;
-    bool want_tone = want_aux_tone ||
-                     (want_tx_tone && !morse_flipper_use_pwm_buzzer(app) &&
-                      morse_flipper_buzz_ok(app));
+    bool want_speaker = want_aux_tone ||
+                        (want_tx_tone && !morse_flipper_use_pwm_buzzer(app) &&
+                         morse_flipper_buzz_ok(app));
 
     if(morse_flipper_use_pwm_buzzer(app)) {
         if(app->sp_owned || app->tone_on) {
@@ -110,7 +118,7 @@ static void morse_flipper_update_sidetone(MorseFlipperApp* app)
         }
     }
 
-    if(want_tone) {
+    if(want_speaker) {
         float hz = morse_flipper_active_tone_hz(app);
 
         morse_flipper_tone_start(app);

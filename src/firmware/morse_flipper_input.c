@@ -493,17 +493,18 @@ static void morse_flipper_key_evt( MorseFlipperApp* app, const InputEvent* event
 
 static void morse_flipper_tone_nudge(MorseFlipperApp* app, int dir)
 {
-    int idx = (int)app->tone_idx + dir;
+    int idx =
+        app->tone_idx == MORSE_FLIPPER_TONE_OFF_IDX ? 0 : ((int)app->tone_idx + 1);
+    int current_idx = idx;
+
+    idx += dir;
 
     if(idx < 0) idx = 0;
-    if(idx >= (int)COUNT_OF(morse_flipper_tones)) idx = (int)COUNT_OF(morse_flipper_tones) - 1;
-    if(idx == (int)app->tone_idx) return;
+    if(idx > (int)COUNT_OF(morse_flipper_tones)) idx = (int)COUNT_OF(morse_flipper_tones);
+    if(idx == current_idx) return;
 
-    app->tone_idx = (uint8_t)idx;
+    app->tone_idx = idx == 0 ? MORSE_FLIPPER_TONE_OFF_IDX : (uint8_t)(idx - 1);
     app->prev_n = MORSE_FLIPPER_PREVIEW_TICKS;
-
-    if(app->tone_on && app->sp_owned && furi_hal_speaker_is_mine())
-        furi_hal_speaker_start(morse_flipper_current_tone(app)->hz, MORSE_FLIPPER_VOLUME);
 
     morse_flipper_save_config(app);
     morse_flipper_update_sidetone(app);

@@ -124,7 +124,6 @@ MorseFlipperApp* morse_flipper_boot(void)
         .rf_rx_text = {0},
         .rf_tx_text = {0},
         .gpio_text = {0},
-        .audio_pwm = {0},
         .rf = {0},
         .radio = {0},
         .rf_decoder = {0},
@@ -134,10 +133,10 @@ MorseFlipperApp* morse_flipper_boot(void)
     };
 
     morse_trainer_init(&app.trainer);
+    morse_flipper_audio_pwm_reset(&app.audio_pwm);
     morse_flipper_rf_init(&app.rf);
     morse_flipper_radio_init(&app.radio);
     morse_flipper_radio_set_rx_callback(&app.radio, morse_flipper_rf_rx_edge, &app);
-    morse_flipper_audio_pwm_reset(&app.audio_pwm);
     morse_flipper_cw_decoder_init(&app.rf_decoder, morse_flipper_current_dit_ms(&app));
     morse_flipper_cw_decoder_init(&app.tx_decoder, morse_flipper_current_dit_ms(&app));
     morse_flipper_cw_decoder_init(&app.gpio_decoder, morse_flipper_current_dit_ms(&app));
@@ -214,10 +213,10 @@ void morse_flipper_shutdown(MorseFlipperApp* app)
         MorseFlipperRadioProfileOokData);
     morse_flipper_radio_set_tx_level(&app->radio, false);
     morse_flipper_radio_deinit(&app->radio);
-    morse_flipper_audio_pwm_stop(&app->audio_pwm);
     morse_keyer_reset(&app->keyer);
     morse_flipper_drain_keyer_events(app);
     morse_flipper_release_all_notes(app);
+    morse_flipper_audio_pwm_stop(&app->audio_pwm);
     morse_flipper_tone_stop(app);
     if(app->backlight != MorseFlipperBacklightAuto && app->notifications)
         notification_message(app->notifications, &sequence_display_backlight_enforce_auto);

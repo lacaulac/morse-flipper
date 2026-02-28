@@ -1,5 +1,4 @@
-#ifndef yo3gnd_p2buzz_uh2xk
-#define yo3gnd_p2buzz_uh2xk
+#pragma once
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -66,6 +65,4 @@ bool morse_flipper_audio_pwm_on(const MorseFlipperAudioPwm* audio);
 #ifdef MORSE_FLIPPER_FAP
 bool morse_flipper_audio_pwm_start(MorseFlipperAudioPwm* audio);
 void morse_flipper_audio_pwm_stop(MorseFlipperAudioPwm* audio);
-#endif
-
 #endif

@@ -23,7 +23,7 @@ static uint8_t morse_flipper_nearest_tone_idx_for_midi(uint8_t midi_note)
     uint8_t best_idx = 0U;
     uint8_t best_delta = 0xFFU;
 
-    for(uint8_t i = 0; i < COUNT_OF(morse_flipper_tones); i++) {
+    for(uint8_t i = 0U; i < COUNT_OF(morse_flipper_tones); i++) {
         uint8_t tone_note = morse_flipper_tones[i].midi_note;
         uint8_t delta = (tone_note > midi_note) ? (tone_note - midi_note) : (midi_note - tone_note);
         if(delta < best_delta) {
@@ -169,14 +169,10 @@ static void morse_flipper_send_transport_note(MorseFlipperApp* app, uint8_t note
 
 static void morse_flipper_clear_vail_overrides(MorseFlipperApp* app)
 {
-    bool had_tone_override = app->vail_tone_active;
-
     app->vail_mode_active = false;
     app->vail_speed_active = false;
     app->vail_tone_active = false;
-
-    if(had_tone_override && app->tone_on && app->sp_owned && furi_hal_speaker_is_mine())
-        furi_hal_speaker_start(morse_flipper_current_tone(app)->hz, MORSE_FLIPPER_VOLUME);
+    morse_flipper_update_sidetone(app);
 }
 
 static void morse_flipper_apply_vail_speed(MorseFlipperApp* app, uint8_t value)
@@ -211,12 +207,7 @@ static void morse_flipper_apply_vail_tone(MorseFlipperApp* app, uint8_t midi_not
 
     app->vail_tone_active = true;
     app->vail_tone_idx = tone_idx;
-
-    if(app->tone_on && app->sp_owned && furi_hal_speaker_is_mine()) {
-        furi_hal_speaker_start(morse_flipper_current_tone(app)->hz, MORSE_FLIPPER_VOLUME);
-    } else {
-        morse_flipper_update_sidetone(app);
-    }
+    morse_flipper_update_sidetone(app);
 
     morse_flipper_view_dirty(app);
 }

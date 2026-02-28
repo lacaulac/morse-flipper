@@ -155,13 +155,6 @@ static void morse_flipper_train_fix(MorseFlipperApp* app)
     if(app->trainer_gap_s > MORSE_FLIPPER_TRAINER_GROUP_PAUSE_MAX_S) app->trainer_gap_s = MORSE_FLIPPER_TRAINER_GROUP_PAUSE_MAX_S;
 }
 
-static uint8_t morse_flipper_cfg_tone_idx(uint8_t x)
-{
-    if(x == MORSE_FLIPPER_TONE_OFF_IDX) return MORSE_FLIPPER_TONE_OFF_IDX;
-    if(x < COUNT_OF(morse_flipper_tones)) return x;
-    return 0U;
-}
-
 static void morse_flipper_sk_fix(MorseFlipperApp* app)
 {
     uint8_t w;
@@ -205,6 +198,13 @@ static void morse_flipper_config_apply_gpio( MorseFlipperApp* app, uint8_t dit, 
     morse_flipper_gpio_sync_straight_idx(app);
 }
 
+static uint8_t morse_flipper_cfg_tone(uint8_t stored_tone_idx)
+{
+    if(stored_tone_idx == MORSE_FLIPPER_TONE_OFF_IDX) return MORSE_FLIPPER_TONE_OFF_IDX;
+    if(stored_tone_idx < COUNT_OF(morse_flipper_tones)) return stored_tone_idx;
+    return 0U;
+}
+
 static void morse_flipper_load_config(MorseFlipperApp* app)
 {
     Storage* storage = furi_record_open(RECORD_STORAGE);
@@ -221,7 +221,7 @@ static void morse_flipper_load_config(MorseFlipperApp* app)
     if(storage_file_open(file, MORSE_FLIPPER_CONFIG_PATH, FSAM_READ, FSOM_OPEN_EXISTING)) {
         got = storage_file_read(file, &config, sizeof(config));
         if(got == sizeof(config) && config.version == MORSE_FLIPPER_CONFIG_VERSION) {
-            app->tone_idx = morse_flipper_cfg_tone_idx(config.tone_idx);
+            app->tone_idx = morse_flipper_cfg_tone(config.tone_idx);
 
             if(config.keyer_mode >= MorseKeyerModeStraight &&
                config.keyer_mode <= MorseKeyerModeKeyahead)
@@ -255,7 +255,7 @@ static void morse_flipper_load_config(MorseFlipperApp* app)
         } else if(got == sizeof(config_v6)) {
             memcpy(&config_v6, &config, sizeof(config_v6));
             if(config_v6.version == 6U) {
-                app->tone_idx = morse_flipper_cfg_tone_idx(config_v6.tone_idx);
+                app->tone_idx = morse_flipper_cfg_tone(config_v6.tone_idx);
 
                 if(config_v6.keyer_mode >= MorseKeyerModeStraight &&
                    config_v6.keyer_mode <= MorseKeyerModeKeyahead)
@@ -288,7 +288,7 @@ static void morse_flipper_load_config(MorseFlipperApp* app)
         } else if(got == sizeof(config_v5)) {
             memcpy(&config_v5, &config, sizeof(config_v5));
             if(config_v5.version == 5U) {
-                app->tone_idx = morse_flipper_cfg_tone_idx(config_v5.tone_idx);
+                app->tone_idx = morse_flipper_cfg_tone(config_v5.tone_idx);
 
                 if(config_v5.keyer_mode >= MorseKeyerModeStraight &&
                    config_v5.keyer_mode <= MorseKeyerModeKeyahead)
@@ -317,7 +317,7 @@ static void morse_flipper_load_config(MorseFlipperApp* app)
         } else if(got == sizeof(config_v4)) {
             memcpy(&config_v4, &config, sizeof(config_v4));
             if(config_v4.version == 4U) {
-                app->tone_idx = morse_flipper_cfg_tone_idx(config_v4.tone_idx);
+                app->tone_idx = morse_flipper_cfg_tone(config_v4.tone_idx);
 
                 if(config_v4.keyer_mode >= MorseKeyerModeStraight &&
                    config_v4.keyer_mode <= MorseKeyerModeKeyahead)
@@ -340,7 +340,7 @@ static void morse_flipper_load_config(MorseFlipperApp* app)
         } else if(got == sizeof(config_v3)) {
             memcpy(&config_v3, &config, sizeof(config_v3));
             if(config_v3.version == 3U) {
-                app->tone_idx = morse_flipper_cfg_tone_idx(config_v3.tone_idx);
+                app->tone_idx = morse_flipper_cfg_tone(config_v3.tone_idx);
 
                 if(config_v3.keyer_mode >= MorseKeyerModeStraight &&
                    config_v3.keyer_mode <= MorseKeyerModeKeyahead)
@@ -360,7 +360,7 @@ static void morse_flipper_load_config(MorseFlipperApp* app)
         } else if(got == sizeof(config_v2)) {
             memcpy(&config_v2, &config, sizeof(config_v2));
             if(config_v2.version == 2U) {
-                app->tone_idx = morse_flipper_cfg_tone_idx(config_v2.tone_idx);
+                app->tone_idx = morse_flipper_cfg_tone(config_v2.tone_idx);
 
                 if(config_v2.keyer_mode >= MorseKeyerModeStraight &&
                    config_v2.keyer_mode <= MorseKeyerModeKeyahead)
@@ -378,7 +378,7 @@ static void morse_flipper_load_config(MorseFlipperApp* app)
         } else if(got == sizeof(config_v1)) {
             memcpy(&config_v1, &config, sizeof(config_v1));
             if(config_v1.version == 1U) {
-                app->tone_idx = morse_flipper_cfg_tone_idx(config_v1.tone_idx);
+                app->tone_idx = morse_flipper_cfg_tone(config_v1.tone_idx);
 
                 if(config_v1.keyer_mode >= MorseKeyerModeStraight &&
                    config_v1.keyer_mode <= MorseKeyerModeKeyahead)

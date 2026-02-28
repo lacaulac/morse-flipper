@@ -37,7 +37,6 @@
 #define MORSE_FLIPPER_CONFIG_PATH APP_DATA_PATH("config.bin")
 #define MORSE_FLIPPER_RF_CONFIG_PATH APP_DATA_PATH("rf.bin")
 #define MORSE_FLIPPER_CONFIG_VERSION 8
-#define MORSE_FLIPPER_TONE_OFF_IDX 0xFFU
 #define MORSE_FLIPPER_DEFAULT_DIT_MS 100U
 #define MORSE_FLIPPER_SESSION_SETTLE_MS 1000U
 #define MORSE_FLIPPER_SESSION_RESULT_MS 160U
@@ -62,6 +61,7 @@
 #define MORSE_FLIPPER_STRAIGHT_NEXT_DEFAULT_S    3U
 #define MORSE_FLIPPER_STRAIGHT_CHARSET           "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 #define MORSE_FLIPPER_RF_FREQ_DIGITS             6U
+#define MORSE_FLIPPER_TONE_OFF_IDX               0xFFU
 
 #define MORSE_SOURCE_STRAIGHT_GPIO (1UL << 0)
 #define MORSE_SOURCE_STRAIGHT_BTN  (1UL << 1)
@@ -451,8 +451,8 @@ typedef struct {
     char rf_rx_text[64];
     char rf_tx_text[64];
     char gpio_text[64];
-    MorseFlipperAudioPwm audio_pwm;
     MorseFlipperRunHistory run_history;
+    MorseFlipperAudioPwm audio_pwm;
     MorseFlipperStraightFilter straight_filter;
     MorseFlipperRf rf;
     MorseFlipperRadio radio;
@@ -515,6 +515,8 @@ static bool morse_flipper_training_playback_active(const MorseFlipperApp* app);
 static bool morse_flipper_straight_answer_down(const MorseFlipperApp* app);
 static void morse_flipper_cycle_mode(MorseFlipperApp* app);
 static void morse_flipper_tone_nudge(MorseFlipperApp* app, int dir);
+static bool morse_flipper_buzz_ok(const MorseFlipperApp* app);
+static const char* morse_flipper_tone_name(const MorseFlipperApp* app);
 static void morse_flipper_toggle_handedness(MorseFlipperApp* app);
 static void morse_flipper_tick_trainer_playback(MorseFlipperApp* app, uint32_t now_ms);
 static void morse_flipper_help_open(MorseFlipperApp* app);
@@ -1379,6 +1381,7 @@ static void morse_flipper_reset_run_state(MorseFlipperApp* app) {
     if(app == NULL) return;
 
     morse_flipper_run_history_reset(&app->run_history);
+    morse_flipper_audio_pwm_set_gate(&app->audio_pwm, false);
     morse_flipper_straight_filter_reset(&app->straight_filter);
     app->rf_tx_text[0] = '\0';
     morse_flipper_cw_decoder_init(&app->tx_decoder, morse_flipper_current_dit_ms(app));
@@ -1457,8 +1460,19 @@ static void morse_flipper_enter_screen( MorseFlipperApp* app, uint8_t screen, ui
     }
 
     if(screen == MorseFlipperScreenRun && app->screen != MorseFlipperScreenRun) {
+        app->prev_n = 0U;
         app->run_dit_ms = morse_flipper_current_dit_ms(app);
         morse_flipper_reset_run_state(app);
+        morse_flipper_audio_pwm_prepare(
+            &app->audio_pwm,
+            MORSE_FLIPPER_AUDIO_PWM_CARRIER_HZ,
+            MORSE_FLIPPER_AUDIO_PWM_SAMPLE_RATE_HZ,
+            MORSE_FLIPPER_AUDIO_PWM_TONE_HZ,
+            MORSE_FLIPPER_AUDIO_PWM_FADE_MS,
+            MORSE_FLIPPER_AUDIO_PWM_FADE_MS);
+        if(morse_flipper_buzz_ok(app)) {
+            morse_flipper_audio_pwm_start(&app->audio_pwm);
+        }
     }
 
     if(screen == MorseFlipperScreenRf && app->screen != MorseFlipperScreenRf) {
@@ -1511,18 +1525,6 @@ static void morse_flipper_enter_screen( MorseFlipperApp* app, uint8_t screen, ui
         app->gpio_edge_at = 0U;
         app->rf_tx_gap_flushed = true;
         app->gpio_gap_flushed = true;
-    }
-
-    if(screen == MorseFlipperScreenRun && app->screen != MorseFlipperScreenRun) {
-        morse_flipper_audio_pwm_prepare(
-            &app->audio_pwm,
-            MORSE_FLIPPER_AUDIO_PWM_CARRIER_HZ,
-            MORSE_FLIPPER_AUDIO_PWM_SAMPLE_RATE_HZ,
-            MORSE_FLIPPER_AUDIO_PWM_TONE_HZ,
-            MORSE_FLIPPER_AUDIO_PWM_FADE_MS,
-            MORSE_FLIPPER_AUDIO_PWM_FADE_MS);
-        morse_flipper_audio_pwm_start(&app->audio_pwm);
-        morse_flipper_cw_decoder_init(&app->tx_decoder, morse_flipper_current_dit_ms(app));
     }
 
     app->screen = screen;

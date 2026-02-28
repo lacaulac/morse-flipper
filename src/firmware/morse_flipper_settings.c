@@ -214,10 +214,6 @@ static void morse_flipper_settings_tone_changed(VariableItem* item) {
     variable_item_set_current_value_text(item, morse_flipper_tone_name(app));
     app->prev_n = MORSE_FLIPPER_PREVIEW_TICKS;
 
-    if(app->tone_on && app->sp_owned && furi_hal_speaker_is_mine()) {
-        furi_hal_speaker_start(morse_flipper_current_tone(app)->hz, MORSE_FLIPPER_VOLUME);
-    }
-
     morse_flipper_update_sidetone(app);
     morse_flipper_save_config(app);
 }
