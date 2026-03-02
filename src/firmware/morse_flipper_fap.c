@@ -1470,9 +1470,8 @@ static void morse_flipper_enter_screen( MorseFlipperApp* app, uint8_t screen, ui
             MORSE_FLIPPER_AUDIO_PWM_TONE_HZ,
             MORSE_FLIPPER_AUDIO_PWM_FADE_MS,
             MORSE_FLIPPER_AUDIO_PWM_FADE_MS);
-        if(morse_flipper_local_buzzer_enabled(app)) {
-            morse_flipper_audio_pwm_start(&app->audio_pwm);
-        }
+        morse_flipper_audio_pwm_start(&app->audio_pwm);
+        morse_flipper_update_sidetone(app);
     }
 
     if(screen == MorseFlipperScreenRf && app->screen != MorseFlipperScreenRf) {
@@ -1783,6 +1782,7 @@ static void morse_flipper_tick_trainer_playback(MorseFlipperApp* app, uint32_t n
                 app->session_last_input_at = now_ms;
             }
         }
+        morse_flipper_update_sidetone(app);
         morse_flipper_view_dirty(app);
         return;
     }
@@ -1790,12 +1790,14 @@ static void morse_flipper_tick_trainer_playback(MorseFlipperApp* app, uint32_t n
     if(morse[app->trainer_mark_idx] == '\0') {
         app->trainer_playback_active = false;
         app->trainer_next_at = 0U;
+        morse_flipper_update_sidetone(app);
         return;
     }
 
     app->trainer_playback_mark = true;
     app->trainer_next_at =
         now_ms + ((morse[app->trainer_mark_idx] == '-') ? (dit_ms * 3U) : dit_ms);
+    morse_flipper_update_sidetone(app);
     morse_flipper_view_dirty(app);
 }
 
@@ -1817,6 +1819,7 @@ static void morse_flipper_tick_straight(MorseFlipperApp* app, uint32_t now_ms) {
                 app->straight_wait_answer = true;
                 app->straight_wait_started_at = now_ms;
                 app->straight_next_at = 0U;
+                morse_flipper_update_sidetone(app);
                 morse_flipper_view_dirty(app);
                 return;
             }
@@ -1824,6 +1827,7 @@ static void morse_flipper_tick_straight(MorseFlipperApp* app, uint32_t now_ms) {
             app->straight_playback_mark = true;
             app->straight_next_at =
                 now_ms + (morse[app->straight_mark_idx] == '-' ? (dit_ms * 3U) : dit_ms);
+            morse_flipper_update_sidetone(app);
             morse_flipper_view_dirty(app);
             return;
         }
@@ -1838,6 +1842,7 @@ static void morse_flipper_tick_straight(MorseFlipperApp* app, uint32_t now_ms) {
         } else {
             app->straight_next_at = now_ms + dit_ms;
         }
+        morse_flipper_update_sidetone(app);
         morse_flipper_view_dirty(app);
     }
 

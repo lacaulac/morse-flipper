@@ -100,22 +100,11 @@ static void morse_flipper_update_sidetone(MorseFlipperApp* app)
     bool want_tx_tone = morse_flipper_any_active_notes(app) || (app->preview_ticks > 0U);
     bool want_aux_tone = app->trainer_playback_mark || app->straight_playback_mark ||
                          app->session_result_tone || app->rf_monitor_tone;
-    bool want_speaker = want_aux_tone ||
-                        (want_tx_tone && !morse_flipper_use_pwm_buzzer(app) &&
-                         morse_flipper_local_buzzer_enabled(app));
+    bool want_speaker =
+        want_aux_tone || (want_tx_tone && morse_flipper_local_buzzer_enabled(app));
 
     if(morse_flipper_use_pwm_buzzer(app)) {
-        if(app->speaker_owned || app->tone_on) {
-            morse_flipper_tone_stop(app);
-        }
-
         morse_flipper_audio_pwm_set_gate(&app->audio_pwm, want_tx_tone);
-        if(!want_aux_tone) {
-            app->tone_on =
-                want_tx_tone || morse_flipper_audio_pwm_sound_active(&app->audio_pwm);
-            app->speaker_busy = false;
-            return;
-        }
     }
 
     if(want_speaker) {

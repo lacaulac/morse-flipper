@@ -164,7 +164,10 @@ static void morse_flipper_tick_session(MorseFlipperApp* app, uint32_t now_ms) {
 
     if(app == NULL || app->screen != MorseFlipperScreenSession || !app->session_started) return;
 
-    if(app->session_result_tone && now_ms >= app->session_result_until) app->session_result_tone = false;
+    if(app->session_result_tone && now_ms >= app->session_result_until) {
+        app->session_result_tone = false;
+        morse_flipper_update_sidetone(app);
+    }
 
     if(app->session_result_hold && app->session_next_group_at > now_ms) {
         if(morse_flipper_session_wait_key_down(app)) {
