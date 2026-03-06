@@ -556,6 +556,12 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
     canvas_clear(canvas);
     canvas_set_font(canvas, FontSecondary);
 
+    if(app->audio_wait_active) {
+        canvas_set_font(canvas, FontPrimary);
+        canvas_draw_str_aligned(canvas, 64, 32, AlignCenter, AlignCenter, "Please wait");
+        return;
+    }
+
     if(app->screen == MorseFlipperScreenAbout) {
         canvas_set_font(canvas, FontPrimary);
         canvas_draw_str(canvas, 4, 14, "About");

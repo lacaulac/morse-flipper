@@ -91,6 +91,14 @@ static uint8_t morse_flipper_scene_view(uint32_t scene)
 
 static void morse_flipper_scene_enter_now(MorseFlipperApp* app, uint32_t scene)
 {
+    uint8_t view = morse_flipper_scene_view(scene);
+
+    if(view == MorseFlipperViewLive) {
+        view_dispatcher_switch_to_view(app->view_dispatcher, view);
         morse_flipper_enter_screen(app, morse_flipper_scene_screen(scene), scene, furi_get_tick());
-    view_dispatcher_switch_to_view(app->view_dispatcher, morse_flipper_scene_view(scene));
+        return;
+    }
+
+    morse_flipper_enter_screen(app, morse_flipper_scene_screen(scene), scene, furi_get_tick());
+    view_dispatcher_switch_to_view(app->view_dispatcher, view);
 }

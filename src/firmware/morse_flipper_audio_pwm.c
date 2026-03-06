@@ -240,6 +240,29 @@ bool morse_flipper_audio_pwm_sound_active(const MorseFlipperAudioPwm* audio)
 #define MORSE_FLIPPER_AUDIO_PWM_DMA_DEF MORSE_FLIPPER_AUDIO_PWM_DMA, MORSE_FLIPPER_AUDIO_PWM_DMA_CH
 #define MORSE_FLIPPER_AUDIO_PWM_DMA_IRQ FuriHalInterruptIdDma1Ch1
 
+static void morse_flipper_audio_pwm_ramp_midpoint(bool up, uint32_t carrier_hz)
+{
+    uint32_t step_delay_ms = MORSE_FLIPPER_AUDIO_PWM_RAMP_MS / MORSE_FLIPPER_AUDIO_PWM_RAMP_STEPS;
+
+    if(step_delay_ms == 0U) step_delay_ms = 1U;
+
+    if(up) {
+        for(uint8_t step = 1U; step <= MORSE_FLIPPER_AUDIO_PWM_RAMP_STEPS; step++) {
+            uint8_t duty = (uint8_t)((50U * step) / MORSE_FLIPPER_AUDIO_PWM_RAMP_STEPS);
+
+            furi_hal_pwm_set_params(FuriHalPwmOutputIdTim1PA7, carrier_hz, duty);
+            furi_delay_ms(step_delay_ms);
+        }
+    } else {
+        for(uint8_t step = MORSE_FLIPPER_AUDIO_PWM_RAMP_STEPS; step > 0U; step--) {
+            uint8_t duty = (uint8_t)((50U * (step - 1U)) / MORSE_FLIPPER_AUDIO_PWM_RAMP_STEPS);
+
+            furi_hal_pwm_set_params(FuriHalPwmOutputIdTim1PA7, carrier_hz, duty);
+            furi_delay_ms(step_delay_ms);
+        }
+    }
+}
+
 static void morse_flipper_audio_pwm_clear_dma_flags(void)
 {
 #if MORSE_FLIPPER_AUDIO_PWM_DMA_CH == LL_DMA_CHANNEL_1
@@ -298,8 +321,9 @@ bool morse_flipper_audio_pwm_start(MorseFlipperAudioPwm* audio)
         audio->own_bus_dmamux1 = true;
     }
 
-    furi_hal_pwm_start(FuriHalPwmOutputIdTim1PA7, audio->carrier_hz, 50U);
+    furi_hal_pwm_start(FuriHalPwmOutputIdTim1PA7, audio->carrier_hz, 0U);
     audio->own_bus_tim1 = true;
+    morse_flipper_audio_pwm_ramp_midpoint(true, audio->carrier_hz);
 
     LL_TIM_DisableCounter(TIM1);
     LL_TIM_DisableAllOutputs(TIM1);
@@ -388,6 +412,14 @@ void morse_flipper_audio_pwm_stop(MorseFlipperAudioPwm* audio)
     LL_TIM_DisableAllOutputs(TIM1);
     LL_TIM_DisableCounter(TIM1);
     LL_TIM_OC_SetCompareCH1(TIM1, audio->pwm_midpoint);
+    LL_TIM_SetRepetitionCounter(TIM1, 0U);
+    LL_TIM_CC_EnableChannel(TIM1, LL_TIM_CHANNEL_CH1N);
+    LL_TIM_EnableAllOutputs(TIM1);
+    LL_TIM_EnableCounter(TIM1);
+    morse_flipper_audio_pwm_ramp_midpoint(false, audio->carrier_hz);
+    LL_TIM_DisableCounter(TIM1);
+    LL_TIM_DisableAllOutputs(TIM1);
+    LL_TIM_CC_DisableChannel(TIM1, LL_TIM_CHANNEL_CH1N);
 
     if(audio->own_bus_tim1) furi_hal_pwm_stop(FuriHalPwmOutputIdTim1PA7);
     if(audio->own_bus_dma1) furi_hal_bus_disable(FuriHalBusDMA1);

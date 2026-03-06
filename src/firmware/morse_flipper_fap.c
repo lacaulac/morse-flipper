@@ -42,6 +42,7 @@
 #define MORSE_FLIPPER_SESSION_RESULT_MS 160U
 #define MORSE_FLIPPER_STRAIGHT_SETTLE_MS 700U
 #define MORSE_FLIPPER_STRAIGHT_RELEASE_DEBOUNCE_MS 15U
+#define MORSE_FLIPPER_AUDIO_WAIT_DRAW_MS 30U
 #define MORSE_FLIPPER_RF_TX_TAIL_DITS 2U
 #define MORSE_FLIPPER_RF_RSSI_WINDOW_MS 160U
 #define MORSE_FLIPPER_RF_RSSI_PEAK_DECAY_MS 240U
@@ -457,6 +458,7 @@ typedef struct {
     bool rf_rssi_valid;
     bool rf_carrier_present;
     bool rf_monitor_tone;
+    bool audio_wait_active;
     bool gpio_level;
     bool gpio_gap_flushed;
     uint8_t straight_mark_idx;
@@ -817,18 +819,24 @@ static uint8_t morse_flipper_gpio_no_p2(uint8_t pin_idx, uint8_t def) {
 
 static bool morse_flipper_scene_supports_audio_pwm(uint8_t scene) {
     switch(scene) {
-    case MorseFlipperSceneMenuMain:
-    case MorseFlipperSceneMenuTraining:
-    case MorseFlipperSceneMenuSettings:
-    case MorseFlipperSceneMenuHelp:
-    case MorseFlipperSceneMenuRf:
-    case MorseFlipperSceneHelp:
-    case MorseFlipperSceneAbout:
-    case MorseFlipperSceneStartupProbe:
-        return false;
-    default:
+    case MorseFlipperSceneRun:
+    case MorseFlipperSceneTrace:
+    case MorseFlipperSceneSession:
+    case MorseFlipperSceneSessionEnd:
+    case MorseFlipperSceneStraight:
+    case MorseFlipperSceneRf:
+    case MorseFlipperSceneRfRx:
         return true;
+    default:
+        return false;
     }
+}
+
+static bool morse_flipper_audio_wait_transition(const MorseFlipperApp* app, uint8_t old_scene, uint8_t new_scene)
+{
+    if(app == NULL || app->audio_path != MorseFlipperAudioPathGpioP2Hd || old_scene == new_scene) return false;
+    return morse_flipper_scene_supports_audio_pwm(old_scene) ||
+           morse_flipper_scene_supports_audio_pwm(new_scene);
 }
 
 static uint8_t morse_flipper_p2_volume_pct(const MorseFlipperApp* app)
@@ -1489,10 +1497,12 @@ static void morse_flipper_enter_screen(
     uint32_t now_ms) {
     uint8_t old_screen;
     uint8_t old_scene;
+    bool audio_wait;
 
     if(app->screen == screen && app->scene == scene) return;
     old_screen = app->screen;
     old_scene = app->scene;
+    audio_wait = morse_flipper_audio_wait_transition(app, old_scene, scene);
 
     if(app->screen == MorseFlipperScreenSession && screen != MorseFlipperScreenSession &&
        screen != MorseFlipperScreenSessionEnd) {
@@ -1612,9 +1622,15 @@ static void morse_flipper_enter_screen(
     if(screen == MorseFlipperScreenHome) {
         morse_flipper_poll(app);
     }
+    if(audio_wait) {
+        app->audio_wait_active = true;
+        morse_flipper_view_dirty(app);
+        furi_delay_ms(MORSE_FLIPPER_AUDIO_WAIT_DRAW_MS);
+    }
     if(old_scene != scene || morse_flipper_scene_supports_audio_pwm(scene) ||
        morse_flipper_scene_supports_audio_pwm(old_scene))
         morse_flipper_sync_audio_output(app);
+    if(audio_wait) app->audio_wait_active = false;
     morse_flipper_view_dirty(app);
 }
 
