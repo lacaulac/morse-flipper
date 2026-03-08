@@ -1251,6 +1251,14 @@ static bool morse_flipper_gpio_probe_screen(const MorseFlipperApp* app) {
            app->screen == MorseFlipperScreenTxGroups;
 }
 
+static bool morse_flipper_gpio_probe_keep_state(uint8_t screen)
+{
+    return screen == MorseFlipperScreenSession || screen == MorseFlipperScreenStraight ||
+           screen == MorseFlipperScreenTxGroups ||
+           screen == MorseFlipperScreenTxGroupsResult ||
+           screen == MorseFlipperScreenTxGroupsFinal;
+}
+
 static bool morse_flipper_gpio_probe_before_start(const MorseFlipperApp* app) {
     if(app == NULL) return false;
     if(app->screen == MorseFlipperScreenSession) return !app->session_started;
@@ -1315,9 +1323,10 @@ static void morse_flipper_gpio_probe_reset(MorseFlipperApp* app) {
 static void morse_flipper_gpio_probe_prepare(MorseFlipperApp* app, uint32_t now_ms) {
     if(app == NULL) return;
 
-    morse_flipper_gpio_probe_reset(app);
     if(!morse_flipper_gpio_probe_screen(app)) return;
+    if(!morse_flipper_gpio_probe_before_start(app)) return;
 
+    morse_flipper_gpio_probe_reset(app);
     app->gpio_probe_state = morse_flipper_gpio_probe_sample(app);
     if(app->gpio_probe_state == MorseFlipperGpioProbeGroundToDah) {
         app->gpio_probe_notice_until = now_ms + 1000U;
@@ -1362,6 +1371,7 @@ bool morse_flipper_gpio_probe_notice_active(const MorseFlipperApp* app) {
 bool morse_flipper_gpio_probe_blocks_start(const MorseFlipperApp* app) {
     return app != NULL && app->input_source == MorseFlipperInputSourcePaddle &&
            morse_flipper_gpio_probe_screen(app) &&
+           morse_flipper_gpio_probe_before_start(app) &&
            morse_flipper_gpio_probe_blocks(app->gpio_probe_state);
 }
 
@@ -2142,7 +2152,7 @@ void morse_flipper_enter_screen(
     app->scene = scene;
     if(morse_flipper_gpio_probe_screen(app)) {
         morse_flipper_gpio_probe_prepare(app, now_ms);
-    } else {
+    } else if(!morse_flipper_gpio_probe_keep_state(screen)) {
         morse_flipper_gpio_probe_reset(app);
     }
     if(old_screen == MorseFlipperScreenStraight || screen == MorseFlipperScreenStraight ||

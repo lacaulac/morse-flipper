@@ -269,10 +269,15 @@ static void morse_flipper_tx_group_pick_fault(MorseFlipperTxGroup* g)
     const char* best = "";
     uint16_t sev = 0U;
     uint16_t delta = 0U;
+    uint16_t lgap_sev = 150U;
     uint8_t len;
 
     if(g == 0) return;
     len = morse_flipper_tx_group_answer_len(g);
+    if(!g->result.correct_pass && morse_flipper_tx_group_marks_complete(g) &&
+       g->result.letter_gap_pct < 90U) {
+        lgap_sev = 215U;
+    }
 
     if(g->result.timed_out) {
         txg_fault_try(&best, &sev, &delta, len == 0U ? "no answer" : "incomplete group", 220U, 100U);
@@ -294,8 +299,8 @@ static void morse_flipper_tx_group_pick_fault(MorseFlipperTxGroup* g)
             &best,
             &sev,
             &delta,
-            g->result.letter_gap_pct > 110U ? "letter gaps long" : "letter gaps short",
-            150U,
+            g->result.letter_gap_pct > 110U ? "letter gaps too long" : "letters gaps too short",
+            lgap_sev,
             txg_abs100(g->result.letter_gap_pct));
 
     if(g->sk && !g->result.ratio_pass)
@@ -303,7 +308,7 @@ static void morse_flipper_tx_group_pick_fault(MorseFlipperTxGroup* g)
             &best,
             &sev,
             &delta,
-            g->result.ratio_x100 > 315U ? "long dah ratio" : "short dah ratio",
+            g->result.ratio_x100 > 315U ? "dah ratio too long" : "dah ratio too short",
             130U,
             g->result.ratio_x100 > 300U ? (uint16_t)(g->result.ratio_x100 - 300U) :
                                            (uint16_t)(300U - g->result.ratio_x100));
@@ -327,7 +332,7 @@ static void morse_flipper_tx_group_pick_fault(MorseFlipperTxGroup* g)
             &best,
             &sev,
             &delta,
-            g->result.dit_gap_pct > 110U ? "symbol gaps long" : "symbol gaps short",
+            g->result.dit_gap_pct > 110U ? "gaps are too long" : "gaps are too short",
             110U,
             txg_abs100(g->result.dit_gap_pct));
 
@@ -336,7 +341,7 @@ static void morse_flipper_tx_group_pick_fault(MorseFlipperTxGroup* g)
             &best,
             &sev,
             &delta,
-            "inconsistent speed",
+            "speed is inconsistent",
             100U,
             txg_abs100(g->result.variance_pct));
 
@@ -354,6 +359,27 @@ void morse_flipper_tx_group_score(MorseFlipperTxGroup* g, uint16_t dit_ms, bool 
 bool morse_flipper_tx_group_complete(const MorseFlipperTxGroup* g)
 {
     return morse_flipper_tx_group_answer_len(g) >= MORSE_FLIPPER_TX_GROUP_LEN;
+}
+
+bool morse_flipper_tx_group_marks_complete(const MorseFlipperTxGroup* g)
+{
+    uint8_t want;
+
+    if(g == 0) return false;
+    want = morse_flipper_tx_group_expected_marks(g);
+    return want != 0U && g->mark_count >= want;
+}
+
+uint8_t morse_flipper_tx_group_expected_marks(const MorseFlipperTxGroup* g)
+{
+    uint8_t mu[MORSE_FLIPPER_TX_GROUP_MAX_EDGES];
+    uint8_t su[MORSE_FLIPPER_TX_GROUP_MAX_EDGES];
+    uint8_t mc = 0U;
+    uint8_t sc;
+
+    if(g == 0) return 0U;
+    txg_expected(g->target, mu, &mc, su, &sc);
+    return mc;
 }
 
 uint8_t morse_flipper_tx_group_answer_len(const MorseFlipperTxGroup* g)

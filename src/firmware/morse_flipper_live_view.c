@@ -153,7 +153,7 @@ static void morse_flipper_draw_tx_groups_result(Canvas* canvas, MorseFlipperApp*
 
     if(app->tx_group.sk) {
         snprintf(a, sizeof(a), "%u.%02u", (unsigned)(r->ratio_x100 / 100U), (unsigned)(r->ratio_x100 % 100U));
-        morse_flipper_draw_txg_metric(canvas, 64, 20, "Ratio", a, !r->ratio_pass);
+        morse_flipper_draw_txg_metric(canvas, 64, 20, "Rtio", a, !r->ratio_pass);
         snprintf(a, sizeof(a), "%u%%", (unsigned)r->accuracy_pct);
         morse_flipper_draw_txg_metric(canvas, 64, 29, "Acc", a, !r->accuracy_pass);
         snprintf(a, sizeof(a), "%u%%", (unsigned)r->dit_gap_pct);
@@ -181,17 +181,14 @@ static void morse_flipper_draw_tx_groups_final(Canvas* canvas, MorseFlipperApp* 
     char v[24];
     uint16_t avg;
     uint8_t y = 20U;
-    unsigned pct = 0U;
 
     if(canvas == NULL || app == NULL) return;
-    if(app->txg_session_total != 0U)
-        pct = ((unsigned)app->txg_session_good * 100U) / app->txg_session_total;
 
     canvas_set_font(canvas, FontPrimary);
     canvas_draw_str_aligned(canvas, 64, 6, AlignCenter, AlignCenter, "Final score");
     canvas_set_font(canvas, FontKeyboard);
 
-    snprintf(v, sizeof(v), "%u/%u  %u%%", (unsigned)app->txg_session_good, (unsigned)app->txg_session_total, pct);
+    snprintf(v, sizeof(v), "%u/%u", (unsigned)app->txg_session_good, (unsigned)app->txg_session_total);
     morse_flipper_draw_txg_metric(canvas, 1, y, "Pass", v, false);
     y += 9U;
     snprintf(v, sizeof(v), "%u%%", (unsigned)morse_flipper_txg_avg_u16(app->txg_sum_speed, app->txg_session_total));
@@ -203,7 +200,7 @@ static void morse_flipper_draw_tx_groups_final(Canvas* canvas, MorseFlipperApp* 
     if(app->txg_session_sk != 0U) {
         avg = morse_flipper_txg_avg_u16(app->txg_sum_ratio, app->txg_session_sk);
         snprintf(v, sizeof(v), "%u.%02u", (unsigned)(avg / 100U), (unsigned)(avg % 100U));
-        morse_flipper_draw_txg_metric(canvas, 64, 20, "Ratio", v, false);
+        morse_flipper_draw_txg_metric(canvas, 64, 20, "Rtio", v, false);
         snprintf(v, sizeof(v), "%u%%", (unsigned)morse_flipper_txg_avg_u16(app->txg_sum_accuracy, app->txg_session_sk));
         morse_flipper_draw_txg_metric(canvas, 64, 29, "Acc", v, false);
         snprintf(v, sizeof(v), "%u%%", (unsigned)morse_flipper_txg_avg_u16(app->txg_sum_dgap, app->txg_session_sk));
@@ -214,6 +211,8 @@ static void morse_flipper_draw_tx_groups_final(Canvas* canvas, MorseFlipperApp* 
 
     canvas_set_font(canvas, FontSecondary);
     canvas_draw_str(canvas, 2, 64, "Back exit");
+    morse_flipper_txg_score_line(app, v, sizeof(v));
+    canvas_draw_str(canvas, 126 - canvas_string_width(canvas, v), 64, v);
     if(app->input_source == MorseFlipperInputSourceButtons && !app->txg_sk)
         morse_flipper_draw_left_exit_hint(canvas);
 }

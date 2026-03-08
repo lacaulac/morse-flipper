@@ -51,6 +51,8 @@ void morse_flipper_tx_group_feed_text(MorseFlipperTxGroup* g, const char* text);
 void morse_flipper_tx_group_score(MorseFlipperTxGroup* g, uint16_t dit_ms, bool timed_out);
 void morse_flipper_tx_group_score_common(MorseFlipperTxGroup* g, uint16_t dit_ms, bool timed_out);
 bool morse_flipper_tx_group_complete(const MorseFlipperTxGroup* g);
+bool morse_flipper_tx_group_marks_complete(const MorseFlipperTxGroup* g);
+uint8_t morse_flipper_tx_group_expected_marks(const MorseFlipperTxGroup* g);
 uint8_t morse_flipper_tx_group_answer_len(const MorseFlipperTxGroup* g);
 
 #endif
