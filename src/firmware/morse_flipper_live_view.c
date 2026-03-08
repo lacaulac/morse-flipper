@@ -292,14 +292,6 @@ static char morse_flipper_live_upper_char(char ch) {
     return ch;
 }
 
-static uint8_t morse_flipper_hex_nibble(char ch)
-{
-    if(ch >= '0' && ch <= '9') return (uint8_t)(ch - '0');
-    if(ch >= 'A' && ch <= 'F') return (uint8_t)(10 + (ch - 'A'));
-    if(ch >= 'a' && ch <= 'f') return (uint8_t)(10 + (ch - 'a'));
-    return 0U;
-}
-
 static void morse_flipper_draw_straight_prompt(Canvas* canvas, int32_t cx, int32_t cy, char ch)
 {
     const MorseFlipperTerminus24Glyph* glyph;
@@ -318,17 +310,11 @@ static void morse_flipper_draw_straight_prompt(Canvas* canvas, int32_t cx, int32
     y_max = canvas_height(canvas);
 
     for(row = 0U; row < MORSE_FLIPPER_TERMINUS24_HEIGHT; row++) {
-        const char* hex = glyph->rows[row];
-        uint16_t bits = 0U;
+        uint16_t bits = glyph->rows[row];
         uint8_t col;
-        uint8_t i;
-
-        for(i = 0U; hex[i] != '\0'; i++) {
-            bits = (uint16_t)((bits << 4U) | morse_flipper_hex_nibble(hex[i]));
-        }
 
         for(col = 0U; col < MORSE_FLIPPER_TERMINUS24_WIDTH; col++) {
-            if((bits & (uint16_t)(1U << (15U - col))) != 0U) {
+            if((bits & (uint16_t)(1U << (11U - col))) != 0U) {
                 int32_t px = x0 + (int32_t)col;
                 int32_t py = y0 + (int32_t)row;
 

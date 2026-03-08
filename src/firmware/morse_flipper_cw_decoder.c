@@ -67,7 +67,7 @@ static char decoder_lookup(uint8_t code)
     for(i = 0u; i < sizeof(cw_ascii); i++)
         if(cw_ascii[i] == code) return (char)i;
 
-    return '_';
+    return '#';
 }
 
 static bool decoder_preview_extendable(uint8_t code, size_t count)
@@ -85,12 +85,12 @@ static bool decoder_preview_extendable(uint8_t code, size_t count)
     next_code = (uint8_t)(code & (uint8_t)~bit);
     next_code |= (uint8_t)(1u << (count + 1u));
     next = decoder_lookup(next_code);
-    if(next != 0 && next != '_' && next != preview) return true;
+    if(next != 0 && next != '#' && next != preview) return true;
 
     next_code = (uint8_t)(code | bit);
     next_code |= (uint8_t)(1u << (count + 1u));
     next = decoder_lookup(next_code);
-    if(next != 0 && next != '_' && next != preview) return true;
+    if(next != 0 && next != '#' && next != preview) return true;
 
     return false;
 }
