@@ -534,12 +534,15 @@ typedef struct {
     bool ham_macro_mark;
     uint8_t ham_macro_char_idx;
     uint8_t ham_macro_mark_idx;
+    uint8_t ham_macro_dir;
     uint32_t ham_macro_next_at;
+    uint32_t ham_notice_until;
     char rf_rx_text[64];
     char rf_tx_text[64];
     char gpio_text[64];
     char ham_text_buffer[MORSE_FLIPPER_HAM_KEYER_MESSAGE_LEN + 1U];
     char ham_macro_text[MORSE_FLIPPER_HAM_KEYER_MESSAGE_LEN + 1U];
+    char ham_notice[16];
     MorseFlipperRunHistory run_history;
     MorseFlipperAudioPwm audio_pwm;
     MorseFlipperStraightFilter straight_filter;
@@ -1710,6 +1713,7 @@ static void morse_flipper_ham_stop_macro(MorseFlipperApp* app)
     app->ham_macro_mark = false;
     app->ham_macro_char_idx = 0U;
     app->ham_macro_mark_idx = 0U;
+    app->ham_macro_dir = MORSE_FLIPPER_HAM_KEYER_UNASSIGNED;
     app->ham_macro_next_at = 0U;
     app->ham_macro_text[0] = '\0';
     morse_flipper_set_note_source(app, 0U, MORSE_SOURCE_HAM_MACRO, false);

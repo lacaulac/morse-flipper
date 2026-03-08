@@ -630,6 +630,8 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
     }
 
     if(app->screen == MorseFlipperScreenHamRun) {
+        uint32_t now_ms = furi_get_tick();
+
         snprintf(
             browse_line,
             sizeof(browse_line),
@@ -640,6 +642,16 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
             app,
             "P16 PTT  P15 Key",
             browse_line);
+        if(app->ham_macro_active && app->ham_macro_dir < MORSE_FLIPPER_HAM_KEYER_ASSIGNMENTS) {
+            snprintf(
+                browse_line,
+                sizeof(browse_line),
+                "Send %s",
+                morse_flipper_ham_keyer_dir_label(app->ham_macro_dir));
+            canvas_draw_str(canvas, 92, 54, browse_line);
+        } else if(app->ham_notice[0] != '\0' && now_ms < app->ham_notice_until) {
+            canvas_draw_str(canvas, 98, 54, app->ham_notice);
+        }
         return;
     }
 

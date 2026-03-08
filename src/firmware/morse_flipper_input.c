@@ -107,7 +107,18 @@ static bool morse_flipper_ham_shell_input(MorseFlipperApp* app, const InputEvent
             if(dir < MORSE_FLIPPER_HAM_KEYER_ASSIGNMENTS) {
                 const char* text = morse_flipper_ham_keyer_assignment_text(&app->ham_keyer, dir);
 
-                if(text[0] != '\0') morse_flipper_ham_start_macro(app, text, furi_get_tick());
+                if(text[0] != '\0') {
+                    morse_flipper_ham_start_macro(app, text, furi_get_tick());
+                    app->ham_macro_dir = dir;
+                } else {
+                    snprintf(
+                        app->ham_notice,
+                        sizeof(app->ham_notice),
+                        "No %s",
+                        morse_flipper_ham_keyer_dir_label(dir));
+                    app->ham_notice_until = furi_get_tick() + 700U;
+                    morse_flipper_view_dirty(app);
+                }
                 return true;
             }
         }
