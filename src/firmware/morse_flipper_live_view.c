@@ -24,6 +24,41 @@ static void morse_flipper_draw_tx_history_divider(Canvas* canvas, bool left_hint
     canvas_draw_box(canvas, 127, 31, 1, 7);
 }
 
+static void morse_flipper_txg_score_line(const MorseFlipperApp* app, char* out, size_t out_sz)
+{
+    unsigned pct = 0U;
+
+    if(out == NULL || out_sz == 0U) return;
+    if(app != NULL && app->txg_session_total != 0U)
+        pct = ((unsigned)app->txg_session_good * 100U) / app->txg_session_total;
+    snprintf(
+        out,
+        out_sz,
+        "%u/%u %u%%",
+        app ? (unsigned)app->txg_session_good : 0U,
+        app ? (unsigned)app->txg_session_total : 0U,
+        pct);
+}
+
+static void morse_flipper_draw_tx_groups_practice(Canvas* canvas, MorseFlipperApp* app)
+{
+    char score[18];
+    uint8_t x;
+
+    if(canvas == NULL || app == NULL) return;
+
+    canvas_set_font(canvas, FontPrimary);
+    canvas_draw_str_aligned(canvas, 64, 12, AlignCenter, AlignCenter, "TX Groups of 5");
+    canvas_draw_str_aligned(canvas, 64, 27, AlignCenter, AlignCenter, app->tx_group.target);
+    morse_flipper_draw_tx_history_divider(canvas, morse_flipper_live_left_hint(app));
+
+    canvas_set_font(canvas, FontSecondary);
+    canvas_draw_str(canvas, 3, 47, app->tx_group.answer[0] ? app->tx_group.answer : "");
+    morse_flipper_txg_score_line(app, score, sizeof(score));
+    x = (uint8_t)(126U - canvas_string_width(canvas, score));
+    canvas_draw_str(canvas, x, 64, score);
+}
+
 static void morse_flipper_rf_edit_text(char* out, size_t out_sz, uint32_t khz)
 {
     if(out == NULL || out_sz == 0U) return;
@@ -794,12 +829,7 @@ void morse_flipper_draw(Canvas* canvas, void* ctx) {
                 canvas_draw_str_aligned(canvas, 64, 44, AlignCenter, AlignCenter, "Press your key to start");
             }
         } else if(app->screen == MorseFlipperScreenTxGroups) {
-            canvas_set_font(canvas, FontPrimary);
-            canvas_draw_str_aligned(canvas, 64, 28, AlignCenter, AlignCenter, app->tx_group.target);
-            canvas_set_font(canvas, FontSecondary);
-            canvas_draw_str_aligned(canvas, 64, 44, AlignCenter, AlignCenter,
-                                    app->tx_group.answer[0] ? app->tx_group.answer : "sending...");
-            if(morse_flipper_live_left_hint(app)) morse_flipper_draw_left_exit_hint(canvas);
+            morse_flipper_draw_tx_groups_practice(canvas, app);
         } else {
             canvas_draw_str_aligned(canvas, 64, 38, AlignCenter, AlignCenter, "not yet");
         }
