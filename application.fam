@@ -19,6 +19,8 @@ App(
         "src/firmware/morse_flipper_transport.c",
         "src/firmware/morse_flipper_input.c",
         "src/firmware/morse_flipper_runtime.c",
+        "src/firmware/morse_flipper_session.c",
+        "src/firmware/morse_flipper_rf_live.c",
         "src/firmware/morse_flipper_gpio.c",
         "src/firmware/morse_flipper_gpio_probe.c",
         "src/firmware/morse_flipper_ham_keyer.c",

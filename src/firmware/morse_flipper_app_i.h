@@ -476,6 +476,9 @@ extern const uint8_t morse_flipper_input_values[3];
 extern const uint8_t morse_flipper_keyer_values[7];
 extern const MorseFlipperTone morse_flipper_tones[31];
 extern const SceneManagerHandlers morse_flipper_scene_handlers;
+extern const NotificationSequence morse_flipper_led_good_twice;
+extern const NotificationSequence morse_flipper_led_bad_twice;
+extern const NotificationSequence morse_flipper_led_miss_twice;
 
 void morse_flipper_set_paddle_source(
     MorseFlipperApp* app,
@@ -535,6 +538,7 @@ float morse_flipper_active_tone_hz(const MorseFlipperApp* app);
 uint8_t morse_flipper_current_keyer_mode(const MorseFlipperApp* app);
 uint8_t morse_flipper_ok_button_paddle(const MorseFlipperApp* app);
 uint8_t morse_flipper_back_button_paddle(const MorseFlipperApp* app);
+bool morse_flipper_straight_like_mode(const MorseFlipperApp* app);
 void morse_flipper_toggle_handedness(MorseFlipperApp* app);
 void morse_flipper_tick_trainer_playback(MorseFlipperApp* app, uint32_t now_ms);
 void morse_flipper_help_open(MorseFlipperApp* app);
@@ -587,6 +591,7 @@ void morse_flipper_ham_log_flush(MorseFlipperApp* app);
 void morse_flipper_ham_log_flush_if_idle(MorseFlipperApp* app, uint32_t now_ms);
 void morse_flipper_tick_live_rf(MorseFlipperApp* app, uint32_t now_ms);
 int8_t morse_flipper_rf_clamp_dbm(int8_t dbm);
+int8_t morse_flipper_rssi_dbm_round(float rssi);
 void morse_flipper_rf_bump_focus(MorseFlipperApp* app, int dir);
 void morse_flipper_rf_bump_digit(MorseFlipperApp* app, int dir);
 void morse_flipper_rf_commit_edit(MorseFlipperApp* app);
@@ -604,6 +609,9 @@ void morse_flipper_sync_backlight(MorseFlipperApp* app, uint32_t now_ms);
 void morse_flipper_tick_callback(void* context);
 const char* morse_flipper_input_line(const MorseFlipperApp* app, char* buf, size_t buf_sz);
 uint32_t morse_flipper_straight_answer_settle_ms(const MorseFlipperApp* app);
+void morse_flipper_draw_session_rows(Canvas* canvas, const MorseFlipperApp* app);
+void morse_flipper_draw_session_bottom(Canvas* canvas, const MorseFlipperApp* app);
+void morse_flipper_draw_session_end(Canvas* canvas, const MorseFlipperApp* app);
 void morse_flipper_scene_enter_now(MorseFlipperApp* app, uint32_t scene);
 void morse_flipper_enter_screen(
     MorseFlipperApp* app,

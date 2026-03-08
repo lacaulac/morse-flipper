@@ -1,3 +1,5 @@
+#include "morse_flipper_app_i.h"
+
 void morse_flipper_rf_rx_edge(void* ctx, bool level, uint16_t duration_ms) {
     MorseFlipperApp* app = ctx;
 

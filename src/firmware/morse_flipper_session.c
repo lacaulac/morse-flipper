@@ -1,6 +1,8 @@
+#include "morse_flipper_app_i.h"
+
 static void morse_flipper_session_answer_text( const MorseFlipperApp* app, char* out, size_t out_sz, uint8_t max_chars);
 
-static void morse_flipper_reset_session_runtime(MorseFlipperApp* app) {
+void morse_flipper_reset_session_runtime(MorseFlipperApp* app) {
     if(app == NULL) return;
 
     app->session_started = false;
@@ -41,7 +43,7 @@ bool morse_flipper_session_repeat_active(const MorseFlipperApp* app) {
            morse_trainer_phase(&app->trainer) == MorseTrainerPhaseRepeat;
 }
 
-static bool morse_flipper_session_idle_view(const MorseFlipperApp* app) {
+bool morse_flipper_session_idle_view(const MorseFlipperApp* app) {
     MorseTrainerPhase ph;
 
     if(!app || app->screen != MorseFlipperScreenSession) return false;
@@ -102,7 +104,7 @@ static void morse_flipper_queue_session_feedback(MorseFlipperApp* app, uint32_t 
     morse_flipper_view_dirty(app);
 }
 
-static void morse_flipper_drop_live_keying_for_playback(MorseFlipperApp* app, uint32_t now_ms) {
+void morse_flipper_drop_live_keying_for_playback(MorseFlipperApp* app, uint32_t now_ms) {
     if(app == NULL) return;
 
     morse_flipper_clear_button_keying(app, now_ms);
@@ -111,7 +113,7 @@ static void morse_flipper_drop_live_keying_for_playback(MorseFlipperApp* app, ui
     morse_flipper_set_paddle_source( app, MorseKeyerPaddleDah, MORSE_PADDLE_SOURCE_GPIO_DAH, false, now_ms);
 }
 
-static void morse_flipper_begin_group_playback(MorseFlipperApp* app, uint32_t now_ms) {
+void morse_flipper_begin_group_playback(MorseFlipperApp* app, uint32_t now_ms) {
     if(app == NULL) {
         return;
     }
@@ -260,7 +262,7 @@ static const char* morse_flipper_session_end_blurb(const MorseFlipperApp* app) {
     return "Keep practicing";
 }
 
-static void morse_flipper_draw_session_end(Canvas* canvas, const MorseFlipperApp* app) {
+void morse_flipper_draw_session_end(Canvas* canvas, const MorseFlipperApp* app) {
     char digits[4];
     bool flash_on = false;
     uint8_t x;
@@ -451,7 +453,7 @@ static void morse_flipper_session_title( const MorseFlipperApp* app, char* out, 
     out[wi] = '\0';
 }
 
-static void morse_flipper_draw_session_rows(Canvas* canvas, const MorseFlipperApp* app) {
+void morse_flipper_draw_session_rows(Canvas* canvas, const MorseFlipperApp* app) {
     uint8_t size = morse_trainer_group_size(&app->trainer);
     uint8_t centers[9];
     char answers[MORSE_TRAINER_GROUP_CAP];
@@ -581,7 +583,7 @@ static void morse_flipper_draw_session_rows(Canvas* canvas, const MorseFlipperAp
     }
 }
 
-static void morse_flipper_draw_session_bottom(Canvas* canvas, const MorseFlipperApp* app) {
+void morse_flipper_draw_session_bottom(Canvas* canvas, const MorseFlipperApp* app) {
     char lesson_line[48];
     char progress_line[16];
     char pct_line[16];
