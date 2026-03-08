@@ -59,6 +59,86 @@ static void morse_flipper_draw_tx_groups_practice(Canvas* canvas, MorseFlipperAp
     canvas_draw_str(canvas, x, 64, score);
 }
 
+static void morse_flipper_draw_txg_label(Canvas* canvas, int32_t x, int32_t y, const char* s, bool bad)
+{
+    uint16_t w;
+
+    if(!bad) {
+        canvas_draw_str(canvas, x, y, s);
+        return;
+    }
+
+    w = canvas_string_width(canvas, s);
+    canvas_draw_box(canvas, x - 1, y - 7, w + 2, 8);
+    canvas_set_color(canvas, ColorWhite);
+    canvas_draw_str(canvas, x, y, s);
+    canvas_set_color(canvas, ColorBlack);
+}
+
+static void morse_flipper_draw_txg_metric(
+    Canvas* canvas,
+    int32_t x,
+    int32_t y,
+    const char* label,
+    const char* value,
+    bool bad)
+{
+    morse_flipper_draw_txg_label(canvas, x, y, label, bad);
+    canvas_draw_str(canvas, x + 28, y, value);
+}
+
+static uint8_t morse_flipper_txg_countdown_s(const MorseFlipperApp* app)
+{
+    uint32_t now;
+    uint32_t left;
+
+    if(app == NULL || app->txg_result_until == 0U) return 0U;
+    now = furi_get_tick();
+    if(now >= app->txg_result_until) return 0U;
+    left = app->txg_result_until - now;
+    return (uint8_t)((left + 999U) / 1000U);
+}
+
+static void morse_flipper_draw_tx_groups_result(Canvas* canvas, MorseFlipperApp* app)
+{
+    char a[12];
+    char b[12];
+    char c[4];
+    const MorseFlipperTxGroupResult* r;
+
+    if(canvas == NULL || app == NULL) return;
+    r = &app->tx_group.result;
+
+    canvas_set_font(canvas, FontPrimary);
+    canvas_draw_str_aligned(canvas, 64, 9, AlignCenter, AlignCenter, "Results");
+    canvas_set_font(canvas, FontKeyboard);
+
+    snprintf(a, sizeof(a), "%u/5", (unsigned)r->correct);
+    morse_flipper_draw_txg_metric(canvas, 1, 20, "Corr", a, !r->correct_pass);
+    snprintf(a, sizeof(a), "%u%%", (unsigned)r->speed_pct);
+    morse_flipper_draw_txg_metric(canvas, 1, 29, "Spd", a, !r->speed_pass);
+    snprintf(a, sizeof(a), "%u%%", (unsigned)r->letter_gap_pct);
+    morse_flipper_draw_txg_metric(canvas, 1, 38, "LGap", a, !r->letter_gap_pass);
+
+    if(app->tx_group.sk) {
+        snprintf(a, sizeof(a), "%u.%02u", (unsigned)(r->ratio_x100 / 100U), (unsigned)(r->ratio_x100 % 100U));
+        morse_flipper_draw_txg_metric(canvas, 64, 20, "Ratio", a, !r->ratio_pass);
+        snprintf(a, sizeof(a), "%u%%", (unsigned)r->accuracy_pct);
+        morse_flipper_draw_txg_metric(canvas, 64, 29, "Acc", a, !r->accuracy_pass);
+        snprintf(a, sizeof(a), "%u%%", (unsigned)r->dit_gap_pct);
+        morse_flipper_draw_txg_metric(canvas, 64, 38, "DGap", a, !r->dit_gap_pass);
+        snprintf(a, sizeof(a), "%u%%", (unsigned)r->variance_pct);
+        morse_flipper_draw_txg_metric(canvas, 64, 47, "Var", a, !r->variance_pass);
+    }
+
+    canvas_set_font(canvas, FontSecondary);
+    canvas_draw_str(canvas, 2, 56, (r->fault && r->fault[0]) ? r->fault : "");
+    snprintf(c, sizeof(c), "%u", (unsigned)morse_flipper_txg_countdown_s(app));
+    canvas_draw_str(canvas, 2, 64, c);
+    morse_flipper_txg_score_line(app, b, sizeof(b));
+    canvas_draw_str(canvas, 126 - canvas_string_width(canvas, b), 64, b);
+}
+
 static void morse_flipper_rf_edit_text(char* out, size_t out_sz, uint32_t khz)
 {
     if(out == NULL || out_sz == 0U) return;
@@ -830,6 +910,8 @@ void morse_flipper_draw(Canvas* canvas, void* ctx) {
             }
         } else if(app->screen == MorseFlipperScreenTxGroups) {
             morse_flipper_draw_tx_groups_practice(canvas, app);
+        } else if(app->screen == MorseFlipperScreenTxGroupsResult) {
+            morse_flipper_draw_tx_groups_result(canvas, app);
         } else {
             canvas_draw_str_aligned(canvas, 64, 38, AlignCenter, AlignCenter, "not yet");
         }

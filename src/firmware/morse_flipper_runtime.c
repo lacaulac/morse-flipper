@@ -84,6 +84,8 @@ static void morse_flipper_drain_tx_decoder(MorseFlipperApp* app) {
             morse_flipper_tx_group_score(&app->tx_group, morse_flipper_current_dit_ms(app), false);
             app->txg_session_total++;
             if(app->tx_group.result.passed) app->txg_session_good++;
+            app->txg_result_until = furi_get_tick() + ((uint32_t)app->straight_next_delay_s * 1000U);
+            scene_manager_next_scene(app->scene_manager, MorseFlipperSceneTxGroupsResult);
         }
     }
 
