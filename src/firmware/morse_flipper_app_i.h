@@ -66,6 +66,7 @@
 #define MORSE_FLIPPER_STRAIGHT_NEXT_MAX_S        15U
 #define MORSE_FLIPPER_STRAIGHT_NEXT_DEFAULT_S    3U
 #define MORSE_FLIPPER_STRAIGHT_CHARSET           "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+#define MORSE_FLIPPER_TX_GROUP_LEN               5U
 #define MORSE_FLIPPER_RF_FREQ_DIGITS             6U
 #define MORSE_FLIPPER_TONE_OFF_IDX               0xFFU
 #define MORSE_FLIPPER_DEFAULT_TONE_IDX           20U
@@ -360,10 +361,15 @@ typedef struct MorseFlipperApp {
     uint32_t straight_wait_started_at;
     uint32_t straight_last_input_at;
     uint32_t straight_mark_started_at;
+    uint32_t txg_wait_started_at;
+    uint32_t txg_last_input_at;
+    uint32_t txg_result_until;
     uint16_t run_dit_ms;
     uint16_t straight_dit_ms;
     uint16_t straight_session_total;
     uint16_t straight_session_good;
+    uint16_t txg_session_total;
+    uint16_t txg_session_good;
     uint32_t session_last_input_at;
     uint32_t session_result_until;
     uint32_t session_next_group_at;
@@ -392,6 +398,10 @@ typedef struct MorseFlipperApp {
     bool straight_wait_answer;
     bool straight_done;
     bool straight_key_down;
+    bool txg_started;
+    bool txg_wait_answer;
+    bool txg_done;
+    bool txg_sk;
     bool rf_live_active;
     bool rf_tx_level;
     bool rf_tx_gap_flushed;
@@ -404,6 +414,7 @@ typedef struct MorseFlipperApp {
     bool gpio_level;
     bool gpio_gap_flushed;
     uint8_t straight_mark_idx;
+    uint8_t txg_repeated_timeouts;
     uint8_t straight_return_screen;
     uint8_t backlight_mode;
     uint8_t session_end_flash_phase;
@@ -423,6 +434,8 @@ typedef struct MorseFlipperApp {
     char rf_rx_text[64];
     char rf_tx_text[64];
     char gpio_text[64];
+    char txg_target[MORSE_FLIPPER_TX_GROUP_LEN + 1U];
+    char txg_answer[MORSE_FLIPPER_TX_GROUP_LEN + 1U];
     char ham_text_buffer[MORSE_FLIPPER_HAM_KEYER_MESSAGE_LEN + 1U];
     char ham_macro_text[MORSE_FLIPPER_HAM_KEYER_MESSAGE_LEN + 1U];
     char ham_notice[16];
@@ -583,6 +596,9 @@ void morse_flipper_note_straight_session(MorseFlipperApp* app);
 void morse_flipper_start_straight_round(MorseFlipperApp* app, uint32_t now_ms);
 void morse_flipper_finish_straight_round(MorseFlipperApp* app, uint32_t now_ms);
 void morse_flipper_tick_straight(MorseFlipperApp* app, uint32_t now_ms);
+void morse_flipper_reset_tx_groups_state(MorseFlipperApp* app, uint32_t now_ms);
+void morse_flipper_start_tx_groups_round(MorseFlipperApp* app, uint32_t now_ms);
+void morse_flipper_leave_tx_groups(MorseFlipperApp* app, uint32_t now_ms);
 void morse_flipper_tick_ham_macro(MorseFlipperApp* app, uint32_t now_ms);
 void morse_flipper_ham_start_macro(MorseFlipperApp* app, const char* text, uint32_t now_ms);
 void morse_flipper_ham_stop_macro(MorseFlipperApp* app);

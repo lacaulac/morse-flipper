@@ -64,6 +64,7 @@
 #define MORSE_FLIPPER_STRAIGHT_NEXT_MAX_S        15U
 #define MORSE_FLIPPER_STRAIGHT_NEXT_DEFAULT_S    3U
 #define MORSE_FLIPPER_STRAIGHT_CHARSET           "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+#define MORSE_FLIPPER_TX_GROUP_LEN               5U
 #define MORSE_FLIPPER_RF_FREQ_DIGITS             6U
 #define MORSE_FLIPPER_TONE_OFF_IDX               0xFFU
 #define MORSE_FLIPPER_DEFAULT_TONE_IDX           20U
@@ -483,10 +484,15 @@ typedef struct {
     uint32_t straight_wait_started_at;
     uint32_t straight_last_input_at;
     uint32_t straight_mark_started_at;
+    uint32_t txg_wait_started_at;
+    uint32_t txg_last_input_at;
+    uint32_t txg_result_until;
     uint16_t run_dit_ms;
     uint16_t straight_dit_ms;
     uint16_t straight_session_total;
     uint16_t straight_session_good;
+    uint16_t txg_session_total;
+    uint16_t txg_session_good;
     uint32_t session_last_input_at;
     uint32_t session_result_until;
     uint32_t session_next_group_at;
@@ -515,6 +521,10 @@ typedef struct {
     bool straight_wait_answer;
     bool straight_done;
     bool straight_key_down;
+    bool txg_started;
+    bool txg_wait_answer;
+    bool txg_done;
+    bool txg_sk;
     bool rf_live_active;
     bool rf_tx_level;
     bool rf_tx_gap_flushed;
@@ -527,6 +537,7 @@ typedef struct {
     bool gpio_level;
     bool gpio_gap_flushed;
     uint8_t straight_mark_idx;
+    uint8_t txg_repeated_timeouts;
     uint8_t straight_return_screen;
     uint8_t backlight_mode;
     uint8_t session_end_flash_phase;
@@ -546,6 +557,8 @@ typedef struct {
     char rf_rx_text[64];
     char rf_tx_text[64];
     char gpio_text[64];
+    char txg_target[MORSE_FLIPPER_TX_GROUP_LEN + 1U];
+    char txg_answer[MORSE_FLIPPER_TX_GROUP_LEN + 1U];
     char ham_text_buffer[MORSE_FLIPPER_HAM_KEYER_MESSAGE_LEN + 1U];
     char ham_macro_text[MORSE_FLIPPER_HAM_KEYER_MESSAGE_LEN + 1U];
     char ham_notice[16];
@@ -656,6 +669,9 @@ static void morse_flipper_note_straight_session(MorseFlipperApp* app);
 void morse_flipper_start_straight_round(MorseFlipperApp* app, uint32_t now_ms);
 static void morse_flipper_finish_straight_round(MorseFlipperApp* app, uint32_t now_ms);
 void morse_flipper_tick_straight(MorseFlipperApp* app, uint32_t now_ms);
+void morse_flipper_reset_tx_groups_state(MorseFlipperApp* app, uint32_t now_ms);
+void morse_flipper_start_tx_groups_round(MorseFlipperApp* app, uint32_t now_ms);
+void morse_flipper_leave_tx_groups(MorseFlipperApp* app, uint32_t now_ms);
 void morse_flipper_tick_ham_macro(MorseFlipperApp* app, uint32_t now_ms);
 void morse_flipper_ham_start_macro(
     MorseFlipperApp* app,
@@ -760,7 +776,10 @@ static uint8_t morse_flipper_backlight_mode(const MorseFlipperApp* app) {
 
     if(app->screen == MorseFlipperScreenRun || app->screen == MorseFlipperScreenTrace ||
        app->screen == MorseFlipperScreenHamRun ||
-       app->screen == MorseFlipperScreenStraight)
+       app->screen == MorseFlipperScreenStraight ||
+       app->screen == MorseFlipperScreenTxGroups ||
+       app->screen == MorseFlipperScreenTxGroupsResult ||
+       app->screen == MorseFlipperScreenTxGroupsFinal)
         return MorseFlipperBacklightHold;
 
     if(app->screen == MorseFlipperScreenRf || app->screen == MorseFlipperScreenRfRx)
@@ -1176,13 +1195,15 @@ bool morse_flipper_straight_like_mode(const MorseFlipperApp* app) {
 
 static bool morse_flipper_gpio_probe_screen(const MorseFlipperApp* app) {
     if(app == NULL) return false;
-    return app->screen == MorseFlipperScreenSession || app->screen == MorseFlipperScreenStraight;
+    return app->screen == MorseFlipperScreenSession || app->screen == MorseFlipperScreenStraight ||
+           app->screen == MorseFlipperScreenTxGroups;
 }
 
 static bool morse_flipper_gpio_probe_before_start(const MorseFlipperApp* app) {
     if(app == NULL) return false;
     if(app->screen == MorseFlipperScreenSession) return !app->session_started;
     if(app->screen == MorseFlipperScreenStraight) return !app->straight_started;
+    if(app->screen == MorseFlipperScreenTxGroups) return !app->txg_started;
     return false;
 }
 
@@ -1313,6 +1334,8 @@ MorseFlipperInputGate morse_flipper_input_gate(const MorseFlipperApp* app) {
         g.live = app->rf_live_active;
     } else if(app->screen == MorseFlipperScreenStraight) {
         g.live = app->straight_wait_answer;
+    } else if(app->screen == MorseFlipperScreenTxGroups) {
+        g.live = app->txg_wait_answer;
     }
 
     if(!g.live || app->input_source != MorseFlipperInputSourceButtons) {
@@ -1322,6 +1345,12 @@ MorseFlipperInputGate morse_flipper_input_gate(const MorseFlipperApp* app) {
 
     g.btn = true;
     if(app->screen == MorseFlipperScreenStraight) {
+        g.btn_str = true;
+        g.back_exit = true;
+        return g;
+    }
+
+    if(app->screen == MorseFlipperScreenTxGroups && app->txg_sk) {
         g.btn_str = true;
         g.back_exit = true;
         return g;
@@ -1972,6 +2001,12 @@ void morse_flipper_enter_screen(
         morse_flipper_update_sidetone(app);
     }
 
+    if(screen == MorseFlipperScreenTxGroups && app->screen != MorseFlipperScreenTxGroups &&
+       app->screen != MorseFlipperScreenTxGroupsResult &&
+       app->screen != MorseFlipperScreenTxGroupsFinal) {
+        morse_flipper_reset_tx_groups_state(app, now_ms);
+    }
+
     if(screen == MorseFlipperScreenStraight && app->screen != MorseFlipperScreenStraight) {
         morse_flipper_reset_straight_state(app, now_ms);
     }
@@ -2048,7 +2083,8 @@ void morse_flipper_enter_screen(
     } else {
         morse_flipper_gpio_probe_reset(app);
     }
-    if(old_screen == MorseFlipperScreenStraight || screen == MorseFlipperScreenStraight) {
+    if(old_screen == MorseFlipperScreenStraight || screen == MorseFlipperScreenStraight ||
+       old_screen == MorseFlipperScreenTxGroups || screen == MorseFlipperScreenTxGroups) {
         morse_flipper_refresh_keyer(app, now_ms);
     }
     if(screen == MorseFlipperScreenHome) {
@@ -2101,6 +2137,69 @@ bool morse_flipper_straight_answer_down(const MorseFlipperApp* app) {
                                                             (morse_flipper_logical_dit_down(app) ||
                                                              morse_flipper_logical_dah_down(app));
     return morse_flipper_straight_down();
+}
+
+static bool morse_flipper_tx_groups_sk_now(const MorseFlipperApp* app)
+{
+    if(app == NULL) return true;
+    if(app->input_source == MorseFlipperInputSourceStraight) return true;
+    if(app->input_source == MorseFlipperInputSourcePaddle && morse_flipper_gpio_probe_use_straight(app))
+        return true;
+    if(app->input_source == MorseFlipperInputSourceButtons && morse_flipper_straight_like_mode(app))
+        return true;
+    return false;
+}
+
+void morse_flipper_reset_tx_groups_state(MorseFlipperApp* app, uint32_t now_ms)
+{
+    if(app == NULL) return;
+    UNUSED(now_ms);
+
+    app->txg_started = false;
+    app->txg_wait_answer = false;
+    app->txg_done = false;
+    app->txg_sk = morse_flipper_tx_groups_sk_now(app);
+    app->txg_wait_started_at = 0U;
+    app->txg_last_input_at = 0U;
+    app->txg_result_until = 0U;
+    app->txg_repeated_timeouts = 0U;
+    app->txg_session_total = 0U;
+    app->txg_session_good = 0U;
+    memcpy(app->txg_target, "ABCDE", 6U);
+    app->txg_answer[0] = '\0';
+    morse_flipper_cw_decoder_init(&app->tx_decoder, morse_flipper_current_dit_ms(app));
+    morse_flipper_clear_button_keying(app, furi_get_tick());
+}
+
+void morse_flipper_start_tx_groups_round(MorseFlipperApp* app, uint32_t now_ms)
+{
+    if(app == NULL) return;
+
+    if(!app->txg_started) {
+        app->txg_session_total = 0U;
+        app->txg_session_good = 0U;
+        app->txg_repeated_timeouts = 0U;
+    }
+
+    app->txg_started = true;
+    app->txg_wait_answer = true;
+    app->txg_done = false;
+    app->txg_sk = morse_flipper_tx_groups_sk_now(app);
+    app->txg_wait_started_at = now_ms;
+    app->txg_last_input_at = now_ms;
+    app->txg_answer[0] = '\0';
+    memcpy(app->txg_target, "ABCDE", 6U);
+    morse_flipper_cw_decoder_init(&app->tx_decoder, morse_flipper_current_dit_ms(app));
+    morse_flipper_refresh_keyer(app, now_ms);
+    morse_flipper_view_dirty(app);
+}
+
+void morse_flipper_leave_tx_groups(MorseFlipperApp* app, uint32_t now_ms)
+{
+    if(app == NULL) return;
+    morse_flipper_clear_button_keying(app, now_ms);
+    morse_flipper_release_all_notes(app);
+    scene_manager_search_and_switch_to_another_scene(app->scene_manager, MorseFlipperSceneTxGroupsFinal);
 }
 
 static void morse_flipper_reset_straight_state(MorseFlipperApp* app, uint32_t now_ms) {

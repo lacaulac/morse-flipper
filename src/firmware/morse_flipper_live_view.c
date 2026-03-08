@@ -782,7 +782,26 @@ void morse_flipper_draw(Canvas* canvas, void* ctx) {
                                 app->screen == MorseFlipperScreenTxGroupsResult ? "Results" :
                                 "TX Groups of 5");
         canvas_set_font(canvas, FontSecondary);
-        canvas_draw_str_aligned(canvas, 64, 38, AlignCenter, AlignCenter, "Press OK to start");
+        if(app->screen == MorseFlipperScreenTxGroups && !app->txg_started) {
+            if(morse_flipper_gpio_probe_blocks_start(app)) {
+                morse_flipper_draw_gpio_probe_overlay(canvas, app);
+                return;
+            }
+            if(app->input_source == MorseFlipperInputSourceButtons) {
+                canvas_draw_str_aligned(canvas, 64, 38, AlignCenter, AlignCenter, "Press OK to start");
+            } else {
+                canvas_draw_str_aligned(canvas, 64, 32, AlignCenter, AlignCenter, "Press OK to start");
+                canvas_draw_str_aligned(canvas, 64, 44, AlignCenter, AlignCenter, "Press your key to start");
+            }
+        } else if(app->screen == MorseFlipperScreenTxGroups) {
+            canvas_set_font(canvas, FontPrimary);
+            canvas_draw_str_aligned(canvas, 64, 36, AlignCenter, AlignCenter, app->txg_target);
+            canvas_set_font(canvas, FontSecondary);
+            canvas_draw_str_aligned(canvas, 64, 56, AlignCenter, AlignCenter, "sending...");
+            if(morse_flipper_live_left_hint(app)) morse_flipper_draw_left_exit_hint(canvas);
+        } else {
+            canvas_draw_str_aligned(canvas, 64, 38, AlignCenter, AlignCenter, "not yet");
+        }
         return;
     }
 

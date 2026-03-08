@@ -345,6 +345,11 @@ void morse_flipper_poll(MorseFlipperApp* app) {
         morse_flipper_start_straight_round(app, now_ms);
         raw_straight = false;
     }
+    if(app->screen == MorseFlipperScreenTxGroups && !app->txg_started &&
+       app->input_source != MorseFlipperInputSourceButtons && raw_straight) {
+        morse_flipper_start_tx_groups_round(app, now_ms);
+        raw_straight = false;
+    }
     if(app->screen == MorseFlipperScreenStraight && !raw_straight &&
        app->straight_mark_started_at != 0U && app->straight_key_down) {
         app->straight_key_down = false;

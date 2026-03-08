@@ -257,6 +257,58 @@ static bool morse_flipper_straight_input( MorseFlipperApp* app, const InputEvent
     return false;
 }
 
+static bool morse_flipper_tx_groups_input( MorseFlipperApp* app, const InputEvent* event, uint32_t now_ms)
+{
+    bool back_key;
+
+    if(app->screen != MorseFlipperScreenTxGroups) return false;
+
+    back_key = app->input_source == MorseFlipperInputSourceButtons && !app->txg_sk;
+
+    if(morse_flipper_gpio_probe_blocks_start(app)) {
+        if(event->key == InputKeyBack &&
+           (event->type == InputTypeShort || event->type == InputTypeLong)) {
+            morse_flipper_scene_back(app);
+        }
+        return true;
+    }
+
+    if(!app->txg_started) {
+        if(event->key == InputKeyOk &&
+           (event->type == InputTypePress || event->type == InputTypeShort ||
+            event->type == InputTypeLong)) {
+            morse_flipper_start_tx_groups_round(app, now_ms);
+            return true;
+        }
+
+        if(back_key && event->key == InputKeyBack && event->type == InputTypePress) {
+            morse_flipper_start_tx_groups_round(app, now_ms);
+            return true;
+        }
+
+        if(event->key == InputKeyBack &&
+           (event->type == InputTypeShort || event->type == InputTypeLong)) {
+            morse_flipper_scene_back(app);
+            return true;
+        }
+
+        return false;
+    }
+
+    if(event->key == InputKeyLeft && event->type == InputTypeLong) {
+        morse_flipper_leave_tx_groups(app, now_ms);
+        return true;
+    }
+
+    if(!back_key && event->key == InputKeyBack &&
+       (event->type == InputTypeShort || event->type == InputTypeLong)) {
+        morse_flipper_leave_tx_groups(app, now_ms);
+        return true;
+    }
+
+    return false;
+}
+
 static bool morse_flipper_session_input( MorseFlipperApp* app, const InputEvent* event, uint32_t now_ms)
 {
     MorseFlipperInputGate g;
@@ -474,6 +526,7 @@ bool morse_flipper_input_chunk_b( MorseFlipperApp* app, InputEvent* event, uint3
 {
     if(morse_flipper_trainer_input(app, event)) return true;
     if(morse_flipper_straight_input(app, event, now_ms)) return true;
+    if(morse_flipper_tx_groups_input(app, event, now_ms)) return true;
     if(morse_flipper_session_input(app, event, now_ms)) return true;
     if(morse_flipper_session_end_input(app, event, now_ms)) return true;
     if(morse_flipper_rf_freq_input(app, event)) return true;
@@ -487,9 +540,12 @@ static bool morse_flipper_session_live_keying_input(MorseFlipperApp* app, const 
 {
     MorseFlipperInputGate g;
 
-    if(app->screen != MorseFlipperScreenSession) return false;
-    if(!morse_flipper_session_repeat_active(app) && !morse_flipper_session_running_view(app))
+    if(app->screen != MorseFlipperScreenSession && app->screen != MorseFlipperScreenTxGroups)
         return false;
+    if(app->screen == MorseFlipperScreenSession &&
+       !morse_flipper_session_repeat_active(app) && !morse_flipper_session_running_view(app))
+        return false;
+    if(app->screen == MorseFlipperScreenTxGroups && !app->txg_wait_answer) return false;
     if(event->type != InputTypePress && event->type != InputTypeRelease) return false;
 
     g = morse_flipper_input_gate(app);
@@ -534,7 +590,8 @@ void morse_flipper_handle_active_keying_event( MorseFlipperApp* app, const Input
         } else if(event->type == InputTypeRelease) {
             app->left_down = false;
         } else if(event->type == InputTypeLong) {
-            morse_flipper_leave_live_screen(app, now_ms);
+            if(app->screen == MorseFlipperScreenTxGroups) morse_flipper_leave_tx_groups(app, now_ms);
+            else morse_flipper_leave_live_screen(app, now_ms);
         }
         return;
     }
@@ -571,7 +628,8 @@ void morse_flipper_handle_active_keying_event( MorseFlipperApp* app, const Input
 
     if(g.back_exit && event->key == InputKeyBack &&
        (event->type == InputTypeShort || event->type == InputTypeLong)) {
-        morse_flipper_leave_live_screen(app, now_ms);
+        if(app->screen == MorseFlipperScreenTxGroups) morse_flipper_leave_tx_groups(app, now_ms);
+        else morse_flipper_leave_live_screen(app, now_ms);
         return;
     }
 
