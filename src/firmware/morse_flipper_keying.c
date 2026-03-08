@@ -97,16 +97,21 @@ static void morse_flipper_tone_start(MorseFlipperApp* app)
 static void morse_flipper_update_sidetone(MorseFlipperApp* app)
 {
     bool use_pwm;
+    bool use_vibro;
     bool want_tx_tone = morse_flipper_any_active_notes(app) || (app->preview_ticks > 0U);
     bool want_aux_tone = app->trainer_playback_mark || app->straight_playback_mark ||
                          app->session_result_tone || app->rf_monitor_tone;
     bool want_speaker;
+    bool want_vibro;
 
     use_pwm = morse_flipper_use_pwm_buzzer(app);
+    use_vibro = app != NULL && app->audio_path == MorseFlipperAudioPathVibration;
     want_speaker = !use_pwm && (want_aux_tone ||
                    (want_tx_tone && morse_flipper_local_buzzer_enabled(app)));
+    want_vibro = use_vibro && (want_tx_tone || want_aux_tone);
 
     if(use_pwm) {
+        furi_hal_vibro_on(false);
         if(app->speaker_owned || app->tone_on) {
             morse_flipper_tone_stop(app);
         }
@@ -119,6 +124,16 @@ static void morse_flipper_update_sidetone(MorseFlipperApp* app)
         return;
     }
 
+    if(use_vibro) {
+        if(app->speaker_owned || app->tone_on) morse_flipper_tone_stop(app);
+        furi_hal_vibro_on(want_vibro);
+        app->tone_on = want_vibro;
+        app->speaker_busy = false;
+        morse_flipper_sync_ptt(app, furi_get_tick());
+        return;
+    }
+
+    furi_hal_vibro_on(false);
     if(want_speaker) {
         float hz = morse_flipper_active_tone_hz(app);
 

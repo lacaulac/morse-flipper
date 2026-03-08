@@ -225,6 +225,7 @@ void morse_flipper_shutdown(MorseFlipperApp* app)
     morse_flipper_release_all_notes(app);
     morse_flipper_audio_pwm_stop(&app->audio_pwm);
     morse_flipper_tone_stop(app);
+    furi_hal_vibro_on(false);
     if(app->backlight_mode != MorseFlipperBacklightAuto && app->notifications)
         notification_message(app->notifications, &sequence_display_backlight_enforce_auto);
     if(app->notifications) {

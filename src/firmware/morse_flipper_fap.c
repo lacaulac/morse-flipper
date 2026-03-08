@@ -112,6 +112,7 @@ typedef enum {
 typedef enum {
     MorseFlipperAudioPathBuzzer = 0,
     MorseFlipperAudioPathGpioP2Hd = 1,
+    MorseFlipperAudioPathVibration = 2,
 } MorseFlipperAudioPath;
 
 typedef enum {
@@ -295,6 +296,7 @@ static const char* const morse_flipper_input_names[] = {
 static const char* const morse_flipper_audio_path_names[] = {
     "Buzzer",
     "P2 (HD)",
+    "Vibration",
 };
 
 static const uint8_t morse_flipper_keyer_values[] = {

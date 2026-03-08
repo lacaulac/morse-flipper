@@ -503,6 +503,8 @@ static void morse_flipper_handle_active_keying_event( MorseFlipperApp* app, cons
 
 static void morse_flipper_tone_nudge(MorseFlipperApp* app, int dir)
 {
+    if(app->audio_path == MorseFlipperAudioPathVibration) return;
+
     int idx = app->tone_idx < COUNT_OF(morse_flipper_tones) ? (int)app->tone_idx :
                                                             (int)MORSE_FLIPPER_DEFAULT_TONE_IDX;
     int current_idx = idx;

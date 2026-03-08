@@ -221,7 +221,7 @@ static uint8_t morse_flipper_config_load_tone_idx(uint8_t stored_tone_idx)
 
 static uint8_t morse_flipper_config_load_audio_path(uint8_t stored_audio_path)
 {
-    if(stored_audio_path <= MorseFlipperAudioPathGpioP2Hd) return stored_audio_path;
+    if(stored_audio_path <= MorseFlipperAudioPathVibration) return stored_audio_path;
     return MorseFlipperAudioPathBuzzer;
 }
 

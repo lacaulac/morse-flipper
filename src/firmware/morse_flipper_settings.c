@@ -210,6 +210,12 @@ static void morse_flipper_settings_tone_changed(VariableItem* item) {
     MorseFlipperApp* app = variable_item_get_context(item);
     uint8_t idx = variable_item_get_current_value_index(item);
 
+    if(app->audio_path == MorseFlipperAudioPathVibration) {
+        variable_item_set_current_value_index(item, 0U);
+        variable_item_set_current_value_text(item, "n/a");
+        return;
+    }
+
     app->tone_idx = idx < COUNT_OF(morse_flipper_tones) ? idx : MORSE_FLIPPER_DEFAULT_TONE_IDX;
     variable_item_set_current_value_text(item, morse_flipper_current_tone_name(app));
     app->preview_ticks = MORSE_FLIPPER_PREVIEW_TICKS;
@@ -245,11 +251,18 @@ static void morse_flipper_audio_menu_refresh(MorseFlipperApp* app)
 
     item = app->audio_cfg_items[MorseFlipperAudioSettingTone];
     if(item) {
-        variable_item_set_current_value_index(
-            item,
-            app->tone_idx < COUNT_OF(morse_flipper_tones) ? app->tone_idx :
-                                                            MORSE_FLIPPER_DEFAULT_TONE_IDX);
-        variable_item_set_current_value_text(item, morse_flipper_current_tone_name(app));
+        if(app->audio_path == MorseFlipperAudioPathVibration) {
+            variable_item_set_values_count(item, 1U);
+            variable_item_set_current_value_index(item, 0U);
+            variable_item_set_current_value_text(item, "n/a");
+        } else {
+            variable_item_set_values_count(item, COUNT_OF(morse_flipper_tones));
+            variable_item_set_current_value_index(
+                item,
+                app->tone_idx < COUNT_OF(morse_flipper_tones) ? app->tone_idx :
+                                                                MORSE_FLIPPER_DEFAULT_TONE_IDX);
+            variable_item_set_current_value_text(item, morse_flipper_current_tone_name(app));
+        }
     }
 
     item = app->audio_cfg_items[MorseFlipperAudioSettingP2Volume];
@@ -265,9 +278,10 @@ static void morse_flipper_settings_audio_path_changed(VariableItem* item)
     MorseFlipperApp* app = variable_item_get_context(item);
     uint8_t idx = variable_item_get_current_value_index(item);
 
-    if(idx > MorseFlipperAudioPathGpioP2Hd) idx = MorseFlipperAudioPathBuzzer;
+    if(idx > MorseFlipperAudioPathVibration) idx = MorseFlipperAudioPathBuzzer;
     app->audio_path = idx;
     variable_item_set_current_value_text(item, morse_flipper_audio_path_names[idx]);
+    morse_flipper_audio_menu_refresh(app);
     morse_flipper_sync_audio_output(app);
     morse_flipper_save_config(app);
 }
@@ -638,7 +652,7 @@ static void morse_flipper_scene_audio_cfg_on_enter(void* context)
     item = variable_item_list_add(
         app->settings_list,
         "Audio path",
-        2U,
+        3U,
         morse_flipper_settings_audio_path_changed,
         app);
     app->audio_cfg_items[MorseFlipperAudioSettingPath] = item;
