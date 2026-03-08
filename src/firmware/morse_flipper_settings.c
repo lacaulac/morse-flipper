@@ -560,7 +560,7 @@ static void morse_flipper_trainer_chars_changed(VariableItem* item) {
     morse_flipper_save_config(app);
 }
 
-static void morse_flipper_scene_home_on_enter(void* context) {
+void morse_flipper_scene_home_on_enter(void* context) {
     MorseFlipperApp* app = context;
     VariableItem* item;
     uint8_t sel = scene_manager_get_scene_state(app->scene_manager, MorseFlipperSceneHome);
@@ -610,7 +610,7 @@ static void morse_flipper_scene_home_on_enter(void* context) {
     variable_item_list_set_selected_item(app->settings_list, sel);
 }
 
-static bool morse_flipper_scene_home_on_event(void* context, SceneManagerEvent event) {
+bool morse_flipper_scene_home_on_event(void* context, SceneManagerEvent event) {
     MorseFlipperApp* app = context;
 
     if(event.type == SceneManagerEventTypeBack) {
@@ -632,13 +632,13 @@ static bool morse_flipper_scene_home_on_event(void* context, SceneManagerEvent e
     return false;
 }
 
-static void morse_flipper_scene_home_on_exit(void* context) {
+void morse_flipper_scene_home_on_exit(void* context) {
     MorseFlipperApp* app = context;
     scene_manager_set_scene_state( app->scene_manager, MorseFlipperSceneHome, variable_item_list_get_selected_item_index(app->settings_list));
     variable_item_list_reset(app->settings_list);
 }
 
-static void morse_flipper_scene_audio_cfg_on_enter(void* context)
+void morse_flipper_scene_audio_cfg_on_enter(void* context)
 {
     MorseFlipperApp* app = context;
     uint32_t sel = scene_manager_get_scene_state(app->scene_manager, MorseFlipperSceneAudioCfg);
@@ -678,7 +678,7 @@ static void morse_flipper_scene_audio_cfg_on_enter(void* context)
     morse_flipper_settings_list_restore(app->settings_list, sel);
 }
 
-static bool morse_flipper_scene_audio_cfg_on_event(void* context, SceneManagerEvent event)
+bool morse_flipper_scene_audio_cfg_on_event(void* context, SceneManagerEvent event)
 {
     MorseFlipperApp* app = context;
 
@@ -690,7 +690,7 @@ static bool morse_flipper_scene_audio_cfg_on_event(void* context, SceneManagerEv
     return false;
 }
 
-static void morse_flipper_scene_audio_cfg_on_exit(void* context)
+void morse_flipper_scene_audio_cfg_on_exit(void* context)
 {
     MorseFlipperApp* app = context;
     scene_manager_set_scene_state(
@@ -700,7 +700,7 @@ static void morse_flipper_scene_audio_cfg_on_exit(void* context)
     variable_item_list_reset(app->settings_list);
 }
 
-static void morse_flipper_scene_gpio_on_enter(void* context) {
+void morse_flipper_scene_gpio_on_enter(void* context) {
     MorseFlipperApp* app = context;
     VariableItem* item;
     uint8_t sel = scene_manager_get_scene_state(app->scene_manager, MorseFlipperSceneGpio);
@@ -755,7 +755,7 @@ static void morse_flipper_scene_gpio_on_enter(void* context) {
     variable_item_list_set_selected_item(app->settings_list, sel);
 }
 
-static bool morse_flipper_scene_gpio_on_event(void* context, SceneManagerEvent event) {
+bool morse_flipper_scene_gpio_on_event(void* context, SceneManagerEvent event) {
     MorseFlipperApp* app = context;
     MorseFlipperGpioRule rule = MorseFlipperGpioRuleOk;
 
@@ -777,13 +777,13 @@ static bool morse_flipper_scene_gpio_on_event(void* context, SceneManagerEvent e
     return false;
 }
 
-static void morse_flipper_scene_gpio_on_exit(void* context) {
+void morse_flipper_scene_gpio_on_exit(void* context) {
     MorseFlipperApp* app = context;
     scene_manager_set_scene_state( app->scene_manager, MorseFlipperSceneGpio, variable_item_list_get_selected_item_index(app->settings_list));
     variable_item_list_reset(app->settings_list);
 }
 
-static void morse_flipper_scene_trainer_on_enter(void* context) {
+void morse_flipper_scene_trainer_on_enter(void* context) {
     MorseFlipperApp* app = context;
     VariableItem* item;
     uint32_t sel = scene_manager_get_scene_state(app->scene_manager, MorseFlipperSceneTrainer);
@@ -872,13 +872,13 @@ static void morse_flipper_scene_trainer_on_enter(void* context) {
     morse_flipper_settings_list_restore(app->settings_list, sel);
 }
 
-static void morse_flipper_scene_trainer_on_exit(void* context) {
+void morse_flipper_scene_trainer_on_exit(void* context) {
     MorseFlipperApp* app = context;
     scene_manager_set_scene_state( app->scene_manager, MorseFlipperSceneTrainer, morse_flipper_settings_list_state(app->settings_list));
     variable_item_list_reset(app->settings_list);
 }
 
-static void morse_flipper_scene_straight_cfg_on_enter(void* context)
+void morse_flipper_scene_straight_cfg_on_enter(void* context)
 {
     MorseFlipperApp* app = context;
     VariableItem* item;
@@ -921,14 +921,14 @@ static void morse_flipper_scene_straight_cfg_on_enter(void* context)
     morse_flipper_settings_list_restore(app->settings_list, sel);
 }
 
-static void morse_flipper_scene_straight_cfg_on_exit(void* context)
+void morse_flipper_scene_straight_cfg_on_exit(void* context)
 {
     MorseFlipperApp* app = context;
     scene_manager_set_scene_state( app->scene_manager, MorseFlipperSceneStraightCfg, morse_flipper_settings_list_state(app->settings_list));
     variable_item_list_reset(app->settings_list);
 }
 
-static void morse_flipper_scene_pc_on_enter(void* context) {
+void morse_flipper_scene_pc_on_enter(void* context) {
     MorseFlipperApp* app = context;
     VariableItem* it;
     uint8_t sel = scene_manager_get_scene_state(app->scene_manager, MorseFlipperScenePc);
@@ -972,7 +972,7 @@ static void morse_flipper_scene_pc_on_enter(void* context) {
     variable_item_list_set_selected_item(app->settings_list, sel);
 }
 
-static bool morse_flipper_scene_pc_on_event(void* context, SceneManagerEvent event) {
+bool morse_flipper_scene_pc_on_event(void* context, SceneManagerEvent event) {
     MorseFlipperApp* app = context;
 
     if(event.type == SceneManagerEventTypeBack) {
@@ -983,7 +983,7 @@ static bool morse_flipper_scene_pc_on_event(void* context, SceneManagerEvent eve
     return false;
 }
 
-static void morse_flipper_scene_pc_on_exit(void* context) {
+void morse_flipper_scene_pc_on_exit(void* context) {
     MorseFlipperApp* app = context;
     scene_manager_set_scene_state( app->scene_manager, MorseFlipperScenePc, variable_item_list_get_selected_item_index(app->settings_list));
     variable_item_list_reset(app->settings_list);

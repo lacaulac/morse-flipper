@@ -1,3 +1,5 @@
+#include "morse_flipper_app_i.h"
+
 static void morse_flipper_scene_menu_main_on_enter(void* context) {
     MorseFlipperApp* app = context;
     uint32_t sel = scene_manager_get_scene_state(app->scene_manager, MorseFlipperSceneMenuMain);

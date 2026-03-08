@@ -554,7 +554,7 @@ static void morse_flipper_draw_rf_rx_screen(Canvas* canvas, MorseFlipperApp* app
     canvas_draw_str(canvas, 125 - canvas_string_width(canvas, "Bk exit"), 64, "Bk exit");
 }
 
-static void morse_flipper_draw(Canvas* canvas, void* ctx) {
+void morse_flipper_draw(Canvas* canvas, void* ctx) {
     MorseFlipperApp* app = ctx;
     char tone_line[32];
     char input_line[32];

@@ -196,6 +196,11 @@ typedef enum {
 } MorseFlipperCustomEvent;
 
 typedef enum {
+    MorseFlipperCustomHelpPrev = 0x1900,
+    MorseFlipperCustomHelpNext,
+} MorseFlipperHelpCustomEvent;
+
+typedef enum {
     MorseFlipperHelpFirstSteps = 0,
     MorseFlipperHelpInputKeys,
     MorseFlipperHelpConnectingPaddle,
@@ -565,6 +570,12 @@ bool morse_flipper_back_event_callback(void* context);
 uint8_t morse_flipper_backlight_mode(const MorseFlipperApp* app);
 void morse_flipper_sync_backlight(MorseFlipperApp* app, uint32_t now_ms);
 void morse_flipper_tick_callback(void* context);
+void morse_flipper_scene_enter_now(MorseFlipperApp* app, uint32_t scene);
+void morse_flipper_enter_screen(
+    MorseFlipperApp* app,
+    uint8_t screen,
+    uint8_t scene,
+    uint32_t now_ms);
 uint32_t morse_flipper_settings_list_state(VariableItemList* list);
 void morse_flipper_settings_list_restore(VariableItemList* list, uint32_t state);
 uint8_t morse_flipper_input_value_index(uint8_t source);
@@ -614,6 +625,23 @@ void morse_flipper_settings_usb_paddle_changed(VariableItem* item);
 void morse_flipper_settings_usb_straight_changed(VariableItem* item);
 void morse_flipper_settings_usb_mouse_swap_changed(VariableItem* item);
 void morse_flipper_scene_menu_pick(void* ctx, uint32_t idx);
+uint8_t morse_flipper_help_card_count(uint8_t t);
+void morse_flipper_scene_home_on_enter(void* context);
+bool morse_flipper_scene_home_on_event(void* context, SceneManagerEvent event);
+void morse_flipper_scene_home_on_exit(void* context);
+void morse_flipper_scene_audio_cfg_on_enter(void* context);
+bool morse_flipper_scene_audio_cfg_on_event(void* context, SceneManagerEvent event);
+void morse_flipper_scene_audio_cfg_on_exit(void* context);
+void morse_flipper_scene_gpio_on_enter(void* context);
+bool morse_flipper_scene_gpio_on_event(void* context, SceneManagerEvent event);
+void morse_flipper_scene_gpio_on_exit(void* context);
+void morse_flipper_scene_trainer_on_enter(void* context);
+void morse_flipper_scene_trainer_on_exit(void* context);
+void morse_flipper_scene_straight_cfg_on_enter(void* context);
+void morse_flipper_scene_straight_cfg_on_exit(void* context);
+void morse_flipper_scene_pc_on_enter(void* context);
+bool morse_flipper_scene_pc_on_event(void* context, SceneManagerEvent event);
+void morse_flipper_scene_pc_on_exit(void* context);
 void morse_flipper_trainer_lesson_changed(VariableItem* item);
 void morse_flipper_trainer_wpm_changed(VariableItem* item);
 void morse_flipper_trainer_farnsworth_changed(VariableItem* item);

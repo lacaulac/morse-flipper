@@ -11,6 +11,8 @@ App(
     sources=[
         "src/firmware/morse_flipper_fap.c",
         "src/firmware/morse_flipper_app.c",
+        "src/firmware/morse_flipper_flow.c",
+        "src/firmware/morse_flipper_scenes.c",
         "src/firmware/morse_flipper_gpio.c",
         "src/firmware/morse_flipper_gpio_probe.c",
         "src/firmware/morse_flipper_ham_keyer.c",

@@ -615,8 +615,8 @@ static const char* morse_flipper_current_tone_name(const MorseFlipperApp* app);
 static float morse_flipper_active_tone_hz(const MorseFlipperApp* app);
 static void morse_flipper_toggle_handedness(MorseFlipperApp* app);
 static void morse_flipper_tick_trainer_playback(MorseFlipperApp* app, uint32_t now_ms);
-static void morse_flipper_help_open(MorseFlipperApp* app);
-static void morse_flipper_about_open(MorseFlipperApp* app);
+void morse_flipper_help_open(MorseFlipperApp* app);
+void morse_flipper_about_open(MorseFlipperApp* app);
 static void morse_flipper_cycle_trainer_value(MorseFlipperApp* app, int dir);
 void morse_flipper_apply_trainer_charset_choice(MorseFlipperApp* app);
 static void morse_flipper_drop_live_keying_for_playback(MorseFlipperApp* app, uint32_t now_ms);
@@ -667,10 +667,10 @@ void morse_flipper_ham_log_flush(MorseFlipperApp* app);
 static void morse_flipper_ham_log_flush_if_idle(MorseFlipperApp* app, uint32_t now_ms);
 static void morse_flipper_tick_live_rf(MorseFlipperApp* app, uint32_t now_ms);
 void morse_flipper_rf_rx_edge(void* ctx, bool level, uint16_t duration_ms);
-static void morse_flipper_draw(Canvas* canvas, void* ctx);
-static void morse_flipper_view_dirty(MorseFlipperApp* app);
-static void morse_flipper_scene_open(MorseFlipperApp* app, uint32_t scene);
-static void morse_flipper_scene_back(MorseFlipperApp* app);
+void morse_flipper_draw(Canvas* canvas, void* ctx);
+void morse_flipper_view_dirty(MorseFlipperApp* app);
+void morse_flipper_scene_open(MorseFlipperApp* app, uint32_t scene);
+void morse_flipper_scene_back(MorseFlipperApp* app);
 void morse_flipper_live_draw(Canvas* canvas, void* model);
 static uint8_t morse_flipper_backlight_mode(const MorseFlipperApp* app);
 static void morse_flipper_sync_backlight(MorseFlipperApp* app, uint32_t now_ms);
@@ -722,7 +722,8 @@ static void morse_flipper_settings_usb_mode_changed(VariableItem* item);
 static void morse_flipper_settings_usb_paddle_changed(VariableItem* item);
 static void morse_flipper_settings_usb_straight_changed(VariableItem* item);
 static void morse_flipper_settings_usb_mouse_swap_changed(VariableItem* item);
-static void morse_flipper_scene_menu_pick(void* ctx, uint32_t idx);
+void morse_flipper_scene_menu_pick(void* ctx, uint32_t idx);
+void morse_flipper_scene_enter_now(MorseFlipperApp* app, uint32_t scene);
 static void morse_flipper_trainer_lesson_changed(VariableItem* item);
 static void morse_flipper_trainer_wpm_changed(VariableItem* item);
 static void morse_flipper_trainer_farnsworth_changed(VariableItem* item);
@@ -1901,7 +1902,7 @@ static void morse_flipper_ham_log_flush_if_idle(MorseFlipperApp* app, uint32_t n
         morse_flipper_ham_log_flush(app);
 }
 
-static void morse_flipper_enter_screen(
+void morse_flipper_enter_screen(
     MorseFlipperApp* app,
     uint8_t screen,
     uint8_t scene,
@@ -2492,6 +2493,4 @@ static void morse_flipper_toggle_handedness(MorseFlipperApp* app) {
 
 #include "morse_flipper_live_view.c"
 
-#include "morse_flipper_flow.c"
 #include "morse_flipper_settings.c"
-#include "morse_flipper_scenes.c"
