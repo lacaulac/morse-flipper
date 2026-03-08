@@ -19,7 +19,7 @@ void morse_flipper_rf_rx_edge(void* ctx, bool level, uint16_t duration_ms) {
 #endif
 }
 
-static void morse_flipper_tick_live_rf(MorseFlipperApp* app, uint32_t now_ms) {
+void morse_flipper_tick_live_rf(MorseFlipperApp* app, uint32_t now_ms) {
     float rssi;
     int8_t dbm;
     bool old_valid;

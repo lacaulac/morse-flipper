@@ -1,3 +1,5 @@
+#include "morse_flipper_app_i.h"
+
 static bool morse_flipper_about_input(MorseFlipperApp* app, const InputEvent* event)
 {
     if(app->screen != MorseFlipperScreenAbout) return false;
@@ -152,7 +154,7 @@ static bool morse_flipper_ham_shell_input(MorseFlipperApp* app, const InputEvent
     return true;
 }
 
-static bool morse_flipper_input_chunk_a(MorseFlipperApp* app, InputEvent* event)
+bool morse_flipper_input_chunk_a(MorseFlipperApp* app, InputEvent* event)
 {
     if(morse_flipper_about_input(app, event)) return true;
     if(morse_flipper_startup_probe_input(app, event)) return true;
@@ -468,7 +470,7 @@ static bool morse_flipper_run_trace_home_input(MorseFlipperApp* app, InputEvent*
     return false;
 }
 
-static bool morse_flipper_input_chunk_b( MorseFlipperApp* app, InputEvent* event, uint32_t now_ms)
+bool morse_flipper_input_chunk_b( MorseFlipperApp* app, InputEvent* event, uint32_t now_ms)
 {
     if(morse_flipper_trainer_input(app, event)) return true;
     if(morse_flipper_straight_input(app, event, now_ms)) return true;
@@ -510,7 +512,7 @@ static bool morse_flipper_session_live_keying_input(MorseFlipperApp* app, const 
     return false;
 }
 
-static void morse_flipper_handle_active_keying_event( MorseFlipperApp* app, const InputEvent* event)
+void morse_flipper_handle_active_keying_event( MorseFlipperApp* app, const InputEvent* event)
 {
     uint32_t now_ms = furi_get_tick();
     MorseFlipperInputGate g = morse_flipper_input_gate(app);
@@ -612,7 +614,7 @@ static void morse_flipper_handle_active_keying_event( MorseFlipperApp* app, cons
         morse_flipper_scene_back(app);
 }
 
-static void morse_flipper_tone_nudge(MorseFlipperApp* app, int dir)
+void morse_flipper_tone_nudge(MorseFlipperApp* app, int dir)
 {
     if(app->audio_path == MorseFlipperAudioPathVibration) return;
 

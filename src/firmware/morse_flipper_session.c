@@ -16,7 +16,7 @@ static void morse_flipper_reset_session_runtime(MorseFlipperApp* app) {
     app->session_end_flash_phase = 0U;
 }
 
-static void morse_flipper_reset_session_state(MorseFlipperApp* app, uint32_t now_ms) {
+void morse_flipper_reset_session_state(MorseFlipperApp* app, uint32_t now_ms) {
     if(app == NULL) return;
 
     app->trainer_playback_active = false;
@@ -35,7 +35,7 @@ static void morse_flipper_reset_session_state(MorseFlipperApp* app, uint32_t now
     morse_flipper_update_sidetone(app);
 }
 
-static bool morse_flipper_session_repeat_active(const MorseFlipperApp* app) {
+bool morse_flipper_session_repeat_active(const MorseFlipperApp* app) {
     return app && app->screen == MorseFlipperScreenSession && app->session_started &&
            !app->trainer_playback_active && app->session_next_group_at == 0U &&
            morse_trainer_phase(&app->trainer) == MorseTrainerPhaseRepeat;
@@ -61,7 +61,7 @@ static bool morse_flipper_session_live_keying(const MorseFlipperApp* app) {
             app->note_sources[2] != 0U);
 }
 
-static bool morse_flipper_session_wait_key_down(const MorseFlipperApp* app) {
+bool morse_flipper_session_wait_key_down(const MorseFlipperApp* app) {
     if(app == NULL) return false;
     if(morse_flipper_gpio_probe_notice_active(app)) return false;
     if(morse_flipper_gpio_probe_blocks_start(app)) return false;
@@ -140,7 +140,7 @@ static void morse_flipper_begin_group_playback(MorseFlipperApp* app, uint32_t no
     morse_flipper_view_dirty(app);
 }
 
-static void morse_flipper_start_session(MorseFlipperApp* app, uint32_t now_ms) {
+void morse_flipper_start_session(MorseFlipperApp* app, uint32_t now_ms) {
     if(app == NULL) return;
 
     morse_flipper_reset_session_state(app, now_ms);
@@ -156,7 +156,7 @@ static void morse_flipper_start_session(MorseFlipperApp* app, uint32_t now_ms) {
     morse_flipper_view_dirty(app);
 }
 
-static void morse_flipper_tick_session(MorseFlipperApp* app, uint32_t now_ms) {
+void morse_flipper_tick_session(MorseFlipperApp* app, uint32_t now_ms) {
     uint32_t dt;
     uint32_t left_ms;
     uint8_t left_s;
@@ -238,7 +238,7 @@ static void morse_flipper_tick_session(MorseFlipperApp* app, uint32_t now_ms) {
     morse_flipper_queue_session_feedback(app, now_ms);
 }
 
-static void morse_flipper_leave_session(MorseFlipperApp* app, uint32_t now_ms) {
+void morse_flipper_leave_session(MorseFlipperApp* app, uint32_t now_ms) {
     if(app == NULL) return;
     morse_flipper_reset_session_state(app, now_ms);
     morse_flipper_scene_back(app);
@@ -249,7 +249,7 @@ static uint8_t morse_flipper_session_final_percent(const MorseFlipperApp* app) {
     return morse_trainer_session_letter_percent(&app->trainer);
 }
 
-static bool morse_flipper_session_end_flash(const MorseFlipperApp* app) {
+bool morse_flipper_session_end_flash(const MorseFlipperApp* app) {
     return app != NULL && morse_flipper_session_final_percent(app) > 95U;
 }
 

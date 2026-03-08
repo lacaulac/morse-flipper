@@ -1,3 +1,5 @@
+#include "morse_flipper_app_i.h"
+
 void morse_flipper_gpio_init(MorseFlipperApp* app) {
     morse_flipper_gpio_apply(app);
 }
@@ -6,7 +8,7 @@ void morse_flipper_gpio_deinit(void) {
     morse_flipper_gpio_reset_candidates();
 }
 
-static bool morse_flipper_straight_down(void) {
+bool morse_flipper_straight_down(void) {
     return !furi_hal_gpio_read(morse_flipper_straight_pin);
 }
 
@@ -18,7 +20,7 @@ static bool morse_flipper_dah_down(void) {
     return !furi_hal_gpio_read(morse_flipper_dah_pin);
 }
 
-static bool morse_flipper_logical_dit_down(const MorseFlipperApp* app) {
+bool morse_flipper_logical_dit_down(const MorseFlipperApp* app) {
     if(app->handedness == MorseFlipperHandednessSwapped) {
         return morse_flipper_dah_down();
     }
@@ -26,7 +28,7 @@ static bool morse_flipper_logical_dit_down(const MorseFlipperApp* app) {
     return morse_flipper_dit_down();
 }
 
-static bool morse_flipper_logical_dah_down(const MorseFlipperApp* app) {
+bool morse_flipper_logical_dah_down(const MorseFlipperApp* app) {
     if(app->handedness == MorseFlipperHandednessSwapped) {
         return morse_flipper_dit_down();
     }
@@ -146,7 +148,7 @@ static void morse_flipper_feed_gpio_edge(MorseFlipperApp* app, bool level, uint3
     app->gpio_gap_flushed = level;
 }
 
-static void morse_flipper_feed_straight_mark(MorseFlipperApp* app, uint16_t mark_ms, uint32_t now_ms) {
+void morse_flipper_feed_straight_mark(MorseFlipperApp* app, uint16_t mark_ms, uint32_t now_ms) {
     char elem;
     uint16_t gap_ms = 0U;
 
@@ -161,7 +163,7 @@ static void morse_flipper_feed_straight_mark(MorseFlipperApp* app, uint16_t mark
     app->straight_last_input_at = now_ms;
 }
 
-static uint32_t morse_flipper_straight_answer_settle_ms(const MorseFlipperApp* app)
+uint32_t morse_flipper_straight_answer_settle_ms(const MorseFlipperApp* app)
 {
     uint32_t dit_ms;
     uint8_t target_symbols;
@@ -247,7 +249,7 @@ static uint8_t morse_flipper_read_input_mask(const MorseFlipperApp* app) {
     return mask;
 }
 
-static const char* morse_flipper_input_line(const MorseFlipperApp* app, char* buf, size_t buf_sz) {
+const char* morse_flipper_input_line(const MorseFlipperApp* app, char* buf, size_t buf_sz) {
     uint8_t straight_idx = morse_flipper_gpio_straight_idx(app);
     size_t n = snprintf(buf, buf_sz, "raw ");
 
