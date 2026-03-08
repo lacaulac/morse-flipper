@@ -426,7 +426,11 @@ static void morse_flipper_draw_straight_metrics(Canvas* canvas, const MorseFlipp
     canvas_draw_str(canvas, x, 64, cnt);
 }
 
-static void morse_flipper_draw_tx_history_screen( Canvas* canvas, MorseFlipperApp* app, const char* second_line) {
+static void morse_flipper_draw_tx_history_screen_custom(
+    Canvas* canvas,
+    MorseFlipperApp* app,
+    const char* second_line,
+    const char* hint_override) {
     MorseFlipperRunHistory preview_history;
     MorseFlipperRunLayout layout;
     char mode_line[32];
@@ -473,7 +477,18 @@ static void morse_flipper_draw_tx_history_screen( Canvas* canvas, MorseFlipperAp
     morse_flipper_draw_tx_history_divider(canvas, left_hint);
     canvas_draw_str( canvas, 3, 44, morse_flipper_run_mode_line(app, mode_line, sizeof(mode_line)));
     canvas_draw_str(canvas, 3, 54, second_line ? second_line : "");
-    canvas_draw_str( canvas, 3, 64, morse_flipper_run_hint(app, hint_line, sizeof(hint_line)));
+    canvas_draw_str(
+        canvas,
+        3,
+        64,
+        hint_override ? hint_override : morse_flipper_run_hint(app, hint_line, sizeof(hint_line)));
+}
+
+static void morse_flipper_draw_tx_history_screen(
+    Canvas* canvas,
+    MorseFlipperApp* app,
+    const char* second_line) {
+    morse_flipper_draw_tx_history_screen_custom(canvas, app, second_line, NULL);
 }
 
 static uint8_t morse_flipper_rf_rssi_bar_px(int8_t dbm, uint8_t width)
@@ -615,11 +630,16 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
     }
 
     if(app->screen == MorseFlipperScreenHamRun) {
-        canvas_set_font(canvas, FontPrimary);
-        canvas_draw_str_aligned(canvas, 64, 22, AlignCenter, AlignCenter, "Ham Keyer");
-        canvas_set_font(canvas, FontSecondary);
-        canvas_draw_str_aligned(canvas, 64, 38, AlignCenter, AlignCenter, "Live shell");
-        canvas_draw_str_aligned(canvas, 64, 58, AlignCenter, AlignCenter, "Bk back");
+        snprintf(
+            browse_line,
+            sizeof(browse_line),
+            "Bk: %s; hold L exit",
+            app->ham_keyer.break_in_enabled ? "BKON" : "BKOFF");
+        morse_flipper_draw_tx_history_screen_custom(
+            canvas,
+            app,
+            "P16 PTT  P15 Key",
+            browse_line);
         return;
     }
 

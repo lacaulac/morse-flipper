@@ -68,6 +68,46 @@ static bool morse_flipper_ham_shell_input(MorseFlipperApp* app, const InputEvent
        app->screen != MorseFlipperScreenHamRun)
         return false;
 
+    if(app->screen == MorseFlipperScreenHamRun) {
+        if(event->key == InputKeyLeft && event->type == InputTypeLong) {
+            morse_flipper_leave_live_screen(app, furi_get_tick());
+            return true;
+        }
+
+        if(event->key == InputKeyBack && event->type == InputTypeShort) {
+            app->ham_keyer.break_in_enabled = !app->ham_keyer.break_in_enabled;
+            if(!app->ham_keyer.break_in_enabled) {
+                app->ptt_tail_until = 0U;
+            }
+            morse_flipper_sync_audio_output(app);
+            morse_flipper_view_dirty(app);
+            return true;
+        }
+
+        if(event->key == InputKeyUp && event->type == InputTypeLong) {
+            morse_flipper_set_run_wpm(app, (uint8_t)(morse_flipper_current_wpm(app) + 1U));
+            return true;
+        }
+
+        if(event->key == InputKeyDown && event->type == InputTypeLong) {
+            uint8_t wpm = morse_flipper_current_wpm(app);
+            morse_flipper_set_run_wpm(app, wpm > 0U ? (uint8_t)(wpm - 1U) : 0U);
+            return true;
+        }
+
+        if(event->type == InputTypeShort) {
+            dir = morse_flipper_ham_dir_from_key(event->key);
+            if(dir < MORSE_FLIPPER_HAM_KEYER_ASSIGNMENTS) {
+                const char* text = morse_flipper_ham_keyer_assignment_text(&app->ham_keyer, dir);
+
+                if(text[0] != '\0') morse_flipper_ham_start_macro(app, text, furi_get_tick());
+                return true;
+            }
+        }
+
+        return true;
+    }
+
     if(app->screen == MorseFlipperScreenHamAssign && event->type == InputTypeShort) {
         dir = morse_flipper_ham_dir_from_key(event->key);
         if(dir < MORSE_FLIPPER_HAM_KEYER_ASSIGNMENTS) {

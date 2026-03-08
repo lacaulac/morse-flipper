@@ -29,10 +29,21 @@ static float morse_flipper_active_tone_hz(const MorseFlipperApp* app)
 {
     float hz = morse_flipper_current_audible_tone(app)->hz;
 
+    if(app != NULL && app->screen == MorseFlipperScreenHamRun &&
+       !app->ham_keyer.break_in_enabled &&
+       app->audio_path == MorseFlipperAudioPathVibration)
+        return morse_flipper_tones[MORSE_FLIPPER_DEFAULT_TONE_IDX].hz;
+
     if(app != NULL && app->vail_tone_active && app->vail_tone_idx < COUNT_OF(morse_flipper_tones))
         hz = morse_flipper_current_audible_tone(app)->hz;
 
     return hz;
+}
+
+static bool morse_flipper_ham_force_buzzer(const MorseFlipperApp* app)
+{
+    return app != NULL && app->screen == MorseFlipperScreenHamRun &&
+           !app->ham_keyer.break_in_enabled;
 }
 
 static bool morse_flipper_local_buzzer_enabled(const MorseFlipperApp* app)
@@ -98,6 +109,7 @@ static void morse_flipper_update_sidetone(MorseFlipperApp* app)
 {
     bool use_pwm;
     bool use_vibro;
+    bool force_buzzer = morse_flipper_ham_force_buzzer(app);
     bool want_tx_tone = morse_flipper_any_active_notes(app) || (app->preview_ticks > 0U);
     bool want_aux_tone = app->trainer_playback_mark || app->straight_playback_mark ||
                          app->session_result_tone || app->rf_monitor_tone;
@@ -105,10 +117,15 @@ static void morse_flipper_update_sidetone(MorseFlipperApp* app)
     bool want_vibro;
 
     use_pwm = morse_flipper_use_pwm_buzzer(app);
-    use_vibro = app != NULL && app->audio_path == MorseFlipperAudioPathVibration;
+    use_vibro = !force_buzzer && app != NULL && app->audio_path == MorseFlipperAudioPathVibration;
     want_speaker = !use_pwm && (want_aux_tone ||
-                   (want_tx_tone && morse_flipper_local_buzzer_enabled(app)));
+                   (want_tx_tone &&
+                    (force_buzzer || morse_flipper_local_buzzer_enabled(app))));
     want_vibro = use_vibro && (want_tx_tone || want_aux_tone);
+
+    if(force_buzzer && app->audio_pwm.running) {
+        morse_flipper_audio_pwm_stop(&app->audio_pwm);
+    }
 
     if(use_pwm) {
         furi_hal_vibro_on(false);

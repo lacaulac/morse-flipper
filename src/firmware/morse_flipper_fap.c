@@ -71,6 +71,7 @@
 #define MORSE_SOURCE_STRAIGHT_BTN  (1UL << 1)
 #define MORSE_SOURCE_KEYER_DIT     (1UL << 2)
 #define MORSE_SOURCE_KEYER_DAH     (1UL << 3)
+#define MORSE_SOURCE_HAM_MACRO     (1UL << 4)
 
 #define MORSE_PADDLE_SOURCE_GPIO_DIT (1UL << 0)
 #define MORSE_PADDLE_SOURCE_GPIO_DAH (1UL << 1)
@@ -515,6 +516,7 @@ typedef struct {
     bool rf_monitor_tone;
     bool audio_wait_active;
     bool ptt_level;
+    bool ham_key_level;
     bool gpio_level;
     bool gpio_gap_flushed;
     uint8_t straight_mark_idx;
@@ -527,10 +529,16 @@ typedef struct {
     uint16_t rf_rssi_samples;
     uint16_t rf_rx_edges_window;
     uint16_t rf_rx_activity;
+    bool ham_macro_active;
+    bool ham_macro_mark;
+    uint8_t ham_macro_char_idx;
+    uint8_t ham_macro_mark_idx;
+    uint32_t ham_macro_next_at;
     char rf_rx_text[64];
     char rf_tx_text[64];
     char gpio_text[64];
     char ham_text_buffer[MORSE_FLIPPER_HAM_KEYER_MESSAGE_LEN + 1U];
+    char ham_macro_text[MORSE_FLIPPER_HAM_KEYER_MESSAGE_LEN + 1U];
     MorseFlipperRunHistory run_history;
     MorseFlipperAudioPwm audio_pwm;
     MorseFlipperStraightFilter straight_filter;
@@ -635,6 +643,14 @@ static void morse_flipper_note_straight_session(MorseFlipperApp* app);
 static void morse_flipper_start_straight_round(MorseFlipperApp* app, uint32_t now_ms);
 static void morse_flipper_finish_straight_round(MorseFlipperApp* app, uint32_t now_ms);
 static void morse_flipper_tick_straight(MorseFlipperApp* app, uint32_t now_ms);
+static void morse_flipper_tick_ham_macro(MorseFlipperApp* app, uint32_t now_ms);
+static void morse_flipper_ham_start_macro(
+    MorseFlipperApp* app,
+    const char* text,
+    uint32_t now_ms);
+static void morse_flipper_ham_stop_macro(MorseFlipperApp* app);
+static void morse_flipper_ham_gpio_apply(MorseFlipperApp* app);
+static void morse_flipper_ham_gpio_release(MorseFlipperApp* app);
 static void morse_flipper_tick_live_rf(MorseFlipperApp* app, uint32_t now_ms);
 static void morse_flipper_rf_rx_edge(void* ctx, bool level, uint16_t duration_ms);
 static void morse_flipper_draw(Canvas* canvas, void* ctx);
@@ -715,6 +731,7 @@ static uint8_t morse_flipper_backlight_mode(const MorseFlipperApp* app) {
     if(app == NULL) return MorseFlipperBacklightAuto;
 
     if(app->screen == MorseFlipperScreenRun || app->screen == MorseFlipperScreenTrace ||
+       app->screen == MorseFlipperScreenHamRun ||
        app->screen == MorseFlipperScreenStraight)
         return MorseFlipperBacklightHold;
 
@@ -885,6 +902,7 @@ static uint8_t morse_flipper_gpio_no_reserved(uint8_t pin_idx, uint8_t def) {
 
 static bool morse_flipper_scene_supports_audio_pwm(uint8_t scene) {
     switch(scene) {
+    case MorseFlipperSceneHamRun:
     case MorseFlipperSceneRun:
     case MorseFlipperSceneTrace:
     case MorseFlipperSceneSession:
@@ -917,6 +935,8 @@ static uint8_t morse_flipper_p2_volume_pct(const MorseFlipperApp* app)
 static bool morse_flipper_audio_output_is_pwm(const MorseFlipperApp* app)
 {
     if(app == NULL) return false;
+    if(app->screen == MorseFlipperScreenHamRun && !app->ham_keyer.break_in_enabled)
+        return false;
     return app->audio_path == MorseFlipperAudioPathGpioP2Hd &&
            morse_flipper_scene_supports_audio_pwm(app->scene);
 }
@@ -1036,8 +1056,32 @@ static bool morse_flipper_gpio_try_apply(
 static void morse_flipper_sync_ptt(MorseFlipperApp* app, uint32_t now_ms) {
     bool tx_active;
     bool want_high;
+    bool want_key;
+    const GpioPin* ham_key_pin = morse_flipper_gpio_pins[MorseFlipperGpioPinP15];
+    const GpioPin* ham_ptt_pin = morse_flipper_gpio_pins[MorseFlipperGpioPinP16];
 
     if(app == NULL) return;
+
+    if(app->screen == MorseFlipperScreenHamRun) {
+        tx_active = (app->note_sources[0] != 0U) || (app->note_sources[1] != 0U) ||
+                    (app->note_sources[2] != 0U);
+        want_key = app->ham_keyer.break_in_enabled && tx_active;
+        if(app->ham_keyer.break_in_enabled && tx_active)
+            app->ptt_tail_until = now_ms + ((uint32_t)morse_flipper_current_dit_ms(app) * 7U);
+        want_high = app->ham_keyer.break_in_enabled &&
+                    (tx_active || (app->ptt_tail_until != 0U && now_ms < app->ptt_tail_until));
+        if(!want_high) app->ptt_tail_until = 0U;
+
+        if(app->ham_key_level != want_key) {
+            furi_hal_gpio_write(ham_key_pin, want_key);
+            app->ham_key_level = want_key;
+        }
+        if(app->ptt_level != want_high) {
+            furi_hal_gpio_write(ham_ptt_pin, want_high);
+            app->ptt_level = want_high;
+        }
+        return;
+    }
 
     if(app->screen != MorseFlipperScreenRun || morse_flipper_ptt_pin == NULL) {
         app->ptt_tail_until = 0U;
@@ -1068,7 +1112,9 @@ static uint8_t morse_flipper_current_keyer_mode(const MorseFlipperApp* app) {
 }
 
 static uint16_t morse_flipper_current_dit_ms(const MorseFlipperApp* app) {
-    if(app != NULL && app->screen == MorseFlipperScreenRun && app->run_dit_ms != 0U) {
+    if(app != NULL &&
+       (app->screen == MorseFlipperScreenRun || app->screen == MorseFlipperScreenHamRun) &&
+       app->run_dit_ms != 0U) {
         return app->run_dit_ms;
     }
 
@@ -1611,6 +1657,129 @@ static bool morse_flipper_session_running_view(const MorseFlipperApp* app) {
 #include "morse_flipper_rf_live.c"
 #include "morse_flipper_help.c"
 
+static char morse_flipper_ham_upper(char ch)
+{
+    if(ch >= 'a' && ch <= 'z') return (char)(ch - ('a' - 'A'));
+    return ch;
+}
+
+static void morse_flipper_ham_gpio_apply(MorseFlipperApp* app)
+{
+    const GpioPin* key_pin = morse_flipper_gpio_pins[MorseFlipperGpioPinP15];
+    const GpioPin* ptt_pin = morse_flipper_gpio_pins[MorseFlipperGpioPinP16];
+
+    if(app == NULL) return;
+
+    furi_hal_gpio_init(key_pin, GpioModeOutputPushPull, GpioPullNo, GpioSpeedLow);
+    furi_hal_gpio_init(ptt_pin, GpioModeOutputPushPull, GpioPullNo, GpioSpeedLow);
+    furi_hal_gpio_write(key_pin, false);
+    furi_hal_gpio_write(ptt_pin, false);
+    app->ham_key_level = false;
+    app->ptt_level = false;
+    app->ptt_tail_until = 0U;
+}
+
+static void morse_flipper_ham_gpio_release(MorseFlipperApp* app)
+{
+    if(app == NULL) return;
+
+    furi_hal_gpio_write(morse_flipper_gpio_pins[MorseFlipperGpioPinP15], false);
+    furi_hal_gpio_write(morse_flipper_gpio_pins[MorseFlipperGpioPinP16], false);
+    app->ham_key_level = false;
+    app->ptt_level = false;
+    app->ptt_tail_until = 0U;
+    morse_flipper_gpio_apply(app);
+}
+
+static void morse_flipper_ham_stop_macro(MorseFlipperApp* app)
+{
+    if(app == NULL) return;
+
+    app->ham_macro_active = false;
+    app->ham_macro_mark = false;
+    app->ham_macro_char_idx = 0U;
+    app->ham_macro_mark_idx = 0U;
+    app->ham_macro_next_at = 0U;
+    app->ham_macro_text[0] = '\0';
+    morse_flipper_set_note_source(app, 0U, MORSE_SOURCE_HAM_MACRO, false);
+}
+
+static void morse_flipper_ham_start_macro(
+    MorseFlipperApp* app,
+    const char* text,
+    uint32_t now_ms)
+{
+    if(app == NULL || text == NULL || text[0] == '\0') return;
+
+    morse_flipper_ham_stop_macro(app);
+    strncpy(app->ham_macro_text, text, sizeof(app->ham_macro_text) - 1U);
+    app->ham_macro_text[sizeof(app->ham_macro_text) - 1U] = '\0';
+    app->ham_macro_active = true;
+    app->ham_macro_next_at = now_ms;
+    morse_flipper_view_dirty(app);
+}
+
+static void morse_flipper_tick_ham_macro(MorseFlipperApp* app, uint32_t now_ms)
+{
+    const char* morse;
+    char ch;
+    uint32_t dit_ms;
+
+    if(app == NULL || !app->ham_macro_active) return;
+
+    if(app->screen != MorseFlipperScreenHamRun) {
+        morse_flipper_ham_stop_macro(app);
+        return;
+    }
+
+    if(now_ms < app->ham_macro_next_at) return;
+
+    dit_ms = morse_flipper_current_dit_ms(app);
+    ch = morse_flipper_ham_upper(app->ham_macro_text[app->ham_macro_char_idx]);
+
+    if(ch == '\0') {
+        morse_flipper_ham_stop_macro(app);
+        morse_flipper_view_dirty(app);
+        return;
+    }
+
+    if(!app->ham_macro_mark && ch == ' ') {
+        app->ham_macro_char_idx++;
+        app->ham_macro_mark_idx = 0U;
+        app->ham_macro_next_at = now_ms + (dit_ms * 7U);
+        return;
+    }
+
+    morse = morse_trainer_char_morse(ch);
+    if(morse == NULL || morse[0] == '\0') {
+        app->ham_macro_char_idx++;
+        app->ham_macro_mark_idx = 0U;
+        app->ham_macro_next_at = now_ms + (dit_ms * 3U);
+        return;
+    }
+
+    if(!app->ham_macro_mark) {
+        app->ham_macro_mark = true;
+        morse_flipper_set_note_source(app, 0U, MORSE_SOURCE_HAM_MACRO, true);
+        app->ham_macro_next_at =
+            now_ms + (morse[app->ham_macro_mark_idx] == '-' ? (dit_ms * 3U) : dit_ms);
+        morse_flipper_view_dirty(app);
+        return;
+    }
+
+    app->ham_macro_mark = false;
+    morse_flipper_set_note_source(app, 0U, MORSE_SOURCE_HAM_MACRO, false);
+    if(morse[app->ham_macro_mark_idx + 1U] != '\0') {
+        app->ham_macro_mark_idx++;
+        app->ham_macro_next_at = now_ms + dit_ms;
+    } else {
+        app->ham_macro_char_idx++;
+        app->ham_macro_mark_idx = 0U;
+        app->ham_macro_next_at = now_ms + (dit_ms * 3U);
+    }
+    morse_flipper_view_dirty(app);
+}
+
 static void morse_flipper_enter_screen(
     MorseFlipperApp* app,
     uint8_t screen,
@@ -1656,6 +1825,12 @@ static void morse_flipper_enter_screen(
         app->run_dit_ms = 0U;
     }
 
+    if(app->screen == MorseFlipperScreenHamRun && screen != MorseFlipperScreenHamRun) {
+        morse_flipper_ham_stop_macro(app);
+        morse_flipper_ham_gpio_release(app);
+        app->run_dit_ms = 0U;
+    }
+
     morse_flipper_clear_button_keying(app, now_ms);
 
     if(screen == MorseFlipperScreenSession && app->screen != MorseFlipperScreenSession &&
@@ -1676,6 +1851,13 @@ static void morse_flipper_enter_screen(
         app->preview_ticks = 0U;
         app->run_dit_ms = morse_flipper_current_dit_ms(app);
         morse_flipper_reset_run_state(app);
+    }
+
+    if(screen == MorseFlipperScreenHamRun && app->screen != MorseFlipperScreenHamRun) {
+        app->preview_ticks = 0U;
+        app->run_dit_ms = morse_flipper_current_dit_ms(app);
+        morse_flipper_reset_run_state(app);
+        morse_flipper_ham_gpio_apply(app);
     }
 
     if(screen == MorseFlipperScreenRf && app->screen != MorseFlipperScreenRf) {
