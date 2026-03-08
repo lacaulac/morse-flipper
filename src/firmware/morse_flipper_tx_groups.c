@@ -1,5 +1,6 @@
 #include "morse_flipper_tx_groups.h"
 #include "cw.h"
+#include "morse_flipper_cw_token.h"
 
 #include <string.h>
 
@@ -25,6 +26,7 @@ static char txg_up(char ch)
 
 static bool txg_answer_ok(char ch)
 {
+    if(morse_flipper_cw_token_is_private((uint8_t)ch)) return true;
     if(ch == '#') return true;
     if(ch == ' ' || ch == '|') return false;
     return cw(ch) != CW_INVALID;
