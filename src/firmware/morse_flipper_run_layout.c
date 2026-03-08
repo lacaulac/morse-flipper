@@ -45,6 +45,16 @@ void morse_flipper_run_layout_build(
         char ch = *text++;
         uint16_t ch_w;
 
+        if(ch == '\n') {
+            if(row_len != 0U) {
+                morse_flipper_run_layout_push_row(layout, row, row_len, &row_n);
+                row[0] = '\0';
+                row_len = 0U;
+                row_w = 0U;
+            }
+            continue;
+        }
+
         if(ch == ' ' && row_len == 0U) continue;
 
         ch_w = glyph_width((uint8_t)ch, glyph_ctx);

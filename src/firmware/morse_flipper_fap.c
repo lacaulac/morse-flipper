@@ -949,8 +949,7 @@ static uint8_t morse_flipper_p2_volume_pct(const MorseFlipperApp* app)
 static bool morse_flipper_audio_output_is_pwm(const MorseFlipperApp* app)
 {
     if(app == NULL) return false;
-    if(app->screen == MorseFlipperScreenHamRun && !app->ham_keyer.break_in_enabled)
-        return false;
+    if(app->screen == MorseFlipperScreenHamRun) return false;
     return app->audio_path == MorseFlipperAudioPathGpioP2Hd &&
            morse_flipper_scene_supports_audio_pwm(app->scene);
 }
@@ -1328,6 +1327,7 @@ static bool morse_flipper_live_back_is_key(const MorseFlipperApp* app) {
 }
 
 static bool morse_flipper_live_left_hint(const MorseFlipperApp* app) {
+    if(app != NULL && app->screen == MorseFlipperScreenHamRun) return true;
     return morse_flipper_input_gate(app).left_hint;
 }
 

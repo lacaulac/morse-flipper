@@ -1,11 +1,6 @@
 #include "morse_flipper_audio_pwm.h"
 
-#include <math.h>
 #include <string.h>
-
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
 
 #ifdef MORSE_FLIPPER_FAP
 #include <furi.h>
@@ -20,6 +15,17 @@
 #include <stm32wbxx_ll_gpio.h>
 #include <stm32wbxx_ll_tim.h>
 #endif
+
+static const int16_t morse_flipper_audio_pwm_sine_q15[MORSE_FLIPPER_AUDIO_PWM_SINE_SAMPLES] = {
+    0,      3212,   6393,   9512,   12539,  15446,  18204,  20787,
+    23170,  25329,  27245,  28898,  30273,  31356,  32137,  32609,
+    32767,  32609,  32137,  31356,  30273,  28898,  27245,  25329,
+    23170,  20787,  18204,  15446,  12539,  9512,   6393,   3212,
+    0,      -3212,  -6393,  -9512,  -12539, -15446, -18204, -20787,
+    -23170, -25329, -27245, -28898, -30273, -31356, -32137, -32609,
+    -32767, -32609, -32137, -31356, -30273, -28898, -27245, -25329,
+    -23170, -20787, -18204, -15446, -12539, -9512,  -6393,  -3212,
+};
 
 static uint16_t morse_flipper_audio_pwm_clamp_fade_len(uint32_t samples)
 {
@@ -113,7 +119,7 @@ static uint16_t morse_flipper_audio_pwm_next_sample(MorseFlipperAudioPwm* audio)
     sample = audio->pwm_midpoint;
     if(env_q15 != 0U) {
         sine_idx = (uint8_t)(audio->phase_q32 >> (32U - 6U));
-        mixed_q15 = (audio->sine_q15[sine_idx] * (int32_t)env_q15) >> 15;
+        mixed_q15 = (morse_flipper_audio_pwm_sine_q15[sine_idx] * (int32_t)env_q15) >> 15;
         delta = (mixed_q15 * (int32_t)audio->pwm_amplitude) >> 15;
         sample = (uint16_t)((int32_t)audio->pwm_midpoint + delta);
     }
@@ -156,8 +162,6 @@ void morse_flipper_audio_pwm_prepare(
     uint32_t i;
     uint32_t attack_samples;
     uint32_t release_samples;
-    float phase;
-    const float scale = (float)MORSE_FLIPPER_AUDIO_PWM_Q15;
 
     if(audio == NULL) return;
 
@@ -191,8 +195,6 @@ void morse_flipper_audio_pwm_prepare(
     audio->gate_applied = false;
 
     for(i = 0U; i < MORSE_FLIPPER_AUDIO_PWM_SINE_SAMPLES; i++) {
-        phase = (2.0f * (float)M_PI * (float)i) / (float)MORSE_FLIPPER_AUDIO_PWM_SINE_SAMPLES;
-        audio->sine_q15[i] = (int16_t)lroundf(sinf(phase) * scale);
         audio->attack_q15[i] = i < audio->attack_len ?
                                    morse_flipper_audio_pwm_progress_q15((uint16_t)i, audio->attack_len) :
                                    MORSE_FLIPPER_AUDIO_PWM_Q15;

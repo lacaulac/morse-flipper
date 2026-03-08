@@ -41,7 +41,6 @@ typedef struct {
     uint16_t env_idx;
     uint16_t env_anchor_q15;
     MorseFlipperAudioPwmEnvState env_state;
-    int16_t sine_q15[MORSE_FLIPPER_AUDIO_PWM_SINE_SAMPLES];
     uint16_t attack_q15[MORSE_FLIPPER_AUDIO_PWM_SINE_SAMPLES];
     uint16_t release_q15[MORSE_FLIPPER_AUDIO_PWM_SINE_SAMPLES];
     uint16_t dma_buffer[MORSE_FLIPPER_AUDIO_PWM_BUFFER_SAMPLES];

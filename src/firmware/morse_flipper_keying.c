@@ -46,6 +46,12 @@ static bool morse_flipper_ham_force_buzzer(const MorseFlipperApp* app)
            !app->ham_keyer.break_in_enabled;
 }
 
+static bool morse_flipper_ham_silent_audio(const MorseFlipperApp* app)
+{
+    return app != NULL && app->screen == MorseFlipperScreenHamRun &&
+           app->ham_keyer.break_in_enabled;
+}
+
 static bool morse_flipper_local_buzzer_enabled(const MorseFlipperApp* app)
 {
     if(app == NULL) return false;
@@ -115,6 +121,16 @@ static void morse_flipper_update_sidetone(MorseFlipperApp* app)
                          app->session_result_tone || app->rf_monitor_tone;
     bool want_speaker;
     bool want_vibro;
+
+    if(morse_flipper_ham_silent_audio(app)) {
+        if(app->audio_pwm.running) morse_flipper_audio_pwm_stop(&app->audio_pwm);
+        furi_hal_vibro_on(false);
+        if(app->speaker_owned || app->tone_on) morse_flipper_tone_stop(app);
+        app->tone_on = false;
+        app->speaker_busy = false;
+        morse_flipper_sync_ptt(app, furi_get_tick());
+        return;
+    }
 
     use_pwm = morse_flipper_use_pwm_buzzer(app);
     use_vibro = !force_buzzer && app != NULL && app->audio_path == MorseFlipperAudioPathVibration;

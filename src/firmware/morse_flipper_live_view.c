@@ -435,6 +435,7 @@ static void morse_flipper_draw_tx_history_screen_custom(
     MorseFlipperRunLayout layout;
     char mode_line[32];
     char hint_line[32];
+    const char* footer;
     char preview;
     bool preview_extendable;
     bool left_hint;
@@ -477,11 +478,9 @@ static void morse_flipper_draw_tx_history_screen_custom(
     morse_flipper_draw_tx_history_divider(canvas, left_hint);
     canvas_draw_str( canvas, 3, 44, morse_flipper_run_mode_line(app, mode_line, sizeof(mode_line)));
     canvas_draw_str(canvas, 3, 54, second_line ? second_line : "");
-    canvas_draw_str(
-        canvas,
-        3,
-        64,
-        hint_override ? hint_override : morse_flipper_run_hint(app, hint_line, sizeof(hint_line)));
+    footer = hint_override ? hint_override : morse_flipper_run_hint(app, hint_line, sizeof(hint_line));
+    if(canvas_string_width(canvas, footer) > 124) canvas_set_font(canvas, FontKeyboard);
+    canvas_draw_str(canvas, 3, 64, footer);
 }
 
 static void morse_flipper_draw_tx_history_screen(
@@ -635,8 +634,8 @@ static void morse_flipper_draw(Canvas* canvas, void* ctx) {
         snprintf(
             browse_line,
             sizeof(browse_line),
-            "Bk: %s; hold L exit",
-            app->ham_keyer.break_in_enabled ? "BKON" : "BKOFF");
+            "Back: Bkin %s hold L exit",
+            app->ham_keyer.break_in_enabled ? "on" : "off");
         morse_flipper_draw_tx_history_screen_custom(
             canvas,
             app,

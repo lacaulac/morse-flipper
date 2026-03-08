@@ -11,7 +11,7 @@ static void morse_flipper_run_history_drop_left(MorseFlipperRunHistory* history)
     if(len == 0U) return;
 
     memmove(history->text, history->text + 1U, len);
-    while(history->text[0] == ' ') {
+    while(history->text[0] == ' ' || history->text[0] == '\n') {
         len = strlen(history->text);
         if(len == 0U) break;
         memmove(history->text, history->text + 1U, len);
@@ -27,8 +27,22 @@ static void morse_flipper_run_history_append_ch(MorseFlipperRunHistory* history,
 
     len = strlen(history->text);
 
+    if(ch == '\n') {
+        if(len == 0U || history->text[len - 1U] == '\n') return;
+
+        while(len + 1U >= MORSE_FLIPPER_RUN_HISTORY_TEXT) {
+            morse_flipper_run_history_drop_left(history);
+            len = strlen(history->text);
+        }
+
+        history->text[len] = ch;
+        history->text[len + 1U] = '\0';
+        return;
+    }
+
     if(ch == ' ') {
-        if(len == 0U || history->text[len - 1U] == ' ') return;
+        if(len == 0U || history->text[len - 1U] == ' ' || history->text[len - 1U] == '\n')
+            return;
     }
 
     while(len + 1U >= MORSE_FLIPPER_RUN_HISTORY_TEXT) {
