@@ -508,6 +508,13 @@ typedef struct {
     uint16_t straight_session_good;
     uint16_t txg_session_total;
     uint16_t txg_session_good;
+    uint16_t txg_session_sk;
+    uint32_t txg_sum_speed;
+    uint32_t txg_sum_lgap;
+    uint32_t txg_sum_ratio;
+    uint32_t txg_sum_accuracy;
+    uint32_t txg_sum_dgap;
+    uint32_t txg_sum_variance;
     uint32_t session_last_input_at;
     uint32_t session_result_until;
     uint32_t session_next_group_at;
@@ -2203,6 +2210,13 @@ void morse_flipper_reset_tx_groups_state(MorseFlipperApp* app, uint32_t now_ms)
     app->txg_repeated_timeouts = 0U;
     app->txg_session_total = 0U;
     app->txg_session_good = 0U;
+    app->txg_session_sk = 0U;
+    app->txg_sum_speed = 0U;
+    app->txg_sum_lgap = 0U;
+    app->txg_sum_ratio = 0U;
+    app->txg_sum_accuracy = 0U;
+    app->txg_sum_dgap = 0U;
+    app->txg_sum_variance = 0U;
     morse_flipper_tx_group_init(&app->tx_group);
     morse_flipper_cw_decoder_init(&app->tx_decoder, morse_flipper_current_dit_ms(app));
     morse_flipper_clear_button_keying(app, furi_get_tick());

@@ -324,6 +324,25 @@ static bool morse_flipper_tx_groups_result_input( MorseFlipperApp* app, const In
     return true;
 }
 
+static bool morse_flipper_tx_groups_final_input( MorseFlipperApp* app, const InputEvent* event, uint32_t now_ms)
+{
+    if(app->screen != MorseFlipperScreenTxGroupsFinal) return false;
+    UNUSED(now_ms);
+
+    if((event->key == InputKeyBack || event->key == InputKeyOk) &&
+       (event->type == InputTypeShort || event->type == InputTypeLong)) {
+        scene_manager_search_and_switch_to_another_scene(app->scene_manager, MorseFlipperSceneMenuTraining);
+        return true;
+    }
+
+    if(event->key == InputKeyLeft && event->type == InputTypeLong) {
+        scene_manager_search_and_switch_to_another_scene(app->scene_manager, MorseFlipperSceneMenuTraining);
+        return true;
+    }
+
+    return true;
+}
+
 static bool morse_flipper_session_input( MorseFlipperApp* app, const InputEvent* event, uint32_t now_ms)
 {
     MorseFlipperInputGate g;
@@ -543,6 +562,7 @@ bool morse_flipper_input_chunk_b( MorseFlipperApp* app, InputEvent* event, uint3
     if(morse_flipper_straight_input(app, event, now_ms)) return true;
     if(morse_flipper_tx_groups_input(app, event, now_ms)) return true;
     if(morse_flipper_tx_groups_result_input(app, event, now_ms)) return true;
+    if(morse_flipper_tx_groups_final_input(app, event, now_ms)) return true;
     if(morse_flipper_session_input(app, event, now_ms)) return true;
     if(morse_flipper_session_end_input(app, event, now_ms)) return true;
     if(morse_flipper_rf_freq_input(app, event)) return true;

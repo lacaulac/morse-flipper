@@ -1,5 +1,7 @@
 #include "morse_flipper_app_i.h"
 
+static void morse_flipper_note_tx_group_result(MorseFlipperApp* app);
+
 void morse_flipper_gpio_init(MorseFlipperApp* app) {
     morse_flipper_gpio_apply(app);
 }
@@ -82,8 +84,7 @@ static void morse_flipper_drain_tx_decoder(MorseFlipperApp* app) {
             app->txg_wait_answer = false;
             app->txg_done = true;
             morse_flipper_tx_group_score(&app->tx_group, morse_flipper_current_dit_ms(app), false);
-            app->txg_session_total++;
-            if(app->tx_group.result.passed) app->txg_session_good++;
+            morse_flipper_note_tx_group_result(app);
             app->txg_repeated_timeouts = 0U;
             if(app->tx_group.result.passed) morse_flipper_feedback_pass(app);
             else morse_flipper_feedback_fail(app);
@@ -110,7 +111,7 @@ static void morse_flipper_finish_tx_group_timeout(MorseFlipperApp* app, uint32_t
     app->txg_wait_answer = false;
     app->txg_done = true;
     morse_flipper_tx_group_score(&app->tx_group, morse_flipper_current_dit_ms(app), true);
-    app->txg_session_total++;
+    morse_flipper_note_tx_group_result(app);
     app->txg_repeated_timeouts++;
     morse_flipper_feedback_timeout(app);
 
@@ -122,6 +123,25 @@ static void morse_flipper_finish_tx_group_timeout(MorseFlipperApp* app, uint32_t
 
     app->txg_result_until = now_ms + ((uint32_t)app->straight_next_delay_s * 1000U);
     scene_manager_next_scene(app->scene_manager, MorseFlipperSceneTxGroupsResult);
+}
+
+static void morse_flipper_note_tx_group_result(MorseFlipperApp* app)
+{
+    const MorseFlipperTxGroupResult* r;
+
+    if(app == NULL) return;
+    r = &app->tx_group.result;
+    app->txg_session_total++;
+    if(r->passed) app->txg_session_good++;
+    app->txg_sum_speed += r->speed_pct;
+    app->txg_sum_lgap += r->letter_gap_pct;
+    if(app->tx_group.sk) {
+        app->txg_session_sk++;
+        app->txg_sum_ratio += r->ratio_x100;
+        app->txg_sum_accuracy += r->accuracy_pct;
+        app->txg_sum_dgap += r->dit_gap_pct;
+        app->txg_sum_variance += r->variance_pct;
+    }
 }
 
 static void morse_flipper_tick_tx_groups(MorseFlipperApp* app, uint32_t now_ms)

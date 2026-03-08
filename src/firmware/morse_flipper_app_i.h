@@ -370,6 +370,13 @@ typedef struct MorseFlipperApp {
     uint16_t straight_session_good;
     uint16_t txg_session_total;
     uint16_t txg_session_good;
+    uint16_t txg_session_sk;
+    uint32_t txg_sum_speed;
+    uint32_t txg_sum_lgap;
+    uint32_t txg_sum_ratio;
+    uint32_t txg_sum_accuracy;
+    uint32_t txg_sum_dgap;
+    uint32_t txg_sum_variance;
     uint32_t session_last_input_at;
     uint32_t session_result_until;
     uint32_t session_next_group_at;

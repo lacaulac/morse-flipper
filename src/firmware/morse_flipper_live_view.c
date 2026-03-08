@@ -139,6 +139,54 @@ static void morse_flipper_draw_tx_groups_result(Canvas* canvas, MorseFlipperApp*
     canvas_draw_str(canvas, 126 - canvas_string_width(canvas, b), 64, b);
 }
 
+static uint16_t morse_flipper_txg_avg_u16(uint32_t sum, uint16_t n)
+{
+    if(n == 0U) return 0U;
+    return (uint16_t)((sum + (n / 2U)) / n);
+}
+
+static void morse_flipper_draw_tx_groups_final(Canvas* canvas, MorseFlipperApp* app)
+{
+    char v[24];
+    uint16_t avg;
+    uint8_t y = 20U;
+    unsigned pct = 0U;
+
+    if(canvas == NULL || app == NULL) return;
+    if(app->txg_session_total != 0U)
+        pct = ((unsigned)app->txg_session_good * 100U) / app->txg_session_total;
+
+    canvas_set_font(canvas, FontPrimary);
+    canvas_draw_str_aligned(canvas, 64, 9, AlignCenter, AlignCenter, "Final score");
+    canvas_set_font(canvas, FontKeyboard);
+
+    snprintf(v, sizeof(v), "%u/%u %u%%", (unsigned)app->txg_session_good, (unsigned)app->txg_session_total, pct);
+    morse_flipper_draw_txg_metric(canvas, 1, y, "Pass", v, false);
+    y += 9U;
+    snprintf(v, sizeof(v), "%u%%", (unsigned)morse_flipper_txg_avg_u16(app->txg_sum_speed, app->txg_session_total));
+    morse_flipper_draw_txg_metric(canvas, 1, y, "Spd", v, false);
+    y += 9U;
+    snprintf(v, sizeof(v), "%u%%", (unsigned)morse_flipper_txg_avg_u16(app->txg_sum_lgap, app->txg_session_total));
+    morse_flipper_draw_txg_metric(canvas, 1, y, "LGap", v, false);
+
+    if(app->txg_session_sk != 0U) {
+        avg = morse_flipper_txg_avg_u16(app->txg_sum_ratio, app->txg_session_sk);
+        snprintf(v, sizeof(v), "%u.%02u", (unsigned)(avg / 100U), (unsigned)(avg % 100U));
+        morse_flipper_draw_txg_metric(canvas, 64, 20, "Ratio", v, false);
+        snprintf(v, sizeof(v), "%u%%", (unsigned)morse_flipper_txg_avg_u16(app->txg_sum_accuracy, app->txg_session_sk));
+        morse_flipper_draw_txg_metric(canvas, 64, 29, "Acc", v, false);
+        snprintf(v, sizeof(v), "%u%%", (unsigned)morse_flipper_txg_avg_u16(app->txg_sum_dgap, app->txg_session_sk));
+        morse_flipper_draw_txg_metric(canvas, 64, 38, "DGap", v, false);
+        snprintf(v, sizeof(v), "%u%%", (unsigned)morse_flipper_txg_avg_u16(app->txg_sum_variance, app->txg_session_sk));
+        morse_flipper_draw_txg_metric(canvas, 64, 47, "Var", v, false);
+    }
+
+    canvas_set_font(canvas, FontSecondary);
+    canvas_draw_str(canvas, 2, 64, "Back exit");
+    if(app->input_source == MorseFlipperInputSourceButtons && !app->txg_sk)
+        morse_flipper_draw_left_exit_hint(canvas);
+}
+
 static void morse_flipper_rf_edit_text(char* out, size_t out_sz, uint32_t khz)
 {
     if(out == NULL || out_sz == 0U) return;
@@ -913,7 +961,7 @@ void morse_flipper_draw(Canvas* canvas, void* ctx) {
         } else if(app->screen == MorseFlipperScreenTxGroupsResult) {
             morse_flipper_draw_tx_groups_result(canvas, app);
         } else {
-            canvas_draw_str_aligned(canvas, 64, 38, AlignCenter, AlignCenter, "not yet");
+            morse_flipper_draw_tx_groups_final(canvas, app);
         }
         return;
     }
