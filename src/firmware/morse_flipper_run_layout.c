@@ -31,6 +31,11 @@ static uint16_t morse_flipper_run_layout_ch_width(
         return w == 0U ? 1U : w;
     }
 
+    if(ch == MORSE_FLIPPER_CW_TOKEN_AA) {
+        w = glyph_width((uint8_t)'W', glyph_ctx);
+        return w == 0U ? 8U : w;
+    }
+
     label = morse_flipper_cw_token_label(ch);
     while(*label != '\0') {
         uint16_t part = glyph_width((uint8_t)*label++, glyph_ctx);
@@ -98,7 +103,7 @@ void morse_flipper_run_layout_build(
         row[row_len] = '\0';
         row_w += ch_w;
 
-        if(ch == '=') {
+        if(ch == '=' || ch == MORSE_FLIPPER_CW_TOKEN_AA) {
             morse_flipper_run_layout_push_row(layout, row, row_len, &row_n);
             row[0] = '\0';
             row_len = 0U;
