@@ -89,6 +89,7 @@ static void morse_flipper_drain_tx_decoder(MorseFlipperApp* app) {
             if(app->tx_group.result.passed) morse_flipper_feedback_pass(app);
             else morse_flipper_feedback_fail(app);
             app->txg_result_until = furi_get_tick() + ((uint32_t)app->straight_next_delay_s * 1000U);
+            morse_flipper_drop_live_keying_for_playback(app, furi_get_tick());
             scene_manager_next_scene(app->scene_manager, MorseFlipperSceneTxGroupsResult);
         }
     }
@@ -114,6 +115,7 @@ static void morse_flipper_finish_tx_group_timeout(MorseFlipperApp* app, uint32_t
     morse_flipper_note_tx_group_result(app);
     app->txg_repeated_timeouts++;
     morse_flipper_feedback_timeout(app);
+    morse_flipper_drop_live_keying_for_playback(app, now_ms);
 
     if(app->txg_repeated_timeouts >= 3U) {
         morse_flipper_clear_button_keying(app, now_ms);
@@ -179,6 +181,9 @@ static bool morse_flipper_tx_decoder_allowed(const MorseFlipperApp* app) {
     if(app == NULL) return false;
     if(app->trainer_playback_active || app->straight_playback_active) return false;
     if(app->screen == MorseFlipperScreenSession && !morse_flipper_session_repeat_active(app)) return false;
+    if(app->screen == MorseFlipperScreenTxGroups && !app->txg_wait_answer) return false;
+    if(app->screen == MorseFlipperScreenTxGroupsResult || app->screen == MorseFlipperScreenTxGroupsFinal)
+        return false;
     return true;
 }
 
@@ -297,6 +302,9 @@ static void morse_flipper_sync_gpio_inputs(MorseFlipperApp* app, uint32_t now_ms
 
     if(morse_flipper_training_playback_active(app) || app->screen == MorseFlipperScreenSessionEnd ||
        app->screen == MorseFlipperScreenRfRx ||
+       app->screen == MorseFlipperScreenTxGroupsResult ||
+       app->screen == MorseFlipperScreenTxGroupsFinal ||
+       (app->screen == MorseFlipperScreenTxGroups && !app->txg_wait_answer) ||
        (app->screen == MorseFlipperScreenSession && !morse_flipper_session_repeat_active(app))) {
         morse_flipper_straight_filter_reset(&app->straight_filter);
         straight_active = false;
