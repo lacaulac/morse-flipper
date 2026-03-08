@@ -773,6 +773,19 @@ void morse_flipper_draw(Canvas* canvas, void* ctx) {
         return;
     }
 
+    if(app->screen == MorseFlipperScreenTxGroups ||
+       app->screen == MorseFlipperScreenTxGroupsResult ||
+       app->screen == MorseFlipperScreenTxGroupsFinal) {
+        canvas_set_font(canvas, FontPrimary);
+        canvas_draw_str_aligned(canvas, 64, 14, AlignCenter, AlignCenter,
+                                app->screen == MorseFlipperScreenTxGroupsFinal ? "Final score" :
+                                app->screen == MorseFlipperScreenTxGroupsResult ? "Results" :
+                                "TX Groups of 5");
+        canvas_set_font(canvas, FontSecondary);
+        canvas_draw_str_aligned(canvas, 64, 38, AlignCenter, AlignCenter, "Press OK to start");
+        return;
+    }
+
     if(app->screen == MorseFlipperScreenRf) {
         morse_flipper_draw_tx_history_screen( canvas, app, morse_flipper_rf_khz_line(app, browse_line, sizeof(browse_line)));
         return;

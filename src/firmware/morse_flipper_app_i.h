@@ -123,6 +123,9 @@ typedef enum {
     MorseFlipperScreenHamStartRefusal = 15,
     MorseFlipperScreenHamAssign = 16,
     MorseFlipperScreenHamAssignments = 17,
+    MorseFlipperScreenTxGroups = 18,
+    MorseFlipperScreenTxGroupsResult = 19,
+    MorseFlipperScreenTxGroupsFinal = 20,
 } MorseFlipperScreen;
 
 typedef enum {
@@ -164,6 +167,9 @@ typedef enum {
     MorseFlipperSceneHamTextInput,
     MorseFlipperSceneHamAssign,
     MorseFlipperSceneHamAssignments,
+    MorseFlipperSceneTxGroups,
+    MorseFlipperSceneTxGroupsResult,
+    MorseFlipperSceneTxGroupsFinal,
     MorseFlipperSceneNum,
 } MorseFlipperScene;
 
