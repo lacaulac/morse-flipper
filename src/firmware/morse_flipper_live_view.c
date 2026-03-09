@@ -142,7 +142,7 @@ static void morse_flipper_draw_tx_groups_result(Canvas* canvas, MorseFlipperApp*
     r = &app->tx_group.result;
 
     canvas_set_font(canvas, FontPrimary);
-    canvas_draw_str_aligned(canvas, 64, 7, AlignCenter, AlignCenter, "Results");
+    canvas_draw_str_aligned(canvas, 64, 7, AlignCenter, AlignCenter, r->passed ? "OK" : "Fail");
     canvas_set_font(canvas, FontKeyboard);
 
     snprintf(a, sizeof(a), "%u/5", (unsigned)r->correct);

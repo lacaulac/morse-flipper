@@ -530,6 +530,21 @@ static void morse_flipper_straight_next_changed(VariableItem* item)
     morse_flipper_save_config(app);
 }
 
+static void morse_flipper_tx_groups_difficulty_changed(VariableItem* item)
+{
+    MorseFlipperApp* app = variable_item_get_context(item);
+    uint8_t idx = variable_item_get_current_value_index(item);
+
+    if(idx >= MorseFlipperTxgDifficultyCount) idx = MorseFlipperTxgDifficultyCompetition;
+    app->txg_difficulty = idx;
+    variable_item_set_current_value_text(item, morse_flipper_txg_difficulty_name(idx));
+    morse_flipper_tx_group_set_range(
+        &app->tx_group,
+        morse_flipper_txg_range_low(app->txg_difficulty),
+        morse_flipper_txg_range_high(app->txg_difficulty));
+    morse_flipper_save_txg_config(app);
+}
+
 void morse_flipper_trainer_group_size_changed(VariableItem* item) {
     MorseFlipperApp* app = variable_item_get_context(item);
     uint8_t idx = variable_item_get_current_value_index(item);
@@ -927,6 +942,56 @@ void morse_flipper_scene_straight_cfg_on_exit(void* context)
 {
     MorseFlipperApp* app = context;
     scene_manager_set_scene_state( app->scene_manager, MorseFlipperSceneStraightCfg, morse_flipper_settings_list_state(app->settings_list));
+    variable_item_list_reset(app->settings_list);
+}
+
+void morse_flipper_scene_tx_groups_cfg_on_enter(void* context)
+{
+    MorseFlipperApp* app = context;
+    VariableItem* item;
+    uint8_t sel = scene_manager_get_scene_state(app->scene_manager, MorseFlipperSceneTxGroupsCfg);
+
+    if(app->txg_difficulty >= MorseFlipperTxgDifficultyCount)
+        app->txg_difficulty = MorseFlipperTxgDifficultyCompetition;
+
+    morse_flipper_scene_enter_now(app, MorseFlipperSceneTxGroupsCfg);
+    variable_item_list_reset(app->settings_list);
+    variable_item_list_set_enter_callback(app->settings_list, morse_flipper_settings_noop_enter, app);
+
+    item = variable_item_list_add(
+        app->settings_list,
+        "Difficulty",
+        MorseFlipperTxgDifficultyCount,
+        morse_flipper_tx_groups_difficulty_changed,
+        app);
+    variable_item_set_current_value_index(item, app->txg_difficulty);
+    variable_item_set_current_value_text(
+        item,
+        morse_flipper_txg_difficulty_name(app->txg_difficulty));
+
+    if(sel > 0U) sel = 0U;
+    variable_item_list_set_selected_item(app->settings_list, sel);
+}
+
+bool morse_flipper_scene_tx_groups_cfg_on_event(void* context, SceneManagerEvent event)
+{
+    MorseFlipperApp* app = context;
+
+    if(event.type == SceneManagerEventTypeBack) {
+        morse_flipper_scene_back(app);
+        return true;
+    }
+
+    return false;
+}
+
+void morse_flipper_scene_tx_groups_cfg_on_exit(void* context)
+{
+    MorseFlipperApp* app = context;
+    scene_manager_set_scene_state(
+        app->scene_manager,
+        MorseFlipperSceneTxGroupsCfg,
+        variable_item_list_get_selected_item_index(app->settings_list));
     variable_item_list_reset(app->settings_list);
 }
 

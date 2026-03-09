@@ -38,6 +38,8 @@ typedef struct
     uint16_t spaces[MORSE_FLIPPER_TX_GROUP_MAX_EDGES];
     uint8_t mark_count;
     uint8_t space_count;
+    uint8_t pass_min;
+    uint8_t pass_max;
     uint32_t rng;
     MorseFlipperTxGroupResult result;
     bool sk;
@@ -48,6 +50,8 @@ void morse_flipper_tx_group_start(MorseFlipperTxGroup* g, bool sk);
 void morse_flipper_tx_group_feed_mark(MorseFlipperTxGroup* g, uint16_t ms);
 void morse_flipper_tx_group_feed_space(MorseFlipperTxGroup* g, uint16_t ms);
 void morse_flipper_tx_group_feed_text(MorseFlipperTxGroup* g, const char* text);
+bool morse_flipper_tx_group_finalize_answer_from_raw(MorseFlipperTxGroup* g, uint16_t dit_ms);
+void morse_flipper_tx_group_set_range(MorseFlipperTxGroup* g, uint8_t pass_min, uint8_t pass_max);
 void morse_flipper_tx_group_score(MorseFlipperTxGroup* g, uint16_t dit_ms, bool timed_out);
 void morse_flipper_tx_group_score_common(MorseFlipperTxGroup* g, uint16_t dit_ms, bool timed_out);
 bool morse_flipper_tx_group_complete(const MorseFlipperTxGroup* g);

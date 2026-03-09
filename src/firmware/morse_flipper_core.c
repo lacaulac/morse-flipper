@@ -41,6 +41,7 @@
 #define MORSE_FLIPPER_PREVIEW_TICKS 8
 #define MORSE_FLIPPER_CONFIG_PATH APP_DATA_PATH("config.bin")
 #define MORSE_FLIPPER_RF_CONFIG_PATH APP_DATA_PATH("rf.bin")
+#define MORSE_FLIPPER_TXG_CONFIG_PATH APP_DATA_PATH("tx_groups.bin")
 #define MORSE_FLIPPER_CONFIG_VERSION 11
 #define MORSE_FLIPPER_DEFAULT_DIT_MS 100U
 #define MORSE_FLIPPER_SESSION_SETTLE_MS 1000U
@@ -123,6 +124,13 @@ typedef enum {
 } MorseFlipperAudioPath;
 
 typedef enum {
+    MorseFlipperTxgDifficultyEasy = 0,
+    MorseFlipperTxgDifficultyMedium,
+    MorseFlipperTxgDifficultyCompetition,
+    MorseFlipperTxgDifficultyCount,
+} MorseFlipperTxgDifficulty;
+
+typedef enum {
     MorseFlipperScreenHome = 0,
     MorseFlipperScreenRun = 1,
     MorseFlipperScreenTrace = 2,
@@ -188,6 +196,7 @@ typedef enum {
     MorseFlipperSceneTxGroups,
     MorseFlipperSceneTxGroupsResult,
     MorseFlipperSceneTxGroupsFinal,
+    MorseFlipperSceneTxGroupsCfg,
     MorseFlipperSceneNum,
 } MorseFlipperScene;
 
@@ -566,6 +575,7 @@ typedef struct {
     uint8_t straight_mark_idx;
     uint8_t straight_next_draw_s;
     uint8_t txg_repeated_timeouts;
+    uint8_t txg_difficulty;
     uint8_t straight_return_screen;
     uint8_t backlight_mode;
     uint8_t session_end_flash_phase;
@@ -633,6 +643,8 @@ void morse_flipper_load_config(MorseFlipperApp* app);
 void morse_flipper_save_config(const MorseFlipperApp* app);
 void morse_flipper_load_rf_config(MorseFlipperApp* app);
 void morse_flipper_save_rf_config(const MorseFlipperApp* app);
+void morse_flipper_load_txg_config(MorseFlipperApp* app);
+void morse_flipper_save_txg_config(const MorseFlipperApp* app);
 uint8_t morse_flipper_local_wpm(const MorseFlipperApp* app);
 void morse_flipper_set_run_wpm(MorseFlipperApp* app, uint8_t wpm);
 uint8_t morse_flipper_straight_wpm(const MorseFlipperApp* app);
@@ -701,6 +713,9 @@ void morse_flipper_tick_straight(MorseFlipperApp* app, uint32_t now_ms);
 void morse_flipper_reset_tx_groups_state(MorseFlipperApp* app, uint32_t now_ms);
 void morse_flipper_start_tx_groups_round(MorseFlipperApp* app, uint32_t now_ms);
 void morse_flipper_leave_tx_groups(MorseFlipperApp* app, uint32_t now_ms);
+const char* morse_flipper_txg_difficulty_name(uint8_t difficulty);
+uint8_t morse_flipper_txg_range_low(uint8_t difficulty);
+uint8_t morse_flipper_txg_range_high(uint8_t difficulty);
 void morse_flipper_tick_ham_macro(MorseFlipperApp* app, uint32_t now_ms);
 void morse_flipper_ham_start_macro(
     MorseFlipperApp* app,
@@ -2239,6 +2254,36 @@ static bool morse_flipper_tx_groups_sk_now(const MorseFlipperApp* app)
     return false;
 }
 
+static uint8_t morse_flipper_txg_clean_difficulty(uint8_t difficulty)
+{
+    return difficulty < MorseFlipperTxgDifficultyCount ? difficulty :
+                                                       MorseFlipperTxgDifficultyCompetition;
+}
+
+const char* morse_flipper_txg_difficulty_name(uint8_t difficulty)
+{
+    static const char* const names[] = {"Easy", "Medium", "IARU HST"};
+
+    difficulty = morse_flipper_txg_clean_difficulty(difficulty);
+    return names[difficulty];
+}
+
+uint8_t morse_flipper_txg_range_low(uint8_t difficulty)
+{
+    static const uint8_t lows[] = {75U, 80U, 90U};
+
+    difficulty = morse_flipper_txg_clean_difficulty(difficulty);
+    return lows[difficulty];
+}
+
+uint8_t morse_flipper_txg_range_high(uint8_t difficulty)
+{
+    static const uint8_t highs[] = {125U, 120U, 110U};
+
+    difficulty = morse_flipper_txg_clean_difficulty(difficulty);
+    return highs[difficulty];
+}
+
 void morse_flipper_reset_tx_groups_state(MorseFlipperApp* app, uint32_t now_ms)
 {
     if(app == NULL) return;
@@ -2289,6 +2334,10 @@ void morse_flipper_start_tx_groups_round(MorseFlipperApp* app, uint32_t now_ms)
     app->txg_result_open_at = 0U;
     app->txg_result_until = 0U;
     app->txg_result_draw_s = 0xFFU;
+    morse_flipper_tx_group_set_range(
+        &app->tx_group,
+        morse_flipper_txg_range_low(app->txg_difficulty),
+        morse_flipper_txg_range_high(app->txg_difficulty));
     morse_flipper_tx_group_start(&app->tx_group, app->txg_sk);
     morse_flipper_cw_decoder_init(&app->tx_decoder, morse_flipper_current_dit_ms(app));
     app->rf_tx_edge_at = 0U;

@@ -140,6 +140,7 @@ MorseFlipperApp* morse_flipper_boot(void)
         .txg_done = false,
         .txg_sk = false,
         .txg_start_holdoff = false,
+        .txg_difficulty = MorseFlipperTxgDifficultyCompetition,
         .rf_live_active = false,
         .rf_tx_level = false,
         .rf_tx_gap_flushed = true,
@@ -194,6 +195,7 @@ MorseFlipperApp* morse_flipper_boot(void)
     morse_flipper_apply_trainer_charset_choice(&app);
     morse_flipper_load_config(&app);
     morse_flipper_load_rf_config(&app);
+    morse_flipper_load_txg_config(&app);
     morse_flipper_apply_trainer_charset_choice(&app);
     morse_flipper_cw_decoder_init(&app.rf_decoder, morse_flipper_current_dit_ms(&app));
     morse_flipper_cw_decoder_init(&app.tx_decoder, morse_flipper_current_dit_ms(&app));

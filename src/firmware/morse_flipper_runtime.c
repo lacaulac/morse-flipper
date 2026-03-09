@@ -72,11 +72,17 @@ static void morse_flipper_decoder_drain_into( MorseFlipperCwDecoder* decoder, ch
 
 static void morse_flipper_finish_tx_group_answer(MorseFlipperApp* app, uint32_t now_ms)
 {
+    uint16_t dit_ms;
+
     if(app == NULL || app->screen != MorseFlipperScreenTxGroups || !app->txg_wait_answer) return;
+
+    dit_ms = morse_flipper_current_dit_ms(app);
+    if(morse_flipper_tx_group_finalize_answer_from_raw(&app->tx_group, dit_ms))
+        morse_flipper_view_dirty(app);
 
     app->txg_wait_answer = false;
     app->txg_done = true;
-    morse_flipper_tx_group_score(&app->tx_group, morse_flipper_current_dit_ms(app), false);
+    morse_flipper_tx_group_score(&app->tx_group, dit_ms, false);
     morse_flipper_note_tx_group_result(app);
     app->txg_repeated_timeouts = 0U;
     if(app->tx_group.result.passed) morse_flipper_feedback_pass(app);
@@ -117,10 +123,15 @@ static void morse_flipper_drain_tx_decoder(MorseFlipperApp* app) {
 
 static void morse_flipper_finish_tx_group_timeout(MorseFlipperApp* app, uint32_t now_ms)
 {
+    uint16_t dit_ms;
+
     if(app == NULL) return;
+    dit_ms = morse_flipper_current_dit_ms(app);
+    if(morse_flipper_tx_group_finalize_answer_from_raw(&app->tx_group, dit_ms))
+        morse_flipper_view_dirty(app);
     app->txg_wait_answer = false;
     app->txg_done = true;
-    morse_flipper_tx_group_score(&app->tx_group, morse_flipper_current_dit_ms(app), true);
+    morse_flipper_tx_group_score(&app->tx_group, dit_ms, true);
     morse_flipper_note_tx_group_result(app);
     app->txg_repeated_timeouts++;
 

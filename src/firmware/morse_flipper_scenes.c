@@ -91,9 +91,11 @@ static void morse_flipper_scene_menu_settings_on_enter(void* context) {
     submenu_add_item(app->submenu, "Audio output", MorseFlipperSceneAudioCfg, morse_flipper_scene_menu_pick, app);
     submenu_add_item(app->submenu, "Koch - LCWO", MorseFlipperSceneTrainer, morse_flipper_scene_menu_pick, app);
     submenu_add_item( app->submenu, "Straight trainer", MorseFlipperSceneStraightCfg, morse_flipper_scene_menu_pick, app);
+    submenu_add_item(app->submenu, "Groups of 5", MorseFlipperSceneTxGroupsCfg, morse_flipper_scene_menu_pick, app);
     submenu_add_item(app->submenu, "USB", MorseFlipperScenePc, morse_flipper_scene_menu_pick, app);
     if(sel != MorseFlipperSceneHome && sel != MorseFlipperSceneAudioCfg && sel != MorseFlipperSceneTrainer &&
-       sel != MorseFlipperSceneStraightCfg && sel != MorseFlipperScenePc)
+       sel != MorseFlipperSceneStraightCfg && sel != MorseFlipperSceneTxGroupsCfg &&
+       sel != MorseFlipperScenePc)
         sel = MorseFlipperSceneHome;
     submenu_set_selected_item(app->submenu, sel);
 }
@@ -651,6 +653,7 @@ static const AppSceneOnEnterCallback morse_flipper_scene_on_enter_handlers[Morse
     morse_flipper_scene_tx_groups_on_enter,
     morse_flipper_scene_tx_groups_result_on_enter,
     morse_flipper_scene_tx_groups_final_on_enter,
+    morse_flipper_scene_tx_groups_cfg_on_enter,
 };
 
 static const AppSceneOnEventCallback morse_flipper_scene_on_event_handlers[MorseFlipperSceneNum] = {
@@ -687,6 +690,7 @@ static const AppSceneOnEventCallback morse_flipper_scene_on_event_handlers[Morse
     morse_flipper_scene_live_on_event,
     morse_flipper_scene_live_on_event,
     morse_flipper_scene_live_on_event,
+    morse_flipper_scene_tx_groups_cfg_on_event,
 };
 
 static const AppSceneOnExitCallback morse_flipper_scene_on_exit_handlers[MorseFlipperSceneNum] = {
@@ -723,6 +727,7 @@ static const AppSceneOnExitCallback morse_flipper_scene_on_exit_handlers[MorseFl
     morse_flipper_scene_live_on_exit,
     morse_flipper_scene_live_on_exit,
     morse_flipper_scene_live_on_exit,
+    morse_flipper_scene_tx_groups_cfg_on_exit,
 };
 
 const SceneManagerHandlers morse_flipper_scene_handlers = {

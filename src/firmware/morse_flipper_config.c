@@ -269,6 +269,12 @@ static uint8_t morse_flipper_config_load_p2_volume(uint8_t stored_p2_volume_pct)
     return (uint8_t)(10U + ((((uint16_t)stored_p2_volume_pct - 10U) / 5U) * 5U));
 }
 
+static uint8_t morse_flipper_config_load_txg_difficulty(uint8_t stored_difficulty)
+{
+    if(stored_difficulty < MorseFlipperTxgDifficultyCount) return stored_difficulty;
+    return MorseFlipperTxgDifficultyCompetition;
+}
+
 void morse_flipper_load_config(MorseFlipperApp* app)
 {
     Storage* storage = furi_record_open(RECORD_STORAGE);
@@ -552,6 +558,27 @@ void morse_flipper_load_rf_config(MorseFlipperApp* app)
     furi_record_close(RECORD_STORAGE);
 }
 
+void morse_flipper_load_txg_config(MorseFlipperApp* app)
+{
+    Storage* storage = furi_record_open(RECORD_STORAGE);
+    File* file = storage_file_alloc(storage);
+    uint8_t difficulty = MorseFlipperTxgDifficultyCompetition;
+
+    if(storage_file_open(file, MORSE_FLIPPER_TXG_CONFIG_PATH, FSAM_READ, FSOM_OPEN_EXISTING)) {
+        if(storage_file_read(file, &difficulty, sizeof(difficulty)) == sizeof(difficulty)) {
+            app->txg_difficulty = morse_flipper_config_load_txg_difficulty(difficulty);
+        }
+    }
+    morse_flipper_tx_group_set_range(
+        &app->tx_group,
+        morse_flipper_txg_range_low(app->txg_difficulty),
+        morse_flipper_txg_range_high(app->txg_difficulty));
+
+    storage_file_close(file);
+    storage_file_free(file);
+    furi_record_close(RECORD_STORAGE);
+}
+
 void morse_flipper_save_config(const MorseFlipperApp* app)
 {
     Storage* storage = furi_record_open(RECORD_STORAGE);
@@ -607,6 +634,20 @@ void morse_flipper_save_rf_config(const MorseFlipperApp* app)
 
     if(storage_file_open(file, MORSE_FLIPPER_RF_CONFIG_PATH, FSAM_WRITE, FSOM_CREATE_ALWAYS))
         storage_file_write(file, &hz, sizeof(hz));
+
+    storage_file_close(file);
+    storage_file_free(file);
+    furi_record_close(RECORD_STORAGE);
+}
+
+void morse_flipper_save_txg_config(const MorseFlipperApp* app)
+{
+    Storage* storage = furi_record_open(RECORD_STORAGE);
+    File* file = storage_file_alloc(storage);
+    uint8_t difficulty = morse_flipper_config_load_txg_difficulty(app->txg_difficulty);
+
+    if(storage_file_open(file, MORSE_FLIPPER_TXG_CONFIG_PATH, FSAM_WRITE, FSOM_CREATE_ALWAYS))
+        storage_file_write(file, &difficulty, sizeof(difficulty));
 
     storage_file_close(file);
     storage_file_free(file);
