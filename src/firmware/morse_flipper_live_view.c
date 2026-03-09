@@ -10,7 +10,7 @@ static void morse_flipper_draw_left_exit_hint(Canvas* canvas) {
     canvas_draw_box(canvas, 127, 29, 1, 7);
 }
 
-static void morse_flipper_draw_straight_prompt(Canvas* canvas, int32_t cx, int32_t cy, char ch);
+static void morse_flipper_draw_straight_prompt(Canvas* canvas, int32_t cx, int32_t cy, uint8_t ch);
 
 static void morse_flipper_draw_tx_history_divider(Canvas* canvas, bool left_hint) {
     if(canvas == NULL) return;
@@ -288,12 +288,12 @@ static void morse_flipper_draw_rf_freq_picker(Canvas* canvas, const MorseFlipper
         morse_flipper_rf_tx_allowed_khz(app->rf_edit_khz) ? "TX allowed" : "TX restricted");
 }
 
-static char morse_flipper_live_upper_char(char ch) {
+static uint8_t morse_flipper_live_upper_char(uint8_t ch) {
     if(ch >= 'a' && ch <= 'z') return (char)(ch - ('a' - 'A'));
     return ch;
 }
 
-static void morse_flipper_draw_straight_prompt(Canvas* canvas, int32_t cx, int32_t cy, char ch)
+static void morse_flipper_draw_straight_prompt(Canvas* canvas, int32_t cx, int32_t cy, uint8_t ch)
 {
     const MorseFlipperTerminus24Glyph* glyph;
     int32_t x0;
