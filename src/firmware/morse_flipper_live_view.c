@@ -52,6 +52,7 @@ static void morse_flipper_txg_score_pct(const MorseFlipperApp* app, char* out, s
     pct = app != NULL && app->txg_session_total != 0U ?
               ((unsigned)app->txg_session_good * 100U) / app->txg_session_total :
               0U;
+    if(pct > 100U) pct = 100U;
     snprintf(out, out_sz, "%u%%", pct);
 }
 

@@ -1965,8 +1965,8 @@ void morse_flipper_ham_log_append_text(
     const char* text,
     uint32_t now_ms)
 {
-    char date_key[MORSE_FLIPPER_HAM_KEYER_DATE_LEN + 1U];
-    char stamp[MORSE_FLIPPER_HAM_KEYER_STAMP_LEN + 1U];
+    char date_key[16];
+    char stamp[24];
     char expanded[96];
 
     if(app == NULL || text == NULL || text[0] == '\0') return;
@@ -1982,8 +1982,8 @@ void morse_flipper_ham_log_append_marker(
     const char* marker,
     uint32_t now_ms)
 {
-    char date_key[MORSE_FLIPPER_HAM_KEYER_DATE_LEN + 1U];
-    char stamp[MORSE_FLIPPER_HAM_KEYER_STAMP_LEN + 1U];
+    char date_key[16];
+    char stamp[24];
 
     if(app == NULL || marker == NULL || marker[0] == '\0') return;
     if(app->screen != MorseFlipperScreenHamRun || !app->ham_keyer.logging_enabled) return;
