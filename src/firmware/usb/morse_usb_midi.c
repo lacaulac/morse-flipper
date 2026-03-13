@@ -149,7 +149,8 @@ static struct usb_device_descriptor morse_usb_midi_device_descriptor = {
 };
 
 static struct morse_usb_midi_config_descriptor morse_usb_midi_config = {
-    .config = {
+    .config =
+        {
             .bLength = sizeof(struct usb_config_descriptor),
             .bDescriptorType = USB_DTYPE_CONFIGURATION,
             .wTotalLength = sizeof(struct morse_usb_midi_config_descriptor),
@@ -159,7 +160,8 @@ static struct morse_usb_midi_config_descriptor morse_usb_midi_config = {
             .bmAttributes = USB_CFG_ATTR_RESERVED,
             .bMaxPower = USB_CFG_POWER_MA(100),
         },
-    .audio_control_iface = {
+    .audio_control_iface =
+        {
             .bLength = sizeof(struct usb_interface_descriptor),
             .bDescriptorType = USB_DTYPE_INTERFACE,
             .bInterfaceNumber = 0,
@@ -170,8 +172,10 @@ static struct morse_usb_midi_config_descriptor morse_usb_midi_config = {
             .bInterfaceProtocol = USB_PROTO_NONE,
             .iInterface = 0,
         },
-    .audio_control_header = {
-            .head = {
+    .audio_control_header =
+        {
+            .head =
+                {
                     .bLength = sizeof(struct morse_usb_audio_header_descriptor),
                     .bDescriptorType = USB_AUDIO_DT_CS_INTERFACE,
                     .bDescriptorSubtype = 0x01U,
@@ -179,11 +183,13 @@ static struct morse_usb_midi_config_descriptor morse_usb_midi_config = {
                     .wTotalLength = sizeof(struct morse_usb_audio_header_descriptor),
                     .bInCollection = 1,
                 },
-            .body = {
+            .body =
+                {
                     .baInterfaceNr = 1,
                 },
         },
-    .midi_streaming_iface = {
+    .midi_streaming_iface =
+        {
             .bLength = sizeof(struct usb_interface_descriptor),
             .bDescriptorType = USB_DTYPE_INTERFACE,
             .bInterfaceNumber = 1,
@@ -194,15 +200,18 @@ static struct morse_usb_midi_config_descriptor morse_usb_midi_config = {
             .bInterfaceProtocol = USB_PROTO_NONE,
             .iInterface = 0,
         },
-    .midi_jacks = {
-            .header = {
+    .midi_jacks =
+        {
+            .header =
+                {
                     .bLength = sizeof(struct usb_midi_header_descriptor),
                     .bDescriptorType = USB_AUDIO_DT_CS_INTERFACE,
                     .bDescriptorSubtype = USB_MIDI_SUBTYPE_MS_HEADER,
                     .bcdMSC = VERSION_BCD(1, 0, 0),
                     .wTotalLength = sizeof(struct morse_usb_midi_jacks_descriptor),
                 },
-            .in_embedded = {
+            .in_embedded =
+                {
                     .bLength = sizeof(struct usb_midi_in_jack_descriptor),
                     .bDescriptorType = USB_AUDIO_DT_CS_INTERFACE,
                     .bDescriptorSubtype = USB_MIDI_SUBTYPE_MIDI_IN_JACK,
@@ -210,7 +219,8 @@ static struct morse_usb_midi_config_descriptor morse_usb_midi_config = {
                     .bJackID = 0x01U,
                     .iJack = 0x00U,
                 },
-            .in_external = {
+            .in_external =
+                {
                     .bLength = sizeof(struct usb_midi_in_jack_descriptor),
                     .bDescriptorType = USB_AUDIO_DT_CS_INTERFACE,
                     .bDescriptorSubtype = USB_MIDI_SUBTYPE_MIDI_IN_JACK,
@@ -218,8 +228,10 @@ static struct morse_usb_midi_config_descriptor morse_usb_midi_config = {
                     .bJackID = 0x02U,
                     .iJack = 0x00U,
                 },
-            .out_embedded = {
-                    .head = {
+            .out_embedded =
+                {
+                    .head =
+                        {
                             .bLength = sizeof(struct usb_midi_out_jack_descriptor),
                             .bDescriptorType = USB_AUDIO_DT_CS_INTERFACE,
                             .bDescriptorSubtype = USB_MIDI_SUBTYPE_MIDI_OUT_JACK,
@@ -227,16 +239,20 @@ static struct morse_usb_midi_config_descriptor morse_usb_midi_config = {
                             .bJackID = 0x03U,
                             .bNrInputPins = 1,
                         },
-                    .source[0] = {
+                    .source[0] =
+                        {
                             .baSourceID = 0x02U,
                             .baSourcePin = 0x01U,
                         },
-                    .tail = {
+                    .tail =
+                        {
                             .iJack = 0x00U,
                         },
                 },
-            .out_external = {
-                    .head = {
+            .out_external =
+                {
+                    .head =
+                        {
                             .bLength = sizeof(struct usb_midi_out_jack_descriptor),
                             .bDescriptorType = USB_AUDIO_DT_CS_INTERFACE,
                             .bDescriptorSubtype = USB_MIDI_SUBTYPE_MIDI_OUT_JACK,
@@ -244,16 +260,19 @@ static struct morse_usb_midi_config_descriptor morse_usb_midi_config = {
                             .bJackID = 0x04U,
                             .bNrInputPins = 1,
                         },
-                    .source[0] = {
+                    .source[0] =
+                        {
                             .baSourceID = 0x01U,
                             .baSourcePin = 0x01U,
                         },
-                    .tail = {
+                    .tail =
+                        {
                             .iJack = 0x00U,
                         },
                 },
         },
-    .bulk_out = {
+    .bulk_out =
+        {
             .bLength = sizeof(struct usb_endpoint_descriptor),
             .bDescriptorType = USB_DTYPE_ENDPOINT,
             .bEndpointAddress = MORSE_USB_MIDI_EP_OUT,
@@ -261,18 +280,22 @@ static struct morse_usb_midi_config_descriptor morse_usb_midi_config = {
             .wMaxPacketSize = MORSE_USB_MIDI_EP_SIZE,
             .bInterval = 0,
         },
-    .midi_bulk_out = {
-            .head = {
+    .midi_bulk_out =
+        {
+            .head =
+                {
                     .bLength = sizeof(struct usb_midi_endpoint_descriptor),
                     .bDescriptorType = USB_AUDIO_DT_CS_ENDPOINT,
                     .bDescriptorSubType = USB_MIDI_SUBTYPE_MS_GENERAL,
                     .bNumEmbMIDIJack = 1,
                 },
-            .jack[0] = {
+            .jack[0] =
+                {
                     .baAssocJackID = 0x01U,
                 },
         },
-    .bulk_in = {
+    .bulk_in =
+        {
             .bLength = sizeof(struct usb_endpoint_descriptor),
             .bDescriptorType = USB_DTYPE_ENDPOINT,
             .bEndpointAddress = MORSE_USB_MIDI_EP_IN,
@@ -280,25 +303,25 @@ static struct morse_usb_midi_config_descriptor morse_usb_midi_config = {
             .wMaxPacketSize = MORSE_USB_MIDI_EP_SIZE,
             .bInterval = 0,
         },
-    .midi_bulk_in = {
-            .head = {
+    .midi_bulk_in =
+        {
+            .head =
+                {
                     .bLength = sizeof(struct usb_midi_endpoint_descriptor),
                     .bDescriptorType = USB_AUDIO_DT_CS_ENDPOINT,
                     .bDescriptorSubType = USB_MIDI_SUBTYPE_MS_GENERAL,
                     .bNumEmbMIDIJack = 1,
                 },
-            .jack[0] = {
+            .jack[0] =
+                {
                     .baAssocJackID = 0x03U,
                 },
         },
 };
 
-static struct usb_string_descriptor morse_usb_midi_manufacturer =
-    USB_STRING_DESC("YO3GND");
-static struct usb_string_descriptor morse_usb_midi_product =
-    USB_STRING_DESC("Morse Flipper MIDI");
-static struct usb_string_descriptor morse_usb_midi_serial =
-    USB_STRING_DESC("Morse Flipper");
+static struct usb_string_descriptor morse_usb_midi_manufacturer = USB_STRING_DESC("YO3GND");
+static struct usb_string_descriptor morse_usb_midi_product = USB_STRING_DESC("Morse Flipper MIDI");
+static struct usb_string_descriptor morse_usb_midi_serial = USB_STRING_DESC("Morse Flipper");
 
 typedef struct {
     usbd_device* dev;
