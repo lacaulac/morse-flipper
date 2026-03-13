@@ -15,7 +15,6 @@
 bool morse_flipper_cw_token_is_private(uint8_t ch);
 const char* morse_flipper_cw_token_label(uint8_t ch);
 const char* morse_flipper_cw_token_text(uint8_t ch);
-const char* morse_flipper_cw_token_morse(uint8_t ch);
 uint16_t morse_flipper_cw_token_code(uint8_t ch);
 bool morse_flipper_cw_token_parse(const char* text, uint8_t* token, size_t* consumed);
 size_t morse_flipper_cw_token_expand_text(char* out, size_t out_sz, const char* text);

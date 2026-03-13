@@ -17,6 +17,7 @@
 #include <m-array.h>
 #include <string.h>
 
+#include "cw.h"
 #include "keyer.h"
 #include "morse_flipper_audio_pwm.h"
 #include "morse_flipper_cw_decoder.h"
@@ -1836,11 +1837,12 @@ void morse_flipper_ham_start_macro(
 }
 
 void morse_flipper_tick_ham_macro(MorseFlipperApp* app, uint32_t now_ms) {
-    const char* morse;
+    uint16_t cw_code;
     uint8_t ch;
     uint8_t token = 0U;
     size_t consumed = 1U;
     uint32_t dit_ms;
+    uint8_t marks;
 
     if(app == NULL || !app->ham_macro_active) return;
 
@@ -1875,8 +1877,9 @@ void morse_flipper_tick_ham_macro(MorseFlipperApp* app, uint32_t now_ms) {
         return;
     }
 
-    morse = token ? morse_flipper_cw_token_morse(token) : morse_trainer_char_morse((char)ch);
-    if(morse == NULL || morse[0] == '\0') {
+    cw_code = token ? morse_flipper_cw_token_code(token) : cw((char)ch);
+    marks = cw_symbol_count(cw_code);
+    if(cw_code == CW_INVALID || marks == 0U) {
         app->ham_macro_char_idx = (uint8_t)(app->ham_macro_char_idx + consumed);
         app->ham_macro_mark_idx = 0U;
         app->ham_macro_next_at = now_ms + (dit_ms * 3U);
@@ -1887,14 +1890,14 @@ void morse_flipper_tick_ham_macro(MorseFlipperApp* app, uint32_t now_ms) {
         app->ham_macro_mark = true;
         morse_flipper_set_note_source(app, 0U, MORSE_SOURCE_HAM_MACRO, true);
         app->ham_macro_next_at =
-            now_ms + (morse[app->ham_macro_mark_idx] == '-' ? (dit_ms * 3U) : dit_ms);
+            now_ms + (dit_ms * cw_symbol_units(cw_code, app->ham_macro_mark_idx));
         morse_flipper_view_dirty(app);
         return;
     }
 
     app->ham_macro_mark = false;
     morse_flipper_set_note_source(app, 0U, MORSE_SOURCE_HAM_MACRO, false);
-    if(morse[app->ham_macro_mark_idx + 1U] != '\0') {
+    if(app->ham_macro_mark_idx + 1U < marks) {
         app->ham_macro_mark_idx++;
         app->ham_macro_next_at = now_ms + dit_ms;
     } else {
@@ -2501,8 +2504,9 @@ static void morse_flipper_finish_straight_round(MorseFlipperApp* app, uint32_t n
 
 void morse_flipper_tick_trainer_playback(MorseFlipperApp* app, uint32_t now_ms) {
     const char* group;
-    const char* morse;
+    uint16_t cw_code;
     uint32_t dit_ms;
+    uint8_t marks;
 
     if(app == NULL || !app->trainer_playback_active || now_ms < app->trainer_next_at) {
         return;
@@ -2517,12 +2521,21 @@ void morse_flipper_tick_trainer_playback(MorseFlipperApp* app, uint32_t now_ms) 
         return;
     }
 
-    morse = morse_trainer_char_morse(group[app->trainer_char_idx]);
+    cw_code = cw(group[app->trainer_char_idx]);
+    marks = cw_symbol_count(cw_code);
     dit_ms = morse_flipper_current_dit_ms(app);
+
+    if(marks == 0U) {
+        app->trainer_char_idx++;
+        app->trainer_mark_idx = 0U;
+        app->trainer_next_at = now_ms + morse_flipper_trainer_char_gap_ms(app);
+        morse_flipper_view_dirty(app);
+        return;
+    }
 
     if(app->trainer_playback_mark) {
         app->trainer_playback_mark = false;
-        if(morse[app->trainer_mark_idx + 1U] != '\0') {
+        if(app->trainer_mark_idx + 1U < marks) {
             app->trainer_mark_idx++;
             app->trainer_next_at = now_ms + dit_ms;
         } else if(group[app->trainer_char_idx + 1U] != '\0') {
@@ -2542,7 +2555,7 @@ void morse_flipper_tick_trainer_playback(MorseFlipperApp* app, uint32_t now_ms) 
         return;
     }
 
-    if(morse[app->trainer_mark_idx] == '\0') {
+    if(app->trainer_mark_idx >= marks) {
         app->trainer_playback_active = false;
         app->trainer_next_at = 0U;
         morse_flipper_update_sidetone(app);
@@ -2550,17 +2563,16 @@ void morse_flipper_tick_trainer_playback(MorseFlipperApp* app, uint32_t now_ms) 
     }
 
     app->trainer_playback_mark = true;
-    app->trainer_next_at =
-        now_ms + ((morse[app->trainer_mark_idx] == '-') ? (dit_ms * 3U) : dit_ms);
+    app->trainer_next_at = now_ms + (dit_ms * cw_symbol_units(cw_code, app->trainer_mark_idx));
     morse_flipper_update_sidetone(app);
     morse_flipper_view_dirty(app);
 }
 
 void morse_flipper_tick_straight(MorseFlipperApp* app, uint32_t now_ms) {
-    const char* morse;
     uint32_t dit_ms;
     uint32_t left_ms;
-    size_t len;
+    uint8_t marks;
+    uint8_t mark_units;
     uint8_t left_s;
 
     if(app == NULL) return;
@@ -2580,12 +2592,11 @@ void morse_flipper_tick_straight(MorseFlipperApp* app, uint32_t now_ms) {
     }
 
     if(app->straight_playback_active && now_ms >= app->straight_next_at) {
-        morse = morse_flipper_straight_trainer_target_morse(&app->straight_trainer);
         dit_ms = morse_flipper_current_straight_dit_ms(app);
-        len = strlen(morse);
+        marks = morse_flipper_straight_trainer_target_symbol_count(&app->straight_trainer);
 
         if(!app->straight_playback_mark) {
-            if(app->straight_mark_idx >= len) {
+            if(app->straight_mark_idx >= marks) {
                 app->straight_playback_active = false;
                 app->straight_wait_answer = true;
                 app->straight_wait_started_at = now_ms;
@@ -2596,8 +2607,9 @@ void morse_flipper_tick_straight(MorseFlipperApp* app, uint32_t now_ms) {
             }
 
             app->straight_playback_mark = true;
-            app->straight_next_at =
-                now_ms + (morse[app->straight_mark_idx] == '-' ? (dit_ms * 3U) : dit_ms);
+            mark_units = morse_flipper_straight_trainer_target_mark_units(
+                &app->straight_trainer, app->straight_mark_idx);
+            app->straight_next_at = now_ms + (dit_ms * mark_units);
             morse_flipper_update_sidetone(app);
             morse_flipper_view_dirty(app);
             return;
@@ -2605,7 +2617,7 @@ void morse_flipper_tick_straight(MorseFlipperApp* app, uint32_t now_ms) {
 
         app->straight_playback_mark = false;
         app->straight_mark_idx++;
-        if(app->straight_mark_idx >= len) {
+        if(app->straight_mark_idx >= marks) {
             app->straight_playback_active = false;
             app->straight_wait_answer = true;
             app->straight_wait_started_at = now_ms;

@@ -42,6 +42,10 @@ typedef struct {
     char expected[MORSE_TRAINER_ANSWER_CAP];
     char answer[MORSE_TRAINER_ANSWER_CAP];
     char reveal[MORSE_TRAINER_GROUP_CAP];
+    uint8_t expected_units[MORSE_TRAINER_ANSWER_CAP];
+    uint8_t answer_units[MORSE_TRAINER_ANSWER_CAP];
+    uint8_t expected_len;
+    uint8_t answer_len;
 } MorseTrainer;
 
 void morse_trainer_init(MorseTrainer* trainer);

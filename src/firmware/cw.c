@@ -25,7 +25,49 @@ uint8_t cw(char c) {
     a = (uint8_t)c;
     if (a >= sizeof(cw_ascii)) return CW_INVALID;
 
-
-
     return cw_ascii[a];
+}
+
+uint8_t cw_symbol_count(uint16_t cw_code) {
+    uint8_t marks = 0U;
+
+    if(cw_code == CW_INVALID) return 0U;
+
+    while(cw_code > 1U) {
+        marks++;
+        cw_code >>= 1U;
+    }
+
+    return marks;
+}
+
+uint8_t cw_symbol_units(uint16_t cw_code, uint8_t mark_idx) {
+    if(cw_code == CW_INVALID || mark_idx >= cw_symbol_count(cw_code)) return 0U;
+    return ((cw_code >> mark_idx) & 1U) ? 3U : 1U;
+}
+
+uint8_t cw_total_units(uint16_t cw_code) {
+    uint8_t marks = cw_symbol_count(cw_code);
+    uint8_t total = 0U;
+
+    for(uint8_t i = 0U; i < marks; i++) {
+        total = (uint8_t)(total + cw_symbol_units(cw_code, i));
+        if(i + 1U < marks) total++;
+    }
+
+    return total;
+}
+
+void cw_to_text(uint16_t cw_code, char* out, size_t out_sz) {
+    uint8_t marks;
+    uint8_t i;
+
+    if(out == NULL || out_sz == 0U) return;
+    out[0] = '\0';
+
+    marks = cw_symbol_count(cw_code);
+    for(i = 0U; i < marks && i + 1U < out_sz; i++) {
+        out[i] = cw_symbol_units(cw_code, i) == 3U ? '-' : '.';
+    }
+    out[i] = '\0';
 }

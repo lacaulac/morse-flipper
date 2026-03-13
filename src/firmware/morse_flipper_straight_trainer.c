@@ -14,47 +14,15 @@ static uint32_t straight_rand(MorseFlipperStraightTrainer* trainer) {
     return trainer->rng_state;
 }
 
-static const char* straight_morse(char ch) {
-    static char code[8];
-    size_t i = 0U;
+static uint16_t straight_code(char ch) {
     uint8_t cw_char = cw(ch);
 
-    if(cw_char == CW_INVALID) return ".";
-
-    FOR_EACH_CW_SYMBOL(symbol) {
-        if(i + 1U >= sizeof(code)) break;
-        code[i++] = symbol ? '-' : '.';
-    }
-
-    code[i] = '\0';
-    return code;
+    if(cw_char == CW_INVALID) return cw('E');
+    return cw_char;
 }
 
 static uint8_t straight_weight(char ch) {
     return (ch == 'E' || ch == 'T') ? 1U : 10U;
-}
-
-static uint8_t straight_units_total(const char* code) {
-    uint8_t total = 0U;
-    size_t i;
-
-    if(code == NULL || code[0] == '\0') return 0U;
-
-    for(i = 0; code[i]; i++) {
-        total += code[i] == '-' ? 3U : 1U;
-        if(code[i + 1U]) total += 1U;
-    }
-
-    return total;
-}
-
-static uint8_t straight_symbol_count(const char* code) {
-    uint8_t n = 0U;
-
-    if(code == NULL) return 0U;
-
-    while(code[n] != '\0') n++;
-    return n;
 }
 
 static char straight_pick(MorseFlipperStraightTrainer* trainer, const char* charset) {
@@ -128,7 +96,7 @@ static void straight_update_error_view(MorseFlipperStraightTrainer* trainer) {
     trainer->ratio_x100 = 0U;
     trainer->answer_total_units = 0U;
 
-    for(i = 0; trainer->answer[i] && i < COUNT_OF(trainer->target_marks_ms); i++) {
+    for(i = 0; i < trainer->answer_len && i < COUNT_OF(trainer->target_marks_ms); i++) {
         int32_t diff_ms;
         uint16_t want_ms;
         uint8_t sc;
@@ -162,11 +130,11 @@ static void straight_update_error_view(MorseFlipperStraightTrainer* trainer) {
         total_pct += (uint32_t)((diff_ms < 0 ? -diff_ms : diff_ms) * 100U / want_ms);
         counted++;
 
-        trainer->answer_total_units += trainer->answer[i] == '-' ? 3U : 1U;
+        trainer->answer_total_units += trainer->answer_mark_units[i];
         if(i != 0U) trainer->answer_total_units++;
 
         sc = straight_score(trainer->answer_marks_ms[i], want_ms);
-        if(trainer->answer[i] == '.') {
+        if(trainer->answer_mark_units[i] == 1U) {
             if(sc < trainer->worst_dit_score) trainer->worst_dit_score = sc;
             dit_sum += trainer->answer_marks_ms[i];
             dit_cnt++;
@@ -217,6 +185,8 @@ void morse_flipper_straight_trainer_init(MorseFlipperStraightTrainer* trainer) {
     memset(trainer, 0, sizeof(*trainer));
     trainer->target_char = 'E';
     trainer->target_morse[0] = '.';
+    trainer->target_code = cw('E');
+    trainer->target_symbol_count = cw_symbol_count(trainer->target_code);
     trainer->rng_state = 7U;
     trainer->worst_space_score = 100U;
     trainer->worst_dit_score = 100U;
@@ -225,14 +195,16 @@ void morse_flipper_straight_trainer_init(MorseFlipperStraightTrainer* trainer) {
 
 void morse_flipper_straight_trainer_start( MorseFlipperStraightTrainer* trainer, const char* charset, uint16_t dit_ms) {
     size_t i;
-    const char* morse;
+    uint16_t code;
+    uint8_t mark_count;
 
     if(!trainer) return;
     if(charset == NULL || charset[0] == '\0') charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     if(!dit_ms) dit_ms = 60U;
 
     trainer->target_char = straight_pick(trainer, charset);
-    morse = straight_morse(trainer->target_char);
+    code = straight_code(trainer->target_char);
+    mark_count = cw_symbol_count(code);
     memset(trainer->target_morse, 0, sizeof(trainer->target_morse));
     memset(trainer->answer, 0, sizeof(trainer->answer));
     memset(trainer->error_bars, 0, sizeof(trainer->error_bars));
@@ -242,25 +214,29 @@ void morse_flipper_straight_trainer_start( MorseFlipperStraightTrainer* trainer,
     memset(trainer->target_marks_ms, 0, sizeof(trainer->target_marks_ms));
     memset(trainer->answer_marks_ms, 0, sizeof(trainer->answer_marks_ms));
     memset(trainer->answer_spaces_ms, 0, sizeof(trainer->answer_spaces_ms));
+    memset(trainer->answer_mark_units, 0, sizeof(trainer->answer_mark_units));
     trainer->average_mark_error_ms = 0U;
     trainer->average_drift_percent = 0U;
     trainer->worst_space_score = 100U;
     trainer->worst_dit_score = 100U;
     trainer->worst_dah_score = 100U;
     trainer->ratio_x100 = 0U;
-    trainer->target_total_units = straight_units_total(morse);
+    trainer->target_code = code;
+    trainer->target_symbol_count = mark_count;
+    trainer->target_total_units = cw_total_units(code);
     trainer->answer_total_units = 0U;
+    trainer->answer_len = 0U;
     trainer->ref_units_max = 0U;
 
-    for(i = 0; morse[i] && i + 1u < sizeof(trainer->target_morse); i++) {
-        uint8_t u = morse[i] == '-' ? 3U : 1U;
-        trainer->target_morse[i] = morse[i];
+    cw_to_text(code, trainer->target_morse, sizeof(trainer->target_morse));
+    for(i = 0; i < mark_count && i < COUNT_OF(trainer->target_marks_ms); i++) {
+        uint8_t u = cw_symbol_units(code, (uint8_t)i);
         trainer->target_mark_units[i] = u;
         trainer->target_marks_ms[i] = (uint16_t)(u * dit_ms);
     }
 
     for(i = 0; charset[i]; i++) {
-        uint8_t u = straight_units_total(straight_morse(charset[i]));
+        uint8_t u = cw_total_units(straight_code(charset[i]));
         if(u > trainer->ref_units_max) trainer->ref_units_max = u;
     }
 
@@ -281,10 +257,12 @@ void morse_flipper_straight_trainer_feed( MorseFlipperStraightTrainer* trainer, 
 
     trainer->answer[len] = elem;
     trainer->answer[len + 1U] = 0;
+    trainer->answer_mark_units[len] = elem == '-' ? 3U : 1U;
+    trainer->answer_len = (uint8_t)(len + 1U);
     trainer->answer_marks_ms[len] = mark_ms;
     if(len != 0U) trainer->answer_spaces_ms[len - 1U] = space_before_ms;
 
-    for(i = 0; trainer->target_morse[i] && i < COUNT_OF(trainer->target_marks_ms); i++) {
+    for(i = 0; i < trainer->target_symbol_count && i < COUNT_OF(trainer->target_marks_ms); i++) {
         if(!trainer->answer_marks_ms[i]) continue;
         total_error += trainer->answer_marks_ms[i] >= trainer->target_marks_ms[i] ?
             (uint32_t)(trainer->answer_marks_ms[i] - trainer->target_marks_ms[i]) :
@@ -361,11 +339,18 @@ uint8_t morse_flipper_straight_trainer_ref_units_max(const MorseFlipperStraightT
 }
 
 uint8_t morse_flipper_straight_trainer_target_symbol_count(const MorseFlipperStraightTrainer* trainer) {
-    return trainer ? straight_symbol_count(trainer->target_morse) : 0U;
+    return trainer ? trainer->target_symbol_count : 0U;
+}
+
+uint8_t morse_flipper_straight_trainer_target_mark_units(
+    const MorseFlipperStraightTrainer* trainer,
+    uint8_t mark_idx) {
+    if(trainer == NULL || mark_idx >= COUNT_OF(trainer->target_mark_units)) return 0U;
+    return trainer->target_mark_units[mark_idx];
 }
 
 uint8_t morse_flipper_straight_trainer_answer_symbol_count(const MorseFlipperStraightTrainer* trainer) {
-    return trainer ? straight_symbol_count(trainer->answer) : 0U;
+    return trainer ? trainer->answer_len : 0U;
 }
 
 bool morse_flipper_straight_trainer_symbol_count_match(const MorseFlipperStraightTrainer* trainer) {

@@ -22,6 +22,10 @@ typedef struct {
     uint8_t target_total_units;
     uint8_t answer_total_units;
     uint8_t ref_units_max;
+    uint16_t target_code;
+    uint8_t target_symbol_count;
+    uint8_t answer_len;
+    uint8_t answer_mark_units[16];
     uint16_t average_mark_error_ms;
     uint8_t average_drift_percent;
     bool active;
@@ -48,6 +52,9 @@ uint8_t morse_flipper_straight_trainer_target_total_units(const MorseFlipperStra
 uint8_t morse_flipper_straight_trainer_answer_total_units(const MorseFlipperStraightTrainer* trainer);
 uint8_t morse_flipper_straight_trainer_ref_units_max(const MorseFlipperStraightTrainer* trainer);
 uint8_t morse_flipper_straight_trainer_target_symbol_count(const MorseFlipperStraightTrainer* trainer);
+uint8_t morse_flipper_straight_trainer_target_mark_units(
+    const MorseFlipperStraightTrainer* trainer,
+    uint8_t mark_idx);
 uint8_t morse_flipper_straight_trainer_answer_symbol_count(const MorseFlipperStraightTrainer* trainer);
 bool morse_flipper_straight_trainer_symbol_count_match(const MorseFlipperStraightTrainer* trainer);
 

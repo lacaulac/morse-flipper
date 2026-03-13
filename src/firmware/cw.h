@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #define CW_INVALID 0xFFu
@@ -8,6 +9,10 @@
 extern const uint8_t cw_ascii[127];
 
 uint8_t cw(char c);
+uint8_t cw_symbol_count(uint16_t cw_code);
+uint8_t cw_symbol_units(uint16_t cw_code, uint8_t mark_idx);
+uint8_t cw_total_units(uint16_t cw_code);
+void cw_to_text(uint16_t cw_code, char* out, size_t out_sz);
 
 /* expects uint8_t cw_char already loaded with cw() */
 #define FOR_EACH_CW_SYMBOL(var) \

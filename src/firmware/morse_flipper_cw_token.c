@@ -6,16 +6,16 @@ typedef struct {
     uint8_t token;
     const char* label;
     const char* text;
-    const char* morse;
+    uint16_t code;
 } MorseFlipperCwTokenDef;
 
 static const MorseFlipperCwTokenDef morse_flipper_cw_tokens[] = {
-    {MORSE_FLIPPER_CW_TOKEN_SK, "SK", "<SK>", "...-.-"},
-    {MORSE_FLIPPER_CW_TOKEN_BK, "BK", "<BK>", "-...-.-"},
-    {MORSE_FLIPPER_CW_TOKEN_CT_KA, "CT", "<CT>", "-.-.-"},
-    {MORSE_FLIPPER_CW_TOKEN_VE_SN, "VE", "<VE>", "...-."},
-    {MORSE_FLIPPER_CW_TOKEN_AA, "AA", "<AA>", ".-.-"},
-    {MORSE_FLIPPER_CW_TOKEN_SOS, "SOS", "<SOS>", "...---..."},
+    {MORSE_FLIPPER_CW_TOKEN_SK, "SK", "<SK>", 0x068U},
+    {MORSE_FLIPPER_CW_TOKEN_BK, "BK", "<BK>", 0x0D1U},
+    {MORSE_FLIPPER_CW_TOKEN_CT_KA, "CT", "<CT>", 0x035U},
+    {MORSE_FLIPPER_CW_TOKEN_VE_SN, "VE", "<VE>", 0x028U},
+    {MORSE_FLIPPER_CW_TOKEN_AA, "AA", "<AA>", 0x01AU},
+    {MORSE_FLIPPER_CW_TOKEN_SOS, "SOS", "<SOS>", 0x238U},
 };
 
 static char cw_token_up(char ch) {
@@ -73,27 +73,9 @@ const char* morse_flipper_cw_token_text(uint8_t ch) {
     return def != NULL ? def->text : "";
 }
 
-const char* morse_flipper_cw_token_morse(uint8_t ch) {
-    const MorseFlipperCwTokenDef* def = cw_token_find(ch);
-    return def != NULL ? def->morse : "";
-}
-
 uint16_t morse_flipper_cw_token_code(uint8_t ch) {
-    const char* morse = morse_flipper_cw_token_morse(ch);
-    uint16_t code = 1U;
-    uint8_t count = 0U;
-
-    while(*morse != '\0' && count < 15U) {
-        uint16_t bit = (uint16_t)(1U << count);
-
-        if(*morse == '-') code |= bit;
-        else code &= (uint16_t)~bit;
-        count++;
-        code |= (uint16_t)(1U << count);
-        morse++;
-    }
-
-    return count == 0U ? 0U : code;
+    const MorseFlipperCwTokenDef* def = cw_token_find(ch);
+    return def != NULL ? def->code : 0U;
 }
 
 bool morse_flipper_cw_token_parse(const char* text, uint8_t* token, size_t* consumed) {

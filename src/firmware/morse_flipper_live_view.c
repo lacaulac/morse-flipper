@@ -323,14 +323,14 @@ static uint16_t morse_flipper_canvas_glyph_width(uint8_t ch, void* ctx) {
 }
 
 static void morse_flipper_draw_run_text(Canvas* canvas, int32_t x, int32_t y, const char* text) {
-    static const char* const aa_glyph[] = {
-        "......X.",
-        "......X.",
-        "...X..X.",
-        "..XX..X.",
-        ".XXXXXX.",
-        "..XX....",
-        "...X....",
+    static const uint8_t aa_glyph[] = {
+        0x02U,
+        0x02U,
+        0x12U,
+        0x32U,
+        0x7EU,
+        0x30U,
+        0x10U,
     };
 
     if(canvas == NULL || text == NULL) return;
@@ -340,8 +340,8 @@ static void morse_flipper_draw_run_text(Canvas* canvas, int32_t x, int32_t y, co
 
         if(ch == MORSE_FLIPPER_CW_TOKEN_AA) {
             for(size_t row = 0U; row < sizeof(aa_glyph) / sizeof(aa_glyph[0]); row++) {
-                for(size_t col = 0U; aa_glyph[row][col] != '\0'; col++) {
-                    if(aa_glyph[row][col] == 'X') {
+                for(size_t col = 0U; col < 8U; col++) {
+                    if((aa_glyph[row] & (uint8_t)(1U << (7U - col))) != 0U) {
                         canvas_draw_dot(canvas, x + (int32_t)col, y - 7 + (int32_t)row);
                     }
                 }

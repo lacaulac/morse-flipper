@@ -64,7 +64,6 @@ static uint32_t morse_trainer_rand(MorseTrainer* trainer) {
 
 const char* morse_trainer_char_morse(char ch) {
     static char buf[8];
-    size_t i = 0U;
     uint8_t cw_char = cw(ch);
 
     if(cw_char == CW_INVALID) {
@@ -72,12 +71,7 @@ const char* morse_trainer_char_morse(char ch) {
         return buf;
     }
 
-    FOR_EACH_CW_SYMBOL(symbol) {
-        if(i + 1U >= sizeof(buf)) break;
-        buf[i++] = symbol ? '-' : '.';
-    }
-
-    buf[i] = '\0';
+    cw_to_text(cw_char, buf, sizeof(buf));
     return buf;
 }
 
@@ -224,6 +218,7 @@ const char* morse_trainer_next_group(MorseTrainer* trainer) {
     if(clen == 0U) {
         trainer->last_group[0] = '\0';
         trainer->expected[0] = '\0';
+        trainer->expected_len = 0U;
         return trainer->last_group;
     }
 
@@ -246,14 +241,22 @@ const char* morse_trainer_next_group(MorseTrainer* trainer) {
         }
     }
 
-    for(i = 0; trainer->last_group[i] != '\0' && wi + 1U < sizeof(trainer->expected); i++) {
-        const char* morse = morse_trainer_char_morse(trainer->last_group[i]);
+    memset(trainer->expected_units, 0, sizeof(trainer->expected_units));
 
-        while(*morse != '\0' && wi + 1U < sizeof(trainer->expected)) {
-            trainer->expected[wi++] = *morse++;
+    for(i = 0; trainer->last_group[i] != '\0' && wi + 1U < sizeof(trainer->expected); i++) {
+        uint16_t code = cw(trainer->last_group[i]);
+        uint8_t marks = cw_symbol_count(code);
+        uint8_t mark_idx;
+
+        for(mark_idx = 0U; mark_idx < marks && wi + 1U < sizeof(trainer->expected); mark_idx++) {
+            uint8_t units = cw_symbol_units(code, mark_idx);
+
+            trainer->expected_units[wi] = units;
+            trainer->expected[wi++] = units == 3U ? '-' : '.';
         }
     }
     trainer->expected[wi] = '\0';
+    trainer->expected_len = (uint8_t)wi;
     return trainer->last_group;
 }
 
@@ -265,6 +268,8 @@ void morse_trainer_start_repeat(MorseTrainer* trainer) {
     morse_trainer_next_group(trainer);
     trainer->answer[0] = '\0';
     trainer->reveal[0] = '\0';
+    memset(trainer->answer_units, 0, sizeof(trainer->answer_units));
+    trainer->answer_len = 0U;
     trainer->wait_ms = 0U;
     trainer->last_score = -1;
     trainer->last_group_hits = 0U;
@@ -308,6 +313,8 @@ void morse_trainer_feed_element(MorseTrainer* trainer, char elem) {
 
     trainer->answer[len] = elem;
     trainer->answer[len + 1U] = '\0';
+    trainer->answer_units[len] = elem == '-' ? 3U : 1U;
+    trainer->answer_len = (uint8_t)(len + 1U);
 }
 
 void morse_trainer_tick(MorseTrainer* trainer, uint32_t ms, uint32_t timeout_ms) {
@@ -334,24 +341,20 @@ void morse_trainer_tick(MorseTrainer* trainer, uint32_t ms, uint32_t timeout_ms)
 }
 
 int16_t morse_trainer_score_repeat(MorseTrainer* trainer) {
-    size_t expected_len;
-    size_t answer_len;
     size_t matched = 0U;
 
     if(trainer == NULL) {
         return -1;
     }
 
-    expected_len = strlen(trainer->expected);
-    answer_len = strlen(trainer->answer);
-
-    while(matched < expected_len && matched < answer_len &&
-          trainer->expected[matched] == trainer->answer[matched]) {
+    while(matched < trainer->expected_len && matched < trainer->answer_len &&
+          trainer->expected_units[matched] == trainer->answer_units[matched]) {
         matched++;
     }
 
-    trainer->last_score =
-        expected_len == 0U ? 0 : (int16_t)(((int32_t)matched * 100) / (int32_t)expected_len);
+    trainer->last_score = trainer->expected_len == 0U ?
+                              0 :
+                              (int16_t)(((int32_t)matched * 100) / (int32_t)trainer->expected_len);
     trainer->last_failed = trainer->last_score != 100 || trainer->answer[0] == '\0';
     trainer->last_missed = trainer->answer[0] == '\0';
     trainer->last_group_hits =
@@ -408,6 +411,10 @@ void morse_trainer_reset_session(MorseTrainer* trainer) {
     trainer->expected[0] = '\0';
     trainer->answer[0] = '\0';
     trainer->reveal[0] = '\0';
+    memset(trainer->expected_units, 0, sizeof(trainer->expected_units));
+    memset(trainer->answer_units, 0, sizeof(trainer->answer_units));
+    trainer->expected_len = 0U;
+    trainer->answer_len = 0U;
 }
 
 void morse_trainer_start_session(MorseTrainer* trainer) {
