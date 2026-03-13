@@ -610,6 +610,8 @@ void morse_flipper_gpio_probe_reset(MorseFlipperApp* app);
 void morse_flipper_gpio_probe_prepare(MorseFlipperApp* app, uint32_t now_ms);
 void morse_flipper_gpio_probe_tick(MorseFlipperApp* app, uint32_t now_ms);
 uint8_t morse_flipper_gpio_probe_sample_raw(MorseFlipperApp* app);
+bool morse_flipper_gpio_probe_screen(const MorseFlipperApp* app);
+bool morse_flipper_gpio_probe_keep_state(uint8_t screen);
 bool morse_flipper_gpio_probe_notice_active(const MorseFlipperApp* app);
 bool morse_flipper_gpio_probe_blocks_start(const MorseFlipperApp* app);
 bool morse_flipper_gpio_probe_use_straight(const MorseFlipperApp* app);
