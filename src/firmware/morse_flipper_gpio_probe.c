@@ -25,6 +25,5 @@ bool morse_flipper_gpio_probe_forces_straight(uint8_t state) {
 }
 
 bool morse_flipper_gpio_probe_blocks(uint8_t state) {
-    return state == MorseFlipperGpioProbeGroundToDit ||
-           state == MorseFlipperGpioProbeGroundToBoth;
+    return state == MorseFlipperGpioProbeGroundToDit || state == MorseFlipperGpioProbeGroundToBoth;
 }

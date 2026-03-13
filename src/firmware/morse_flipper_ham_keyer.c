@@ -23,8 +23,7 @@ static void morse_flipper_ham_keyer_copy_message(char* dst, const char* src) {
     if(src == NULL) return;
 
     len = strlen(src);
-    if(len > MORSE_FLIPPER_HAM_KEYER_MESSAGE_LEN)
-        len = MORSE_FLIPPER_HAM_KEYER_MESSAGE_LEN;
+    if(len > MORSE_FLIPPER_HAM_KEYER_MESSAGE_LEN) len = MORSE_FLIPPER_HAM_KEYER_MESSAGE_LEN;
 
     memcpy(dst, src, len);
     dst[len] = '\0';
@@ -43,8 +42,7 @@ static void morse_flipper_ham_keyer_seed_defaults(MorseFlipperHamKeyer* keyer) {
 
     for(uint8_t i = 0U; i < keyer->message_count; i++) {
         morse_flipper_ham_keyer_copy_message(
-            keyer->messages[i],
-            morse_flipper_ham_keyer_default_messages[i]);
+            keyer->messages[i], morse_flipper_ham_keyer_default_messages[i]);
     }
 
     keyer->assignments[MorseFlipperHamKeyerDirUp] = 0U;
@@ -134,8 +132,9 @@ bool morse_flipper_ham_keyer_delete_message(MorseFlipperHamKeyer* keyer, uint8_t
     for(uint8_t i = 0U; i < MORSE_FLIPPER_HAM_KEYER_ASSIGNMENTS; i++) {
         if(keyer->assignments[i] == index) {
             keyer->assignments[i] = MORSE_FLIPPER_HAM_KEYER_UNASSIGNED;
-        } else if(keyer->assignments[i] != MORSE_FLIPPER_HAM_KEYER_UNASSIGNED &&
-                  keyer->assignments[i] > index) {
+        } else if(
+            keyer->assignments[i] != MORSE_FLIPPER_HAM_KEYER_UNASSIGNED &&
+            keyer->assignments[i] > index) {
             keyer->assignments[i]--;
         }
     }
@@ -155,9 +154,8 @@ bool morse_flipper_ham_keyer_assign(
     return true;
 }
 
-const char* morse_flipper_ham_keyer_assignment_text(
-    const MorseFlipperHamKeyer* keyer,
-    uint8_t dir) {
+const char*
+    morse_flipper_ham_keyer_assignment_text(const MorseFlipperHamKeyer* keyer, uint8_t dir) {
     uint8_t index;
 
     if(keyer == NULL || dir >= MORSE_FLIPPER_HAM_KEYER_ASSIGNMENTS) return "";
@@ -236,9 +234,7 @@ bool morse_flipper_ham_keyer_append_marker(
     return ok;
 }
 
-bool morse_flipper_ham_keyer_should_flush(
-    const MorseFlipperHamKeyer* keyer,
-    uint32_t now_ms) {
+bool morse_flipper_ham_keyer_should_flush(const MorseFlipperHamKeyer* keyer, uint32_t now_ms) {
     if(keyer == NULL || keyer->pending_len == 0U) return false;
     return now_ms - keyer->last_activity_at_ms >= MORSE_FLIPPER_HAM_KEYER_INACTIVITY_MS;
 }

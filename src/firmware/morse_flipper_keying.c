@@ -28,8 +28,7 @@ float morse_flipper_active_tone_hz(const MorseFlipperApp* app) {
     float hz = morse_flipper_current_audible_tone(app)->hz;
 
     if(app != NULL && app->screen == MorseFlipperScreenHamRun &&
-       !app->ham_keyer.break_in_enabled &&
-       app->audio_path == MorseFlipperAudioPathVibration)
+       !app->ham_keyer.break_in_enabled && app->audio_path == MorseFlipperAudioPathVibration)
         return morse_flipper_tones[MORSE_FLIPPER_DEFAULT_TONE_IDX].hz;
 
     if(app != NULL && app->vail_tone_active && app->vail_tone_idx < COUNT_OF(morse_flipper_tones))
@@ -124,9 +123,9 @@ void morse_flipper_update_sidetone(MorseFlipperApp* app) {
 
     use_pwm = morse_flipper_use_pwm_buzzer(app);
     use_vibro = !force_buzzer && app != NULL && app->audio_path == MorseFlipperAudioPathVibration;
-    want_speaker = !use_pwm && (want_aux_tone ||
-                   (want_tx_tone &&
-                    (force_buzzer || morse_flipper_local_buzzer_enabled(app))));
+    want_speaker = !use_pwm &&
+                   (want_aux_tone ||
+                    (want_tx_tone && (force_buzzer || morse_flipper_local_buzzer_enabled(app))));
     want_vibro = use_vibro && (want_tx_tone || want_aux_tone);
 
     if(force_buzzer && app->audio_pwm.running) {
@@ -140,8 +139,8 @@ void morse_flipper_update_sidetone(MorseFlipperApp* app) {
         }
 
         morse_flipper_audio_pwm_set_gate(&app->audio_pwm, want_tx_tone || want_aux_tone);
-        app->tone_on =
-            want_tx_tone || want_aux_tone || morse_flipper_audio_pwm_sound_active(&app->audio_pwm);
+        app->tone_on = want_tx_tone || want_aux_tone ||
+                       morse_flipper_audio_pwm_sound_active(&app->audio_pwm);
         app->speaker_busy = false;
         morse_flipper_sync_ptt(app, furi_get_tick());
         return;

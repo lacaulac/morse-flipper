@@ -39,8 +39,7 @@ static void morse_flipper_run_history_append_ch(MorseFlipperRunHistory* history,
     }
 
     if(ch == ' ') {
-        if(len == 0U || history->text[len - 1U] == ' ' || history->text[len - 1U] == '\n')
-            return;
+        if(len == 0U || history->text[len - 1U] == ' ' || history->text[len - 1U] == '\n') return;
     }
 
     while(len + 1U >= MORSE_FLIPPER_RUN_HISTORY_TEXT) {

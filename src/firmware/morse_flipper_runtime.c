@@ -85,8 +85,10 @@ static void morse_flipper_finish_tx_group_answer(MorseFlipperApp* app, uint32_t 
     morse_flipper_tx_group_score(&app->tx_group, dit_ms, false);
     morse_flipper_note_tx_group_result(app);
     app->txg_repeated_timeouts = 0U;
-    if(app->tx_group.result.passed) morse_flipper_feedback_pass(app);
-    else morse_flipper_feedback_fail(app);
+    if(app->tx_group.result.passed)
+        morse_flipper_feedback_pass(app);
+    else
+        morse_flipper_feedback_fail(app);
     app->txg_result_open_at = now_ms + MORSE_FLIPPER_TXG_RESULT_DELAY_MS;
     app->txg_result_until = 0U;
     app->txg_result_draw_s = 0xFFU;
@@ -387,8 +389,8 @@ static void morse_flipper_sync_gpio_inputs(MorseFlipperApp* app, uint32_t now_ms
         }
     }
 
-    if(morse_flipper_training_playback_active(app) || app->screen == MorseFlipperScreenSessionEnd ||
-       app->screen == MorseFlipperScreenRfRx ||
+    if(morse_flipper_training_playback_active(app) ||
+       app->screen == MorseFlipperScreenSessionEnd || app->screen == MorseFlipperScreenRfRx ||
        app->screen == MorseFlipperScreenTxGroupsResult ||
        app->screen == MorseFlipperScreenTxGroupsFinal ||
        (app->screen == MorseFlipperScreenStraight && !app->straight_wait_answer) ||
@@ -553,8 +555,9 @@ void morse_flipper_poll(MorseFlipperApp* app) {
         morse_flipper_feed_straight_mark(
             app, (uint16_t)(now_ms - app->straight_mark_started_at), now_ms);
         app->straight_mark_started_at = 0U;
-    } else if(app->screen == MorseFlipperScreenStraight && raw_straight &&
-              !app->straight_key_down && app->straight_wait_answer) {
+    } else if(
+        app->screen == MorseFlipperScreenStraight && raw_straight && !app->straight_key_down &&
+        app->straight_wait_answer) {
         app->straight_key_down = true;
         app->straight_mark_started_at = now_ms;
     }
@@ -592,7 +595,6 @@ void morse_flipper_poll(MorseFlipperApp* app) {
         morse_flipper_view_dirty(app);
     }
 }
-
 
 void morse_flipper_tick_callback(void* context) {
     MorseFlipperApp* app = context;

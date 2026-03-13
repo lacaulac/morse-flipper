@@ -180,7 +180,7 @@ void morse_flipper_clamp_trainer_settings(MorseFlipperApp* app) {
 
     if(app == NULL) return;
 
-      w = morse_flipper_local_wpm(app);
+    w = morse_flipper_local_wpm(app);
     if(app->trainer_farnsworth_wpm == 0U) app->trainer_farnsworth_wpm = w;
     if(app->trainer_farnsworth_wpm > w) app->trainer_farnsworth_wpm = w;
 
@@ -397,7 +397,8 @@ void morse_flipper_load_config(MorseFlipperApp* app) {
                 morse_trainer_set_lesson(&app->trainer, config_v6.trainer_lesson);
                 morse_trainer_set_group_size(&app->trainer, config_v6.trainer_group_size);
                 morse_trainer_set_session_groups(&app->trainer, config_v6.trainer_session_groups);
-                if(config_v6.local_dit_ms != 0U) app->trainer.local_dit_ms = config_v6.local_dit_ms;
+                if(config_v6.local_dit_ms != 0U)
+                    app->trainer.local_dit_ms = config_v6.local_dit_ms;
 
                 morse_flipper_config_apply_gpio(
                     app,
@@ -437,7 +438,8 @@ void morse_flipper_load_config(MorseFlipperApp* app) {
                 morse_trainer_set_lesson(&app->trainer, config_v5.trainer_lesson);
                 morse_trainer_set_group_size(&app->trainer, config_v5.trainer_group_size);
                 morse_trainer_set_session_groups(&app->trainer, config_v5.trainer_session_groups);
-                if(config_v5.local_dit_ms != 0U) app->trainer.local_dit_ms = config_v5.local_dit_ms;
+                if(config_v5.local_dit_ms != 0U)
+                    app->trainer.local_dit_ms = config_v5.local_dit_ms;
 
                 morse_flipper_config_apply_gpio(
                     app,
@@ -473,7 +475,8 @@ void morse_flipper_load_config(MorseFlipperApp* app) {
                 morse_trainer_set_lesson(&app->trainer, config_v4.trainer_lesson);
                 morse_trainer_set_group_size(&app->trainer, config_v4.trainer_group_size);
                 morse_trainer_set_session_groups(&app->trainer, config_v4.trainer_session_groups);
-                if(config_v4.local_dit_ms != 0U) app->trainer.local_dit_ms = config_v4.local_dit_ms;
+                if(config_v4.local_dit_ms != 0U)
+                    app->trainer.local_dit_ms = config_v4.local_dit_ms;
 
                 morse_flipper_config_apply_gpio(
                     app,
@@ -502,7 +505,8 @@ void morse_flipper_load_config(MorseFlipperApp* app) {
                 morse_trainer_set_lesson(&app->trainer, config_v3.trainer_lesson);
                 morse_trainer_set_group_size(&app->trainer, config_v3.trainer_group_size);
                 morse_trainer_set_session_groups(&app->trainer, config_v3.trainer_session_groups);
-                if(config_v3.local_dit_ms != 0U) app->trainer.local_dit_ms = config_v3.local_dit_ms;
+                if(config_v3.local_dit_ms != 0U)
+                    app->trainer.local_dit_ms = config_v3.local_dit_ms;
 
                 morse_flipper_config_apply_gpio(
                     app,
@@ -528,7 +532,8 @@ void morse_flipper_load_config(MorseFlipperApp* app) {
                 morse_trainer_set_lesson(&app->trainer, config_v2.trainer_lesson);
                 morse_trainer_set_group_size(&app->trainer, config_v2.trainer_group_size);
                 morse_trainer_set_session_groups(&app->trainer, config_v2.trainer_session_groups);
-                if(config_v2.local_dit_ms != 0U) app->trainer.local_dit_ms = config_v2.local_dit_ms;
+                if(config_v2.local_dit_ms != 0U)
+                    app->trainer.local_dit_ms = config_v2.local_dit_ms;
             }
         } else if(got == sizeof(config_v1)) {
             memcpy(&config_v1, &config, sizeof(config_v1));

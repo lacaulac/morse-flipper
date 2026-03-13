@@ -23,7 +23,8 @@ static void morse_keyer_push_event(MorseKeyer* keyer, uint8_t type, uint8_t padd
         return;
     }
 
-    uint8_t tail = (uint8_t)((keyer->event_head + keyer->event_count) % MORSE_KEYER_EVENT_CAPACITY);
+    uint8_t tail =
+        (uint8_t)((keyer->event_head + keyer->event_count) % MORSE_KEYER_EVENT_CAPACITY);
     keyer->events[tail].type = type;
     keyer->events[tail].paddle = paddle;
     keyer->event_count++;

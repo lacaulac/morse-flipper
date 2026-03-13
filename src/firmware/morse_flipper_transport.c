@@ -25,7 +25,8 @@ uint8_t morse_flipper_nearest_tone_idx_for_midi(uint8_t midi_note) {
 
     for(uint8_t i = 0U; i < COUNT_OF(morse_flipper_tones); i++) {
         uint8_t tone_note = morse_flipper_tones[i].midi_note;
-        uint8_t delta = (tone_note > midi_note) ? (tone_note - midi_note) : (midi_note - tone_note);
+        uint8_t delta = (tone_note > midi_note) ? (tone_note - midi_note) :
+                                                  (midi_note - tone_note);
         if(delta < best_delta) {
             best_delta = delta;
             best_idx = i;
@@ -181,7 +182,7 @@ static void morse_flipper_apply_vail_mode(MorseFlipperApp* app, uint8_t program)
 
     if(app->vail_mode_active && app->vail_keyer_mode == mode) return;
 
-      app->vail_mode_active = true;
+    app->vail_mode_active = true;
     app->vail_keyer_mode = mode;
     morse_flipper_refresh_keyer(app, furi_get_tick());
     morse_flipper_view_dirty(app);

@@ -23,7 +23,7 @@ uint8_t cw(char c) {
     uint8_t a;
 
     a = (uint8_t)c;
-    if (a >= sizeof(cw_ascii)) return CW_INVALID;
+    if(a >= sizeof(cw_ascii)) return CW_INVALID;
 
     return cw_ascii[a];
 }

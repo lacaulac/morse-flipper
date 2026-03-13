@@ -115,8 +115,10 @@ uint8_t morse_pc_paddle_preset_key(uint8_t idx, uint8_t note, bool swapped) {
 uint8_t morse_pc_mouse_button(uint8_t note, bool inverted) {
     uint8_t btn = MorsePcMouseBtnNone;
 
-    if(note == 2U) btn = MorsePcMouseBtnRight;
-    else if(note == 0U || note == 1U) btn = MorsePcMouseBtnLeft;
+    if(note == 2U)
+        btn = MorsePcMouseBtnRight;
+    else if(note == 0U || note == 1U)
+        btn = MorsePcMouseBtnLeft;
 
     if(inverted) {
         if(btn == MorsePcMouseBtnLeft) return MorsePcMouseBtnRight;

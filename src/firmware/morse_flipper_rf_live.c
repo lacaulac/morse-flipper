@@ -99,9 +99,8 @@ void morse_flipper_tick_live_rf(MorseFlipperApp* app, uint32_t now_ms) {
             app->rf_rssi_valid = true;
         }
 
-        app->rf_monitor_tone =
-            (carrier_now && app->rf_rssi_valid) ||
-            (app->rf_rssi_valid && (app->rf_rssi_dbm >= thr_dbm));
+        app->rf_monitor_tone = (carrier_now && app->rf_rssi_valid) ||
+                               (app->rf_rssi_valid && (app->rf_rssi_dbm >= thr_dbm));
 
         if(!old_valid || old_dbm != app->rf_rssi_dbm || old_peak_dbm != app->rf_rssi_peak_dbm ||
            old_activity != app->rf_rx_activity || old_carrier != app->rf_carrier_present ||

@@ -637,10 +637,7 @@ void morse_flipper_ham_stop_macro(MorseFlipperApp* app);
 void morse_flipper_ham_gpio_apply(MorseFlipperApp* app);
 void morse_flipper_ham_gpio_release(MorseFlipperApp* app);
 void morse_flipper_ham_log_append_text(MorseFlipperApp* app, const char* text, uint32_t now_ms);
-void morse_flipper_ham_log_append_marker(
-    MorseFlipperApp* app,
-    const char* marker,
-    uint32_t now_ms);
+void morse_flipper_ham_log_append_marker(MorseFlipperApp* app, const char* marker, uint32_t now_ms);
 void morse_flipper_ham_log_flush(MorseFlipperApp* app);
 void morse_flipper_ham_log_flush_if_idle(MorseFlipperApp* app, uint32_t now_ms);
 void morse_flipper_tick_live_rf(MorseFlipperApp* app, uint32_t now_ms);

@@ -110,7 +110,8 @@ static void morse_flipper_session_title(const MorseFlipperApp* app, char* out, s
     chars = morse_trainer_charset(&app->trainer);
     len = strlen(chars);
     if(len > 12U) {
-        snprintf(out, out_sz, "%s", app->trainer.custom_name[0] ? app->trainer.custom_name : chars);
+        snprintf(
+            out, out_sz, "%s", app->trainer.custom_name[0] ? app->trainer.custom_name : chars);
         return;
     }
 
@@ -263,8 +264,10 @@ static void morse_flipper_draw_session_bottom(Canvas* canvas, const MorseFlipper
 
     if(app->session_started) {
         asked = morse_trainer_session_index(&app->trainer);
-        if(app->session_round_pending && asked != 0U) scored = (uint8_t)(asked - 1U);
-        else scored = asked;
+        if(app->session_round_pending && asked != 0U)
+            scored = (uint8_t)(asked - 1U);
+        else
+            scored = asked;
     }
 
     if(fail > scored) fail = scored;

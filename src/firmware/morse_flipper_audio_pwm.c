@@ -17,14 +17,12 @@
 #endif
 
 static const int16_t morse_flipper_audio_pwm_sine_q15[MORSE_FLIPPER_AUDIO_PWM_SINE_SAMPLES] = {
-    0,      3212,   6393,   9512,   12539,  15446,  18204,  20787,
-    23170,  25329,  27245,  28898,  30273,  31356,  32137,  32609,
-    32767,  32609,  32137,  31356,  30273,  28898,  27245,  25329,
-    23170,  20787,  18204,  15446,  12539,  9512,   6393,   3212,
-    0,      -3212,  -6393,  -9512,  -12539, -15446, -18204, -20787,
-    -23170, -25329, -27245, -28898, -30273, -31356, -32137, -32609,
-    -32767, -32609, -32137, -31356, -30273, -28898, -27245, -25329,
-    -23170, -20787, -18204, -15446, -12539, -9512,  -6393,  -3212,
+    0,      3212,   6393,   9512,   12539,  15446,  18204,  20787,  23170,  25329,  27245,
+    28898,  30273,  31356,  32137,  32609,  32767,  32609,  32137,  31356,  30273,  28898,
+    27245,  25329,  23170,  20787,  18204,  15446,  12539,  9512,   6393,   3212,   0,
+    -3212,  -6393,  -9512,  -12539, -15446, -18204, -20787, -23170, -25329, -27245, -28898,
+    -30273, -31356, -32137, -32609, -32767, -32609, -32137, -31356, -30273, -28898, -27245,
+    -25329, -23170, -20787, -18204, -15446, -12539, -9512,  -6393,  -3212,
 };
 
 static uint16_t morse_flipper_audio_pwm_clamp_fade_len(uint32_t samples) {
@@ -61,9 +59,8 @@ static uint16_t morse_flipper_audio_pwm_current_env_q15(const MorseFlipperAudioP
             return 0U;
         }
 
-        return (uint16_t)(
-            ((uint32_t)audio->env_anchor_q15 * audio->release_q15[audio->env_idx]) /
-            MORSE_FLIPPER_AUDIO_PWM_Q15);
+        return (uint16_t)(((uint32_t)audio->env_anchor_q15 * audio->release_q15[audio->env_idx]) /
+                          MORSE_FLIPPER_AUDIO_PWM_Q15);
     default:
         return 0U;
     }
@@ -78,19 +75,20 @@ static void morse_flipper_audio_pwm_apply_gate(MorseFlipperAudioPwm* audio) {
             audio->env_anchor_q15 = 0U;
             audio->env_idx = 0U;
             audio->env_state = audio->attack_len == 0U ? MorseFlipperAudioPwmEnvSustain :
-                                                        MorseFlipperAudioPwmEnvAttack;
+                                                         MorseFlipperAudioPwmEnvAttack;
         } else {
             audio->env_anchor_q15 = morse_flipper_audio_pwm_current_env_q15(audio);
             audio->env_idx = 0U;
             audio->env_state = audio->attack_len == 0U ? MorseFlipperAudioPwmEnvSustain :
-                                                        MorseFlipperAudioPwmEnvAttack;
+                                                         MorseFlipperAudioPwmEnvAttack;
         }
-    } else if(audio->env_state == MorseFlipperAudioPwmEnvAttack ||
-              audio->env_state == MorseFlipperAudioPwmEnvSustain) {
+    } else if(
+        audio->env_state == MorseFlipperAudioPwmEnvAttack ||
+        audio->env_state == MorseFlipperAudioPwmEnvSustain) {
         audio->env_anchor_q15 = morse_flipper_audio_pwm_current_env_q15(audio);
         audio->env_idx = 0U;
-        audio->env_state =
-            audio->release_len == 0U ? MorseFlipperAudioPwmEnvIdle : MorseFlipperAudioPwmEnvRelease;
+        audio->env_state = audio->release_len == 0U ? MorseFlipperAudioPwmEnvIdle :
+                                                      MorseFlipperAudioPwmEnvRelease;
     }
 
     audio->gate_applied = audio->gate_requested;
@@ -160,7 +158,8 @@ void morse_flipper_audio_pwm_prepare(
     if(audio == NULL) return;
 
     carrier_hz = carrier_hz == 0U ? MORSE_FLIPPER_AUDIO_PWM_CARRIER_HZ : carrier_hz;
-    sample_rate_hz = sample_rate_hz == 0U ? MORSE_FLIPPER_AUDIO_PWM_SAMPLE_RATE_HZ : sample_rate_hz;
+    sample_rate_hz = sample_rate_hz == 0U ? MORSE_FLIPPER_AUDIO_PWM_SAMPLE_RATE_HZ :
+                                            sample_rate_hz;
     tone_hz = tone_hz == 0U ? MORSE_FLIPPER_AUDIO_PWM_TONE_HZ : tone_hz;
     if(volume_pct < 10U) volume_pct = 10U;
     if(volume_pct > 100U) volume_pct = 100U;
@@ -169,14 +168,12 @@ void morse_flipper_audio_pwm_prepare(
     audio->carrier_hz = carrier_hz;
     audio->tone_hz = tone_hz;
     audio->phase_q32 = 0U;
-    audio->phase_step_q32 =
-        (uint32_t)(((uint64_t)tone_hz << 32U) / (uint64_t)sample_rate_hz);
+    audio->phase_step_q32 = (uint32_t)(((uint64_t)tone_hz << 32U) / (uint64_t)sample_rate_hz);
     audio->pwm_period = (uint16_t)(64000000UL / carrier_hz);
     audio->pwm_midpoint = audio->pwm_period / 2U;
     audio->pwm_amplitude = audio->pwm_midpoint > 2U ? (uint16_t)(audio->pwm_midpoint - 2U) :
                                                       audio->pwm_midpoint;
-    audio->pwm_amplitude =
-        (uint16_t)(((uint32_t)audio->pwm_amplitude * volume_pct) / 100U);
+    audio->pwm_amplitude = (uint16_t)(((uint32_t)audio->pwm_amplitude * volume_pct) / 100U);
 
     attack_samples = ((uint32_t)attack_ms * sample_rate_hz) / 1000U;
     release_samples = ((uint32_t)release_ms * sample_rate_hz) / 1000U;
@@ -193,11 +190,11 @@ void morse_flipper_audio_pwm_prepare(
             i < audio->attack_len ?
                 morse_flipper_audio_pwm_progress_q15((uint16_t)i, audio->attack_len) :
                 MORSE_FLIPPER_AUDIO_PWM_Q15;
-        audio->release_q15[i] = i < audio->release_len ?
-                                    (uint16_t)(MORSE_FLIPPER_AUDIO_PWM_Q15 -
-                                               morse_flipper_audio_pwm_progress_q15(
-                                                   (uint16_t)i, audio->release_len)) :
-                                    0U;
+        audio->release_q15[i] =
+            i < audio->release_len ?
+                (uint16_t)(MORSE_FLIPPER_AUDIO_PWM_Q15 -
+                           morse_flipper_audio_pwm_progress_q15((uint16_t)i, audio->release_len)) :
+                0U;
     }
 
     for(i = 0U; i < MORSE_FLIPPER_AUDIO_PWM_BUFFER_SAMPLES; i++) {

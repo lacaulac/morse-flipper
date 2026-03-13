@@ -15,10 +15,9 @@
 
 static const char* morse_trainer_custom_path_value = MORSE_FLIPPER_CUSTOM_CHARS_PATH;
 static const char* morse_trainer_straight_stats_path_value = MORSE_FLIPPER_STRAIGHT_STATS_PATH;
-static const char* morse_trainer_custom_defaults =
-    "numbers=0123456789\n"
-    "dits=EISH5\n"
-    "more dits=EISH5AUVNDB\n";
+static const char* morse_trainer_custom_defaults = "numbers=0123456789\n"
+                                                   "dits=EISH5\n"
+                                                   "more dits=EISH5AUVNDB\n";
 
 const char* morse_trainer_custom_chars_path(void) {
     return morse_trainer_custom_path_value;

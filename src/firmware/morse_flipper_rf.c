@@ -13,7 +13,8 @@ static void rf_push_tx_log(MorseFlipperRf* rf, const char* line) {
     if(!rf || !line) return;
 
     if(rf->tx_log_count < sizeof(rf->tx_log) / sizeof(rf->tx_log[0])) {
-        slot = (rf->tx_log_start + rf->tx_log_count) % (sizeof(rf->tx_log) / sizeof(rf->tx_log[0]));
+        slot =
+            (rf->tx_log_start + rf->tx_log_count) % (sizeof(rf->tx_log) / sizeof(rf->tx_log[0]));
         rf->tx_log_count++;
     } else {
         slot = rf->tx_log_start;

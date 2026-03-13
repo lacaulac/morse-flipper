@@ -215,7 +215,8 @@ const char* morse_trainer_next_group(MorseTrainer* trainer) {
     charset = morse_trainer_charset(trainer);
     strncpy(prev, trainer->last_group, sizeof(prev) - 1U);
     prev[sizeof(prev) - 1U] = '\0';
-    while(charset[clen] != '\0') clen++;
+    while(charset[clen] != '\0')
+        clen++;
 
     if(clen == 0U) {
         trainer->last_group[0] = '\0';

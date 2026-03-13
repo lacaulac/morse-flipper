@@ -23,7 +23,8 @@ static void decoder_push_dit_sample(MorseFlipperCwDecoder* decoder, uint16_t ms)
 
     if(!decoder || !ms) return;
 
-    if(decoder->dit_sample_count < sizeof(decoder->dit_samples) / sizeof(decoder->dit_samples[0])) {
+    if(decoder->dit_sample_count <
+       sizeof(decoder->dit_samples) / sizeof(decoder->dit_samples[0])) {
         decoder->dit_samples[decoder->dit_sample_count++] = ms;
     } else {
         for(i = 1; i < decoder->dit_sample_count; i++) {
@@ -33,7 +34,8 @@ static void decoder_push_dit_sample(MorseFlipperCwDecoder* decoder, uint16_t ms)
     }
 
     total = 0;
-    for(i = 0; i < decoder->dit_sample_count; i++) total += decoder->dit_samples[i];
+    for(i = 0; i < decoder->dit_sample_count; i++)
+        total += decoder->dit_samples[i];
     decoder->dit_ms = (uint16_t)(total / decoder->dit_sample_count);
 }
 
@@ -43,8 +45,10 @@ static bool decoder_push_symbol(MorseFlipperCwDecoder* decoder, bool dash) {
     if(!decoder || decoder->symbol_count >= 9u) return false;
 
     bit = (uint16_t)(1u << decoder->symbol_count);
-    if(dash) decoder->symbol_code |= bit;
-    else decoder->symbol_code &= (uint16_t)~bit;
+    if(dash)
+        decoder->symbol_code |= bit;
+    else
+        decoder->symbol_code &= (uint16_t)~bit;
 
     decoder->symbol_count++;
     decoder->symbol_code |= (uint16_t)(1u << decoder->symbol_count);
@@ -152,7 +156,8 @@ static bool decoder_guess_timing(MorseFlipperCwDecoder* decoder) {
     if(marks[split_idx] / marks[split_idx - 1u] < 2u) return false;
 
     lower_total = 0;
-    for(i = 0; i < split_idx; i++) lower_total += marks[i];
+    for(i = 0; i < split_idx; i++)
+        lower_total += marks[i];
     decoder->dit_ms = (uint16_t)(lower_total / split_idx);
     decoder->dit_sample_count = 0;
     for(i = 0; i < split_idx && i < sizeof(decoder->dit_samples) / sizeof(decoder->dit_samples[0]);
@@ -233,12 +238,15 @@ static void decoder_replay_pending(MorseFlipperCwDecoder* decoder) {
     if(!decoder) return;
     count = decoder->pending_count;
     if(count > sizeof(samples) / sizeof(samples[0])) count = sizeof(samples) / sizeof(samples[0]);
-    for(i = 0; i < count; i++) samples[i] = decoder->pending_samples[i];
+    for(i = 0; i < count; i++)
+        samples[i] = decoder->pending_samples[i];
     decoder->pending_count = 0;
 
     for(i = 0; i < count; i++) {
-        if(samples[i] > 0) decoder_process_mark(decoder, (uint16_t)samples[i]);
-        else decoder_process_space(decoder, (uint16_t)(-samples[i]));
+        if(samples[i] > 0)
+            decoder_process_mark(decoder, (uint16_t)samples[i]);
+        else
+            decoder_process_space(decoder, (uint16_t)(-samples[i]));
     }
 }
 

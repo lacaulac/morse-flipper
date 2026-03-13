@@ -43,7 +43,8 @@ void morse_flipper_straight_trainer_feed(
     uint16_t mark_ms,
     uint16_t space_before_ms);
 char morse_flipper_straight_trainer_target_char(const MorseFlipperStraightTrainer* trainer);
-const char* morse_flipper_straight_trainer_target_morse(const MorseFlipperStraightTrainer* trainer);
+const char*
+    morse_flipper_straight_trainer_target_morse(const MorseFlipperStraightTrainer* trainer);
 const char* morse_flipper_straight_trainer_answer(const MorseFlipperStraightTrainer* trainer);
 uint16_t morse_flipper_straight_trainer_average_mark_error_ms(
     const MorseFlipperStraightTrainer* trainer);
@@ -51,7 +52,8 @@ uint8_t morse_flipper_straight_trainer_average_drift_percent(
     const MorseFlipperStraightTrainer* trainer);
 const char* morse_flipper_straight_trainer_error_bars(const MorseFlipperStraightTrainer* trainer);
 const char* morse_flipper_straight_trainer_timing_view(const MorseFlipperStraightTrainer* trainer);
-const char* morse_flipper_straight_trainer_metrics_line(const MorseFlipperStraightTrainer* trainer);
+const char*
+    morse_flipper_straight_trainer_metrics_line(const MorseFlipperStraightTrainer* trainer);
 bool morse_flipper_straight_trainer_active(const MorseFlipperStraightTrainer* trainer);
 uint8_t
     morse_flipper_straight_trainer_worst_space_score(const MorseFlipperStraightTrainer* trainer);
