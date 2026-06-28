@@ -90,13 +90,14 @@ typedef struct {
 typedef struct {
     int16_t scroll_px;
     int16_t target_scroll_px;
+    int16_t max_scroll_px;
 } CwmdState;
 
 void cwmd_config_default(CwmdConfig* cfg, bool bottom_chrome);
-void cwmd_draw(Canvas* canvas, const CwmdConfig* cfg, const CwmdState* state, const char* text);
+void cwmd_draw(Canvas* canvas, const CwmdConfig* cfg, CwmdState* state, const char* text);
 uint16_t cwmd_content_height(Canvas* canvas, const CwmdConfig* cfg, const char* text);
 int16_t cwmd_max_scroll_px(Canvas* canvas, const CwmdConfig* cfg, const char* text);
-void cwmd_scroll_line(CwmdState* state, int8_t dir, int16_t max_scroll_px, uint8_t line_height);
+void cwmd_scroll_step(CwmdState* state, int8_t dir, int16_t max_scroll_px, uint8_t step_px);
 bool cwmd_scroll_tick(CwmdState* state);
 
 #ifdef CWMD_HOST_TEST

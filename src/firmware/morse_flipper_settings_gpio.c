@@ -128,7 +128,7 @@ void morse_flipper_scene_gpio_on_enter(void* context) {
 
     item = variable_item_list_add(
         app->settings_list,
-        "Force gnd",
+        "Virtual gnd",
         COUNT_OF(morse_flipper_gpio_ui_pins) + 1U,
         morse_flipper_settings_gpio_ground_changed,
         app);
