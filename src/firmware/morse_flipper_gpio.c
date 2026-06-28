@@ -94,7 +94,7 @@ const char* morse_flipper_gpio_rule_text(MorseFlipperGpioRule rule) {
     case MorseFlipperGpioRulePaddlesSharePin:
         return "Dit and dah must differ.";
     case MorseFlipperGpioRuleGroundShared:
-        return "Force gnd must stay unique.";
+        return "Virtual gnd must stay unique.";
     case MorseFlipperGpioRuleBadIndex:
         return "That GPIO choice is not valid.";
     default:

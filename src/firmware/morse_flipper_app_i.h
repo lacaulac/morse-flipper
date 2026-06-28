@@ -695,9 +695,9 @@ void morse_flipper_draw_run_text(Canvas* canvas, int32_t x, int32_t y, const cha
 void morse_flipper_draw_straight_prompt(Canvas* canvas, int32_t cx, int32_t cy, uint8_t ch);
 void morse_flipper_about_reset(MorseFlipperApp* app, uint32_t now_ms);
 void morse_flipper_tick_about(MorseFlipperApp* app, uint32_t now_ms);
-void morse_flipper_draw_about(Canvas* canvas, const MorseFlipperApp* app);
+void morse_flipper_draw_about(Canvas* canvas, MorseFlipperApp* app);
 int16_t morse_flipper_about_max_scroll(Canvas* canvas);
-void morse_flipper_draw_help(Canvas* canvas, const MorseFlipperApp* app);
+void morse_flipper_draw_help(Canvas* canvas, MorseFlipperApp* app);
 int16_t morse_flipper_help_max_scroll(Canvas* canvas, const MorseFlipperApp* app);
 void morse_flipper_draw_gpio_probe_overlay(Canvas* canvas, const MorseFlipperApp* app);
 void morse_flipper_draw_startup_gpio_probe(Canvas* canvas, const MorseFlipperApp* app);

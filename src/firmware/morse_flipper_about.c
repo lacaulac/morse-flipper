@@ -264,8 +264,7 @@ void morse_flipper_about_reset(MorseFlipperApp* app, uint32_t now_ms) {
 
     furi_hal_rtc_get_datetime(&dt);
     app->about_mode = MorseFlipperAboutModeLanding;
-    app->about_md.scroll_px = 0;
-    app->about_md.target_scroll_px = 0;
+    app->about_md = (CwmdState){0};
     app->about_ok_count = 0U;
     app->about_last_ok_ms = 0U;
     app->about_footer_seq_i = morse_flipper_about_request_start(dt.day);
@@ -318,7 +317,7 @@ static void morse_flipper_draw_about_landing(Canvas* canvas, const MorseFlipperA
     if(app->about_show_next) elements_button_right(canvas, "Next");
 }
 
-static void morse_flipper_draw_about_text_view(Canvas* canvas, const MorseFlipperApp* app) {
+static void morse_flipper_draw_about_text_view(Canvas* canvas, MorseFlipperApp* app) {
     CwmdConfig cfg;
 
     canvas_clear(canvas);
@@ -326,7 +325,7 @@ static void morse_flipper_draw_about_text_view(Canvas* canvas, const MorseFlippe
     cwmd_draw(canvas, &cfg, &app->about_md, morse_flipper_about_body);
 }
 
-void morse_flipper_draw_about(Canvas* canvas, const MorseFlipperApp* app) {
+void morse_flipper_draw_about(Canvas* canvas, MorseFlipperApp* app) {
     if(canvas == NULL || app == NULL) return;
 
     if(app->about_mode == MorseFlipperAboutModeText) {
