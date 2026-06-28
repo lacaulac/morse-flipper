@@ -1,37 +1,35 @@
 # Morse Flipper
 
-Morse Flipper is a Morse/CW trainer, keyer, hardware adapter and small emergency Morse transmitter for the Flipper Zero.
+Morse Flipper is a CW trainer, keyer, hardware adapter, portable ham helper, and Sub-GHz Morse experiment bench for the Flipper Zero.
 
 It is built around one opinion: do not learn Morse by staring at dots and dashes. Learn the sound. Hear the character, type the character, and keep the counting part of your brain out of it.
 
-It can be a toy, a contest trainer, a portable-radio helper, or a small piece of prepper kit. CW has always been oddly good at surviving bad conditions.
+It works with nothing more than the Flipper buttons and buzzer. Add a simple jack adapter and it becomes a real key/paddle interface. Add the bigger board and it can key a rig, drive PTT, output cleaner sidetone, and log a portable contact without needing a laptop balanced on a damp picnic table.
 
-This started as a 2024 experiment, was abandoned for a while, then dragged into launch shape with LLM-assisted cleanup in 2026. The bulk of the design and the important decisions are still human-made and human-reviewed: timing, keying, GPIO behaviour, RF compromises, tests, and the stubborn refusal to make CW look like a barcode for the ears.
+This started as a 2024 experiment, then got the proper launch-shape treatment in 2026. The important bits are still where they should be: timing, keying, GPIO behaviour, RF compromises, tests, and the stubborn refusal to make CW look like a barcode for the ears.
 
 ## What it does
 
-- LCWO-style listening practice
-- Straight-key timing practice for learning a cleaner fist
-- Five-character sending drills for spacing and rhythm
-- Free practice with straight key, paddle, Flipper buttons, USB, MIDI, mouse or keyboard input
-- Straight keys and paddles through a simple 6.5 mm jack adapter
-- Iambic, Elekey-A/B and oddball keying modes: keyahead, Ultimatic and bug
+- Flipper-to-Flipper Sub-GHz Morse TX/RX, plus receive/decode experiments for compatible OOK Morse signals inside the Flipper's supported bands.
+- LCWO-style listening practice, straight-key timing practice, and five-character sending drills.
+- Free practice with a straight key, paddle, Flipper buttons, USB, MIDI, mouse, or keyboard input.
+- Built-in help for setup, hardware, practice, portable operating, contests, prepper use, and the bits of CW folklore that otherwise become pub arguments.
+- Straight keys and paddles through either the Flipper joystick or a simple 6.5 mm jack adapter.
+- Iambic, Elekey-A/B, Ultimatic, bug, keyahead, and hidden Vail compatibility modes for the more suspicious corners of keying behaviour.
 - Flipper buttons as either a straight key or a usable paddle. Paddle mode uses OK and Back so your fingers are not forced into a silly little claw.
 - A field keyer/logger for POTA/SOTA-style portable operating. Send canned replies like `UR 5NN HW?` or `P2P RO 0038`; if you send a callsign manually with paddles, it keys your rig and logs the text at the same time.
-- Ham rig keying on GPIO, with `P15` as key and `P16` as PTT  (Ham Keyer mode)
-- USB paddle adapter modes for Vail, V-Band and similar practice tools: MIDI, mouse and keyboard.
+- Ham rig keying on GPIO, with `P15` as key and `P16` as PTT in Ham Keyer mode.
 - Vail-style MIDI control, so the browser can talk back to the Flipper for speed, tone and keyer mode. It also means Vail-style browser games can use the Flipper as the adapter, which is tidier than buying another adapter.
-- Buzzer, vibration and high quality sinewave audio output for discreet or external sidetone
-- Sub-GHz Morse TX for experiments and last-resort signalling, where sensible
-- Extended help inside the app, because CW has enough folklore without making users hunt for the manual
+- High-quality sinewave sidetone on `P2/A7`, with internal buzzer and vibration fallback.
+- A field-tested decoder, compact run history, saved settings, custom training character files on SD, and startup warnings for suspicious GPIO shorts.
 
-It also saves its settings, supports custom training character files on the SD card, warns about suspicious GPIO shorts at startup, and falls back sensibly when a straight key is plugged into the paddle jack.
+It also falls back sensibly when a straight key is plugged into a stereo paddle jack, because that mistake is not hypothetical. Ask me how I know.
 
 ## Why another CW app?
 
 <p align="center"><img src="docs/images/ss1.png" alt="Morse Flipper screenshot 1" height="128"> <img src="docs/images/ss2.png" alt="Morse Flipper screenshot 2" height="128"> <img src="docs/images/ss4.png" alt="Morse Flipper screenshot 4" height="128"> <img src="docs/images/ss5.png" alt="Morse Flipper screenshot 5" height="128"></p>
 
-There are already Flipper Morse apps, but many of them teach the most common bad habit first: looking at dots and dashes. That is fine for a code table and rubbish for copying real Morse Code messages.
+There are already Flipper Morse apps, but many of them teach the most common bad habit first: looking at dots and dashes. That is fine for a code table and rubbish for copying real CW at speed.
 
 Morse Flipper tries to train the useful reflex instead. Keep the character speed high, widen the gaps if needed, and let the sound become the letter. The app has a small LCWO-style trainer because LCWO is still the gold standard for this approach, but the Flipper version is useful when the laptop is not.
 
@@ -41,7 +39,7 @@ The other half of the project is hardware. A Flipper is already a pocket full of
 
 ### None required
 
-Morse Flipper works out of the box with no extra hardware. Use the joystick as a straight key, switch to the built-in keyers when you want paddle-style timing, hear the sidetone on the internal buzzer, and use the Flipper radio for its built-in Morse TX path where that is legal and sensible. The adapters below make it nicer, sturdier, or more useful with real keys and rigs; they are comfort upgrades, not a hard requirement.
+Morse Flipper works out of the box with no extra hardware. Use the joystick as a straight key, switch to the built-in keyers when you want paddle-style timing, hear the sidetone on the internal buzzer, and use the Flipper radio for short-range Morse experiments where that is legal and sensible. The adapters below make it nicer, sturdier, or more useful with real keys and rigs; they are comfort upgrades, not a hard requirement.
 
 ### Simple key and paddle jack
 
@@ -57,7 +55,7 @@ Default wiring:
 | Dah                | `P5`         |
 | Ground             | `P3`         |
 
-Why is ground `P3` and not `GND`/`P8`? Because the GPIO is assignable. Use whatever pins make sense for your key, and one pin can even pretend to be ground when that makes the hardware less silly. `P3` is the default because a 6.5 mm audio jack lands neatly on every second header pin. Since that ground is under software control, the app can do useful little tricks, such as spotting `P5` and `P3` shorted together when a straight key has been shoved into a paddle jack, then falling back accordingly. If you prefer a real ground, use `GND`; the app will cope.
+Why is ground `P3` and not `GND`/`P8`? Because the GPIO is assignable. Use whatever pins make sense for your key, and one pin can even pretend to be ground when that makes wiring simpler. `P3` is the default because a 6.5 mm audio jack lands neatly on every second header pin. Since that ground is under software control, the app can do useful little tricks, such as spotting `P5` and `P3` shorted together when a straight key has been shoved into a paddle jack, then falling back accordingly. If you prefer a real ground, use `GND`; the app will cope.
 
 A small GPIO board / Flipper add-on board is in production (drop me a message if you want an early prototype!) but this ugly little jack adapter is the easy first build. It is cheap, obvious, and hard to debug incorrectly. You likely have the parts around your shack anyway.
 
@@ -77,17 +75,27 @@ Small daily practice beats the grand weekly binge. Morse likes repetition, not t
 
 Start by copying by ear, not by diagram. If you catch yourself thinking `dash-dot-dash` and then deciding it is `K`, slow down the *gaps*, not the character. Farnsworth spacing exists for this reason. The letter should arrive as one sound.
 
-Use the Flipper for quick sessions, pocket practice, button/key experiments and portable operating. Use LCWO for longer keyboard drills. Use Vail or V-Band when you want live humans to make things less tidy. Use a real key as soon as you can; the Flipper buttons work, but they are still rubber buttons on a toy dolphin.
+Use the Flipper for quick sessions, pocket practice, button/key experiments and portable operating. Use Vail or V-Band when you want live humans to make things less tidy. Use a real key as soon as you can; the Flipper buttons work, but they are still rubber buttons on a toy dolphin.
+
+## Code and engineering notes
+
+This is not just a beep demo with a menu stapled on. The app has host-tested C cores for keying, CW token handling, training sessions, straight-key scoring, TX-group timing, RF timing helpers, GPIO rules, run-history layout, and the markdown-ish help renderer.
+
+The firmware side uses stock Flipper `SceneManager` and `ViewDispatcher` flow, GPIO preflight checks for awkward key/paddle wiring, USB HID/MIDI modes, Sub-GHz RX/TX plumbing, and DMA-backed PWM sidetone on `P2/A7`. The tests run on the host, and the final FAP build still goes through the real Flipper toolchain. Not elegant everywhere, but honest, inspectable, and built to be carried rather than merely screenshotted.
+
+I wanted the sidetone to be something you can live with for more than a minute: no sharp pops, no buzzer-like rasp, and no waveform chopped off mid-swing. The Flipper has neither a bipolar speaker supply nor an audio amp, so the sinewave sidetone rides on a high-frequency PWM carrier. On startup the output creeps up to the centre voltage instead of stepping there, which keeps headphones from popping; each tone is shaped, and release waits for the virtual zero crossing instead of snapping the output off wherever it happens to be.
+
+The help section is fairly comprehensive, which means reading plain text on a 128x64 screen became annoying almost immediately. There is a custom renderer involved now: scrolling text, inline formatting, best-effort justified text, and tiny inline icons for things the Flipper has no business typesetting, including `µ`, arrows and bullets. Full LaTeX support is almost ready.
 
 ## Build
 
-Build it against 1.4.3 with fbt.
+Latest checked build: Flipper firmware 1.4.3 with fbt API 87.1.
 
 ## Notes
 
 - RF TX is experimental and jurisdiction-dependent. Know what you are transmitting, where, and why.
 - The Flipper radio is not a replacement for a proper HF CW rig. It is a useful emergency and experimentation path, not magic.
 - Ham-rig keying deserves boring electrical caution. Verify levels, polarity and isolation before connecting to equipment you like.
-- The project is intentionally small enough to inspect, but not just a demo: there are host tests for the timing, keyers, training logic, GPIO behaviour, RF timing helpers and layout helpers, plus a real firmware build path.
+- Some 2026 cleanup was LLM-assisted, but the design decisions and launch behaviour are human-reviewed, tested, and checked on real hardware.
 
 Idea and prototype by Richard, YO3GND.

@@ -137,7 +137,7 @@ static const char* const morse_help_usb_live[] = {
 
 static const char* const morse_help_moving_forward[] = {
     "This is only a small app, really, just a practical way into CW. I made it for people who are curious about Morse and RF and would rather prod the thing than read about it forever.",
-    "Seriously, get a key. The rubber contacts will eventually wear out, and keying from the front panel gets annoying quickly.",
+    "Seriously, get a telegraphy key; I suggest paddles over a straight key. The Flipper's silicone membrane buttons will eventually wear out, especially when a practice plateau tempts you to press harder, as if force were the missing skill. Keying from the joystick gets annoying quickly too.",
     "lcwo.net is the easy daily practice route on a computer. It lets you type what you hear, which means you can practise and make mistakes faster than you can on the Flipper.",
     "Morse Runner Community Edition will simulate live contest traffic, exchanges and general unpleasantness.",
     "rufzxp trains upper-end decoding speed. It is official software in the CW IARU HST World Championship.\n\nYes, CW olympiads are a real thing.",
