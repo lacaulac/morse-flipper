@@ -58,6 +58,16 @@ void morse_flipper_draw(Canvas* canvas, void* ctx) {
         return;
     }
 
+    if(app->screen == MorseFlipperScreenHamCopyNotice) {
+        morse_flipper_draw_ham_copy_notice(canvas, app);
+        return;
+    }
+
+    if(app->screen == MorseFlipperScreenHamDeleteConfirm) {
+        morse_flipper_draw_ham_delete_confirm(canvas);
+        return;
+    }
+
     if(app->screen == MorseFlipperScreenHamRun) {
         morse_flipper_draw_ham_run(canvas, app);
         return;

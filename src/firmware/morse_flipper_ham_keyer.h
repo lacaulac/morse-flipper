@@ -13,7 +13,7 @@
 
 #define MORSE_FLIPPER_HAM_KEYER_MAX_MESSAGES  12U
 #define MORSE_FLIPPER_HAM_KEYER_MESSAGE_LEN   48U
-#define MORSE_FLIPPER_HAM_KEYER_ASSIGNMENTS   4U
+#define MORSE_FLIPPER_HAM_KEYER_ASSIGNMENTS   5U
 #define MORSE_FLIPPER_HAM_KEYER_UNASSIGNED    0xFFU
 #define MORSE_FLIPPER_HAM_KEYER_PENDING_LEN   384U
 #define MORSE_FLIPPER_HAM_KEYER_DATE_LEN      10U
@@ -25,6 +25,7 @@ typedef enum {
     MorseFlipperHamKeyerDirDown,
     MorseFlipperHamKeyerDirLeft,
     MorseFlipperHamKeyerDirRight,
+    MorseFlipperHamKeyerDirOk,
 } MorseFlipperHamKeyerDir;
 
 typedef struct {
@@ -49,6 +50,10 @@ bool morse_flipper_ham_keyer_edit_message(
     uint8_t index,
     const char* message);
 bool morse_flipper_ham_keyer_delete_message(MorseFlipperHamKeyer* keyer, uint8_t index);
+bool morse_flipper_ham_keyer_duplicate_message(
+    MorseFlipperHamKeyer* keyer,
+    uint8_t index,
+    uint8_t* new_index);
 bool morse_flipper_ham_keyer_assign(
     MorseFlipperHamKeyer* keyer,
     uint8_t dir,

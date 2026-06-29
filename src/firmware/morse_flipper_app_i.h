@@ -12,6 +12,7 @@
 #include <furi_hal_rtc.h>
 
 #include <dialogs/dialogs.h>
+#include <gui/elements.h>
 #include <gui/gui.h>
 #include <gui/modules/submenu.h>
 #include <gui/modules/text_input.h>
@@ -61,6 +62,8 @@
 #define MORSE_FLIPPER_RF_RSSI_WINDOW_MS             160U
 #define MORSE_FLIPPER_RF_RSSI_PEAK_DECAY_MS         240U
 #define MORSE_FLIPPER_RF_LIVE_DECODERS              1U
+#define MORSE_FLIPPER_HAM_WPM_HOLD_NONE             0xFFU
+#define MORSE_FLIPPER_HAM_WPM_HOLD_REPEAT_MS        500U
 #define MORSE_FLIPPER_TRAINER_TIMEOUT_DEFAULT_S     6U
 #define MORSE_FLIPPER_TRAINER_TIMEOUT_MIN_S         3U
 #define MORSE_FLIPPER_TRAINER_TIMEOUT_MAX_S         10U
@@ -143,9 +146,11 @@ typedef enum {
     MorseFlipperScreenHamStartRefusal = 15,
     MorseFlipperScreenHamAssign = 16,
     MorseFlipperScreenHamAssignments = 17,
-    MorseFlipperScreenTxGroups = 18,
-    MorseFlipperScreenTxGroupsResult = 19,
-    MorseFlipperScreenTxGroupsFinal = 20,
+    MorseFlipperScreenHamCopyNotice = 18,
+    MorseFlipperScreenHamDeleteConfirm = 19,
+    MorseFlipperScreenTxGroups = 20,
+    MorseFlipperScreenTxGroupsResult = 21,
+    MorseFlipperScreenTxGroupsFinal = 22,
 } MorseFlipperScreen;
 
 typedef enum {
@@ -187,6 +192,8 @@ typedef enum {
     MorseFlipperSceneHamTextInput,
     MorseFlipperSceneHamAssign,
     MorseFlipperSceneHamAssignments,
+    MorseFlipperSceneHamCopyNotice,
+    MorseFlipperSceneHamDeleteConfirm,
     MorseFlipperSceneTxGroups,
     MorseFlipperSceneTxGroupsResult,
     MorseFlipperSceneTxGroupsFinal,
@@ -209,6 +216,7 @@ typedef enum {
 typedef enum {
     MorseFlipperHamActionAssign = 1,
     MorseFlipperHamActionEdit,
+    MorseFlipperHamActionCopy,
     MorseFlipperHamActionDelete,
 } MorseFlipperHamActionItem;
 
@@ -303,8 +311,10 @@ typedef struct {
     uint8_t macro_char_idx;
     uint8_t macro_mark_idx;
     uint8_t macro_dir;
+    uint8_t wpm_hold_key;
     uint32_t macro_next_at;
     uint32_t notice_until;
+    uint32_t wpm_hold_next_at;
     char text_buffer[MORSE_FLIPPER_HAM_KEYER_MESSAGE_LEN + 1U];
     char macro_text[MORSE_FLIPPER_HAM_KEYER_MESSAGE_LEN + 1U];
     char notice[16];
@@ -332,6 +342,7 @@ typedef struct MorseFlipperApp {
     FuriHalUsbHidConfig hid_cfg;
     bool tone_on;
     bool signal_led_on;
+    bool signal_led_red;
     bool speaker_owned;
     bool speaker_busy;
     float speaker_hz;
@@ -713,6 +724,8 @@ void morse_flipper_draw_rf_rx_screen(Canvas* canvas, MorseFlipperApp* app);
 void morse_flipper_draw_ham_start_refusal(Canvas* canvas);
 void morse_flipper_draw_ham_assign(Canvas* canvas);
 void morse_flipper_draw_ham_assignments(Canvas* canvas, MorseFlipperApp* app);
+void morse_flipper_draw_ham_copy_notice(Canvas* canvas, MorseFlipperApp* app);
+void morse_flipper_draw_ham_delete_confirm(Canvas* canvas);
 void morse_flipper_draw_ham_run(Canvas* canvas, MorseFlipperApp* app);
 void morse_flipper_draw(Canvas* canvas, void* ctx);
 void morse_flipper_view_dirty(MorseFlipperApp* app);

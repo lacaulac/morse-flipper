@@ -264,7 +264,7 @@ static const char* const morse_help_ham_usage[] = {
     "Ham Keyer is a field keyer and logger in one slightly opinionated box. It can send fixed lines like RR UR 5NN BK or POTA RO 0038 K, while also keying and logging whatever you send on the paddles.\n\nBKIN off logs only. BKIN enabled transmits and logs. Handy for POTA\ex6SOTA, where the operator already has enough plates wobbling. Logs are dated on the SD card, and each change is timestamped.",
     "Rig keying uses P15 for key and P16 for PTT. Do not wire a radio on optimism.\n\nCheck the rig input, polarity, and ground arrangement. Use a transistor or optocoupler if the noise or RFI makes Flipper misbehave.",
     "Back toggles BKIN. Long press Left exits.\n\nWith BKIN off, paddle input is logged but not sent to the rig.",
-    "Assign short messages to Up, Down, Left, and Right. Use them for field exchanges, not essays.\n\nIf logging is enabled, entries go to \ex6ext\ex6ham\ex6morse flipper ham keyer YYYY MM DD.txt.",
+    "Assign short messages to Up, Down, Left, Right, and OK. Use them for field exchanges, not essays.\n\nIf logging is enabled, entries go to \ex6ext\ex6ham\ex6morse flipper ham keyer YYYY MM DD.txt.",
 };
 
 static const char* const morse_help_troubleshooting[] = {

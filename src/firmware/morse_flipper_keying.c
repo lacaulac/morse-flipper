@@ -75,6 +75,9 @@ static bool morse_flipper_training_input_muted(const MorseFlipperApp* app) {
 static bool morse_flipper_signal_led_level(const MorseFlipperApp* app, bool want_tx_tone) {
     if(app == NULL) return false;
 
+    if(app->session_result_tone) return true;
+    if(app->trainer_playback_mark || app->straight_playback_mark) return true;
+
     if(app->screen == MorseFlipperScreenRf && app->rf_live_active) {
         return app->radio.tx_level;
     }

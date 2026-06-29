@@ -71,6 +71,10 @@ static uint8_t morse_flipper_scene_screen(uint32_t scene) {
         return MorseFlipperScreenHamAssign;
     case MorseFlipperSceneHamAssignments:
         return MorseFlipperScreenHamAssignments;
+    case MorseFlipperSceneHamCopyNotice:
+        return MorseFlipperScreenHamCopyNotice;
+    case MorseFlipperSceneHamDeleteConfirm:
+        return MorseFlipperScreenHamDeleteConfirm;
     case MorseFlipperSceneTxGroups:
         return MorseFlipperScreenTxGroups;
     case MorseFlipperSceneTxGroupsResult:
