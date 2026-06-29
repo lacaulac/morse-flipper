@@ -172,8 +172,19 @@ static uint8_t morse_flipper_ham_dir_from_key(InputKey key) {
         return MorseFlipperHamKeyerDirLeft;
     case InputKeyRight:
         return MorseFlipperHamKeyerDirRight;
+    case InputKeyOk:
+        return MorseFlipperHamKeyerDirOk;
     default:
         return MORSE_FLIPPER_HAM_KEYER_ASSIGNMENTS;
+    }
+}
+
+static void morse_flipper_ham_bump_run_wpm(MorseFlipperApp* app, InputKey key) {
+    if(key == InputKeyUp) {
+        morse_flipper_set_run_wpm(app, (uint8_t)(morse_flipper_current_wpm(app) + 1U));
+    } else if(key == InputKeyDown) {
+        uint8_t wpm = morse_flipper_current_wpm(app);
+        morse_flipper_set_run_wpm(app, wpm > 0U ? (uint8_t)(wpm - 1U) : 0U);
     }
 }
 
@@ -182,8 +193,61 @@ static bool morse_flipper_ham_shell_input(MorseFlipperApp* app, const InputEvent
 
     if(app->screen != MorseFlipperScreenHamStartRefusal &&
        app->screen != MorseFlipperScreenHamAssign &&
-       app->screen != MorseFlipperScreenHamAssignments && app->screen != MorseFlipperScreenHamRun)
+       app->screen != MorseFlipperScreenHamAssignments &&
+       app->screen != MorseFlipperScreenHamCopyNotice &&
+       app->screen != MorseFlipperScreenHamDeleteConfirm &&
+       app->screen != MorseFlipperScreenHamRun)
         return false;
+
+    if(app->screen == MorseFlipperScreenHamDeleteConfirm) {
+        if(event->key == InputKeyOk &&
+           (event->type == InputTypeShort || event->type == InputTypeLong)) {
+            uint8_t next_selection = app->ham.selected_message;
+
+            morse_flipper_ham_keyer_delete_message(&app->ham_keyer, app->ham.selected_message);
+            if(app->ham_keyer.message_count == 0U) {
+                scene_manager_set_scene_state(
+                    app->scene_manager, MorseFlipperSceneHamConfigure, MorseFlipperHamConfigureAdd);
+            } else {
+                if(next_selection >= app->ham_keyer.message_count)
+                    next_selection = (uint8_t)(app->ham_keyer.message_count - 1U);
+                app->ham.selected_message = next_selection;
+                scene_manager_set_scene_state(
+                    app->scene_manager,
+                    MorseFlipperSceneHamConfigure,
+                    MorseFlipperHamConfigureMessageBase + next_selection);
+            }
+            morse_flipper_save_config(app);
+            scene_manager_search_and_switch_to_another_scene(
+                app->scene_manager, MorseFlipperSceneHamConfigure);
+            return true;
+        }
+
+        if((event->key == InputKeyBack || event->key == InputKeyLeft) &&
+           (event->type == InputTypeShort || event->type == InputTypeLong)) {
+            morse_flipper_scene_back(app);
+            return true;
+        }
+
+        return true;
+    }
+
+    if(app->screen == MorseFlipperScreenHamCopyNotice) {
+        if(event->key == InputKeyBack &&
+           (event->type == InputTypeShort || event->type == InputTypeLong)) {
+            scene_manager_search_and_switch_to_another_scene(
+                app->scene_manager, MorseFlipperSceneHamConfigure);
+            return true;
+        }
+
+        return true;
+    }
+
+    if(app->screen == MorseFlipperScreenHamAssignments && event->key == InputKeyLeft &&
+       (event->type == InputTypeShort || event->type == InputTypeLong)) {
+        morse_flipper_scene_back(app);
+        return true;
+    }
 
     if(app->screen == MorseFlipperScreenHamRun) {
         if(event->key == InputKeyLeft && event->type == InputTypeLong) {
@@ -215,14 +279,21 @@ static bool morse_flipper_ham_shell_input(MorseFlipperApp* app, const InputEvent
             return true;
         }
 
-        if(event->key == InputKeyUp && event->type == InputTypeLong) {
-            morse_flipper_set_run_wpm(app, (uint8_t)(morse_flipper_current_wpm(app) + 1U));
+        if((event->key == InputKeyUp || event->key == InputKeyDown) &&
+           event->type == InputTypeLong) {
+            uint32_t now_ms = furi_get_tick();
+
+            morse_flipper_ham_bump_run_wpm(app, event->key);
+            app->ham.wpm_hold_key = (uint8_t)event->key;
+            app->ham.wpm_hold_next_at = now_ms + MORSE_FLIPPER_HAM_WPM_HOLD_REPEAT_MS;
             return true;
         }
 
-        if(event->key == InputKeyDown && event->type == InputTypeLong) {
-            uint8_t wpm = morse_flipper_current_wpm(app);
-            morse_flipper_set_run_wpm(app, wpm > 0U ? (uint8_t)(wpm - 1U) : 0U);
+        if((event->key == InputKeyUp || event->key == InputKeyDown) &&
+           event->type == InputTypeRelease &&
+           app->ham.wpm_hold_key == (uint8_t)event->key) {
+            app->ham.wpm_hold_key = MORSE_FLIPPER_HAM_WPM_HOLD_NONE;
+            app->ham.wpm_hold_next_at = 0U;
             return true;
         }
 

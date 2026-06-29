@@ -502,6 +502,39 @@ static void morse_flipper_rf_mode_tick(MorseFlipperApp* app, uint32_t now_ms) {
 #endif
 }
 
+static void morse_flipper_tick_ham_wpm_hold(MorseFlipperApp* app, uint32_t now_ms) {
+    if(app == NULL) return;
+
+    if(app->screen != MorseFlipperScreenHamRun) {
+        app->ham.wpm_hold_key = MORSE_FLIPPER_HAM_WPM_HOLD_NONE;
+        app->ham.wpm_hold_next_at = 0U;
+        return;
+    }
+
+    if(app->ham.wpm_hold_key != InputKeyUp && app->ham.wpm_hold_key != InputKeyDown) return;
+    if(app->ham.wpm_hold_next_at == 0U || now_ms < app->ham.wpm_hold_next_at) return;
+
+    do {
+        if(app->ham.wpm_hold_key == InputKeyUp) {
+            morse_flipper_set_run_wpm(app, (uint8_t)(morse_flipper_current_wpm(app) + 1U));
+        } else {
+            uint8_t wpm = morse_flipper_current_wpm(app);
+            morse_flipper_set_run_wpm(app, wpm > 0U ? (uint8_t)(wpm - 1U) : 0U);
+        }
+        app->ham.wpm_hold_next_at += MORSE_FLIPPER_HAM_WPM_HOLD_REPEAT_MS;
+    } while(now_ms >= app->ham.wpm_hold_next_at);
+}
+
+static void morse_flipper_tick_ham_copy_notice(MorseFlipperApp* app, uint32_t now_ms) {
+    if(app == NULL || app->screen != MorseFlipperScreenHamCopyNotice) return;
+    if(app->ham.notice_until == 0U || now_ms < app->ham.notice_until) return;
+
+    app->ham.notice_until = 0U;
+    app->ham.notice[0] = '\0';
+    scene_manager_search_and_switch_to_another_scene(
+        app->scene_manager, MorseFlipperSceneHamConfigure);
+}
+
 void morse_flipper_active_mode_tick(MorseFlipperApp* app, uint32_t now_ms) {
     if(app == NULL) return;
 
@@ -516,7 +549,11 @@ void morse_flipper_active_mode_tick(MorseFlipperApp* app, uint32_t now_ms) {
     case MorseFlipperScreenTxGroupsResult:
         morse_flipper_tick_tx_groups(app, now_ms);
         break;
+    case MorseFlipperScreenHamCopyNotice:
+        morse_flipper_tick_ham_copy_notice(app, now_ms);
+        break;
     case MorseFlipperScreenHamRun:
+        morse_flipper_tick_ham_wpm_hold(app, now_ms);
         morse_flipper_tick_ham_macro(app, now_ms);
         break;
     case MorseFlipperScreenRun:

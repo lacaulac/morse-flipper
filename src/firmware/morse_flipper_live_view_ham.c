@@ -17,30 +17,60 @@ void morse_flipper_draw_ham_start_refusal(Canvas* canvas) {
 
 void morse_flipper_draw_ham_assign(Canvas* canvas) {
     canvas_set_font(canvas, FontSecondary);
-    canvas_draw_str_aligned(canvas, 64, 24, AlignCenter, AlignCenter, "Press Up, Down,");
-    canvas_draw_str_aligned(canvas, 64, 34, AlignCenter, AlignCenter, "Left or Right");
+    canvas_draw_str_aligned(canvas, 64, 24, AlignCenter, AlignCenter, "Press U/D/L/R/OK");
     canvas_draw_str_aligned(canvas, 64, 44, AlignCenter, AlignCenter, "to assign this message");
-    canvas_draw_str_aligned(canvas, 64, 60, AlignCenter, AlignCenter, "Bk cancel");
+    canvas_draw_str_aligned(canvas, 64, 60, AlignCenter, AlignCenter, "Back cancel");
+}
+
+static void morse_flipper_draw_ham_assignment_row(
+    Canvas* canvas,
+    uint8_t row,
+    const char* label,
+    const char* text) {
+    char line[64];
+    const char* shown = (text != NULL && text[0] != '\0') ? text : "-";
+    size_t shown_len = strlen(shown);
+
+    snprintf(line, sizeof(line), "%s: %s", label, shown);
+    while(shown_len > 0U && canvas_string_width(canvas, line) > 126U) {
+        shown_len--;
+        snprintf(line, sizeof(line), "%s: %.*s", label, (int)shown_len, shown);
+    }
+
+    canvas_draw_str(canvas, 2, (int32_t)(11U + (row * 9U)), line);
 }
 
 void morse_flipper_draw_ham_assignments(Canvas* canvas, MorseFlipperApp* app) {
-    char line[64];
-
     if(canvas == NULL || app == NULL) return;
 
     canvas_set_font(canvas, FontSecondary);
     for(uint8_t i = 0U; i < MORSE_FLIPPER_HAM_KEYER_ASSIGNMENTS; i++) {
-        const char* text = morse_flipper_ham_keyer_assignment_text(&app->ham_keyer, i);
-
-        snprintf(
-            line,
-            sizeof(line),
-            "%s: %.42s",
+        morse_flipper_draw_ham_assignment_row(
+            canvas,
+            i,
             morse_flipper_ham_keyer_dir_label(i),
-            text[0] ? text : "-");
-        canvas_draw_str(canvas, 3, (int32_t)(12U + (i * 12U)), line);
+            morse_flipper_ham_keyer_assignment_text(&app->ham_keyer, i));
     }
-    canvas_draw_str(canvas, 3, 64, "Bk back");
+    elements_button_left(canvas, "Back");
+}
+
+void morse_flipper_draw_ham_copy_notice(Canvas* canvas, MorseFlipperApp* app) {
+    const char* text = "Copied";
+
+    if(canvas == NULL) return;
+    if(app != NULL && app->ham.notice[0] != '\0') text = app->ham.notice;
+
+    canvas_set_font(canvas, FontPrimary);
+    canvas_draw_str_aligned(canvas, 64, 32, AlignCenter, AlignCenter, text);
+}
+
+void morse_flipper_draw_ham_delete_confirm(Canvas* canvas) {
+    if(canvas == NULL) return;
+
+    canvas_set_font(canvas, FontPrimary);
+    canvas_draw_str_aligned(canvas, 64, 30, AlignCenter, AlignCenter, "Delete message?");
+    elements_button_left(canvas, "No");
+    elements_button_center(canvas, "Yes");
 }
 
 void morse_flipper_draw_ham_run(Canvas* canvas, MorseFlipperApp* app) {

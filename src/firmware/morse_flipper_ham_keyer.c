@@ -10,9 +10,11 @@
 #include <string.h>
 
 static const char* const morse_flipper_ham_keyer_default_messages[] = {
-    "CQ POTA DE FL1PPR K",
-    "RR UR 5NN TU 73",
-    "E E",
+    "CQ CQ CQ POTA DE FL1PPR K",
+    "UR RST 5NN 5NN BK",
+    "P2P",
+    "TU FER PARK ES 73",
+    "MY PARK RO 0038 RO 0038 BK",
 };
 
 static const char* const morse_flipper_ham_keyer_dir_labels[] = {
@@ -20,6 +22,7 @@ static const char* const morse_flipper_ham_keyer_dir_labels[] = {
     "D",
     "L",
     "R",
+    "OK",
 };
 
 static void morse_flipper_ham_keyer_copy_message(char* dst, const char* src) {
@@ -52,10 +55,11 @@ static void morse_flipper_ham_keyer_seed_defaults(MorseFlipperHamKeyer* keyer) {
             keyer->messages[i], morse_flipper_ham_keyer_default_messages[i]);
     }
 
-    keyer->assignments[MorseFlipperHamKeyerDirUp] = 0U;
+    keyer->assignments[MorseFlipperHamKeyerDirUp] = 2U;
     keyer->assignments[MorseFlipperHamKeyerDirDown] = 1U;
-    keyer->assignments[MorseFlipperHamKeyerDirLeft] = 2U;
-    keyer->assignments[MorseFlipperHamKeyerDirRight] = MORSE_FLIPPER_HAM_KEYER_UNASSIGNED;
+    keyer->assignments[MorseFlipperHamKeyerDirLeft] = 4U;
+    keyer->assignments[MorseFlipperHamKeyerDirRight] = 3U;
+    keyer->assignments[MorseFlipperHamKeyerDirOk] = 0U;
 }
 
 void morse_flipper_ham_keyer_reset(MorseFlipperHamKeyer* keyer) {
@@ -147,6 +151,23 @@ bool morse_flipper_ham_keyer_delete_message(MorseFlipperHamKeyer* keyer, uint8_t
     }
 
     morse_flipper_ham_keyer_normalize(keyer);
+    return true;
+}
+
+bool morse_flipper_ham_keyer_duplicate_message(
+    MorseFlipperHamKeyer* keyer,
+    uint8_t index,
+    uint8_t* new_index) {
+    uint8_t dst;
+
+    if(keyer == NULL || index >= keyer->message_count) return false;
+    if(keyer->message_count >= MORSE_FLIPPER_HAM_KEYER_MAX_MESSAGES) return false;
+
+    dst = keyer->message_count;
+    morse_flipper_ham_keyer_copy_message(keyer->messages[dst], keyer->messages[index]);
+    keyer->message_count++;
+    morse_flipper_ham_keyer_normalize(keyer);
+    if(new_index != NULL) *new_index = dst;
     return true;
 }
 

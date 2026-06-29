@@ -57,6 +57,8 @@ void morse_flipper_enter_screen(
         morse_flipper_ham_stop_macro(app);
         morse_flipper_ham_gpio_release(app);
         morse_flipper_clear_run_wpm(app, now_ms);
+        app->ham.wpm_hold_key = MORSE_FLIPPER_HAM_WPM_HOLD_NONE;
+        app->ham.wpm_hold_next_at = 0U;
     }
 
     morse_flipper_clear_button_keying(app, now_ms);
@@ -90,6 +92,8 @@ void morse_flipper_enter_screen(
     if(screen == MorseFlipperScreenHamRun && app->screen != MorseFlipperScreenHamRun) {
         app->preview_ticks = 0U;
         app->run_dit_ms = morse_flipper_current_dit_ms(app);
+        app->ham.wpm_hold_key = MORSE_FLIPPER_HAM_WPM_HOLD_NONE;
+        app->ham.wpm_hold_next_at = 0U;
         morse_flipper_reset_run_state(app);
         morse_flipper_ham_gpio_apply(app);
     }
