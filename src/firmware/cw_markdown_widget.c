@@ -10,20 +10,20 @@
 #include <stddef.h>
 #include <string.h>
 
-#define CWMD_SCREEN_W                 128U
-#define CWMD_SCREEN_H                 64U
-#define CWMD_CHROME_H                 13U
-#define CWMD_SCROLL_W                 1U
-#define CWMD_SCROLL_GAP               2U
-#define CWMD_MAX_ITEMS                24U
-#define CWMD_ITEM_TEXT                24U
-#define CWMD_BULLET_INDENT            8U
-#define CWMD_BULLET_SIZE              4U
-#define CWMD_JUSTIFY_MIN_NUM          4U
-#define CWMD_JUSTIFY_MIN_DEN          5U
-#define CWMD_WORD_GAP_MIN             3U
-#define CWMD_JUSTIFY_MAX_GAP          12U
-#define CWMD_SCROLL_PX_PER_TICK       1U
+#define CWMD_SCREEN_W           128U
+#define CWMD_SCREEN_H           64U
+#define CWMD_CHROME_H           13U
+#define CWMD_SCROLL_W           1U
+#define CWMD_SCROLL_GAP         2U
+#define CWMD_MAX_ITEMS          24U
+#define CWMD_ITEM_TEXT          24U
+#define CWMD_BULLET_INDENT      8U
+#define CWMD_BULLET_SIZE        4U
+#define CWMD_JUSTIFY_MIN_NUM    4U
+#define CWMD_JUSTIFY_MIN_DEN    5U
+#define CWMD_WORD_GAP_MIN       3U
+#define CWMD_JUSTIFY_MAX_GAP    12U
+#define CWMD_SCROLL_PX_PER_TICK 1U
 
 typedef enum {
     CwmdItemText = 0,

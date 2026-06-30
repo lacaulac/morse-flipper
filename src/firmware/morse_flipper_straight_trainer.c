@@ -17,8 +17,8 @@
 #endif
 
 #define STRAIGHT_TRAINER_DEFAULT_SEED 7U
-#define STRAIGHT_WEIGHT_RARE         1U
-#define STRAIGHT_WEIGHT_NORMAL       20U
+#define STRAIGHT_WEIGHT_RARE          1U
+#define STRAIGHT_WEIGHT_NORMAL        20U
 
 static uint32_t straight_rand(MorseFlipperStraightTrainer* trainer) {
     trainer->rng_state = trainer->rng_state * 1103515245u + 12345u;
