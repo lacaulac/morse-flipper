@@ -620,6 +620,12 @@ static bool
             return true;
         }
 
+        if((event->type == InputTypePress || event->type == InputTypeShort ||
+            event->type == InputTypeLong) &&
+           ((event->key == InputKeyOk && g.btn) || (event->key == InputKeyBack && g.back_key))) {
+            if(morse_flipper_session_hurry(app, now_ms)) return true;
+        }
+
         if(event->key == InputKeyBack && g.back_key) return true;
         if(event->key == InputKeyOk && g.btn) return true;
         if(event->key == InputKeyLeft && morse_flipper_session_left_exit_active(app)) return true;
@@ -853,8 +859,7 @@ static bool
 
     if(app->screen != MorseFlipperScreenSession && app->screen != MorseFlipperScreenTxGroups)
         return false;
-    if(app->screen == MorseFlipperScreenSession && !morse_flipper_session_repeat_active(app) &&
-       !morse_flipper_session_running_view(app))
+    if(app->screen == MorseFlipperScreenSession && !morse_flipper_session_repeat_active(app))
         return false;
     if(app->screen == MorseFlipperScreenTxGroups && !app->txg_wait_answer) return false;
     if(event->type != InputTypePress && event->type != InputTypeRelease) return false;
