@@ -61,7 +61,7 @@ This is the same help file that lives on the Flipper under Help: a gentle introd
 - LCWO.net is the gold standard for learning to tell letters apart by sound. It starts with two letters.
 - Once you stop making mistakes on those two, you add another.
 - When you add a new letter, resist the urge to translate it into dots and dashes. Learn the sound directly. This app avoids showing the pattern on purpose, because once you start reading Morse as dots and dashes, you have made the whole thing harder than it should be.
-- There is an LCWO style trainer in here too: same lesson order, same general idea, just on a small orange gadget instead of a laptop.
+- There is a Listening trainer in here too: same sort of Koch-style progression, same general idea, just on a small orange gadget instead of a laptop.
 - Keep the WPM high. You want to recognise letters by sound, not count dits and dahs. Stay above 20 wpm; start at 30, or 25 if 30 is simply too much.
 - Do not lower the WPM below 30 before you reach lesson 10.
 - If you catch yourself spelling it out as dash dot dash and then deciding it is K, the speed is too low. Turn it up.

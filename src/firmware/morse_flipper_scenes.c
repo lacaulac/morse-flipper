@@ -75,7 +75,7 @@ static void morse_flipper_scene_menu_training_on_enter(void* context) {
     submenu_set_header(app->submenu, "Training");
     submenu_add_item(
         app->submenu,
-        "Koch - LCWO groups",
+        "Listening",
         MorseFlipperSceneSession,
         morse_flipper_scene_menu_pick,
         app);
@@ -136,7 +136,7 @@ static void morse_flipper_scene_menu_settings_on_enter(void* context) {
         morse_flipper_scene_menu_pick,
         app);
     submenu_add_item(
-        app->submenu, "Koch - LCWO", MorseFlipperSceneTrainer, morse_flipper_scene_menu_pick, app);
+        app->submenu, "Listening", MorseFlipperSceneTrainer, morse_flipper_scene_menu_pick, app);
     submenu_add_item(
         app->submenu,
         "Straight trainer",

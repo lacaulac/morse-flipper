@@ -610,7 +610,7 @@ void morse_flipper_draw_session_rows(Canvas* canvas, const MorseFlipperApp* app)
 
     if(idle) {
         canvas_set_font(canvas, FontPrimary);
-        canvas_draw_str_aligned(canvas, 64, 14, AlignCenter, AlignCenter, "Koch - LCWO");
+        canvas_draw_str_aligned(canvas, 64, 14, AlignCenter, AlignCenter, "Listening");
         canvas_set_font(canvas, FontSecondary);
         if(app->input_source == MorseFlipperInputSourceButtons) {
             canvas_draw_str_aligned(canvas, 64, 38, AlignCenter, AlignCenter, "Press OK to start");
