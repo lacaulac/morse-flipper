@@ -1,12 +1,12 @@
-# Koch Listening Practice
+# Listening Practice
 
-`Koch - LCWO groups` is the main listening trainer. It plays short groups from the current lesson pool, waits for your answer, scores the copied letters, and repeats until the session is done. This is where most of the early work belongs. Sending practice is useful later; listening is the skill that decides whether the rest means anything.
+`Listening` is the main listening trainer. It plays short groups from the current lesson pool, waits for your answer, scores the copied letters, and repeats until the session is done. This is where most of the early work belongs. Sending practice is useful later; listening is the skill that decides whether the rest means anything.
 
 This is worth repeating: __if you want to learn CW, learn to decode early on__. You can hone your transmitting skills, but do not use a CW table or notes to read the message you want to transmit; keep it in your head. If you need to look up a letter before sending it, you are not ready to send that letter.
 
-From the main menu, use `Training → Koch - LCWO groups` to run the trainer. Use `Settings → Koch - LCWO` to change the lesson, speed, spacing, and session length. The idle screen says `Koch - LCWO`; press `OK` to start. With external key input selected, pressing the key can also start the session.
+From the main menu, use `Training → Listening` to run the trainer. Use `Settings → Listening` to change the lesson, speed, spacing, and session length. The idle screen says `Listening`; press `OK` to start. With external key input selected, pressing the key can also start the session.
 
-<img align="right" src="../docs/images/ss7.png" alt="Koch result example" height="256">
+<img align="right" src="../docs/images/ss7.png" alt="Listening result example" height="256">
 
 In this example the question was PWRU, four letters. The answer entered was RWRU, so the first answer cell is black: R was the mistake. The other three letters still count, because scoring is by letter position, not all-or-nothing. The session score is now 50%. This is question 2 of 4; at four letters per question, that means 4 correct letters out of 8 so far. Since this group missed only one letter, the previous group must have missed three. The centre `3` is the pause countdown, so the next group starts in 3 seconds. We are currently at lesson 12, letter I. The triangle on the right means the Flipper buttons are being used as paddle input. Back is a paddle here, not an exit. Hold Left to leave.
 
@@ -20,7 +20,7 @@ In this example the question was PWRU, four letters. The answer entered was RWRU
 
 ## Settings
 
-The trainer and its settings are separate screens. Run it from `Training → Koch - LCWO groups`; configure it from `Settings → Koch - LCWO`.
+The trainer and its settings are separate screens. Run it from `Training → Listening`; configure it from `Settings → Listening`.
 
 - `Lesson`: the Koch lesson. Lesson 1 starts with K and M; later lessons add one new character at a time. This follows the LCWO.net lesson order.
 - `WPM`: character speed. This is the speed inside each letter. Use `20` only for the first shakedown if the controls are new; for real progress, use 25-30 WPM.
