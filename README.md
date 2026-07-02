@@ -8,7 +8,9 @@ It works with nothing more than the Flipper buttons and buzzer. Add a simple jac
 
 This started as a 2024 experiment, then got the proper launch-shape treatment in 2026. The important bits are still where they should be: timing, keying, GPIO behaviour, RF compromises, tests, and the stubborn refusal to make CW look like a barcode for the ears.
 
-Morse Flipper also includes a fairly extensive help manual on the Flipper itself, under `Help`. It covers how to learn and practise Morse Code, how to connect straight keys and paddles, what is worth practising, and which outside resources are worth your time. Please read it; there is more useful Morse guidance in there than fits comfortably in a README. An online copy is available here: [manual/internal-help.md](manual/internal-help.md).
+Morse Flipper also includes a fairly extensive help manual on the Flipper itself, under `Help`. It covers how to learn and practise Morse Code, how to connect straight keys and paddles, what is worth practising, and which outside resources are worth your time. Please read it; there is more useful Morse guidance in there than fits comfortably in a README.
+
+The full Morse Flipper manual lives here: [manual/internal-help.md](manual/internal-help.md).
 
 ## What it does
 
