@@ -48,7 +48,7 @@ static bool morse_flipper_help_input(MorseFlipperApp* app, const InputEvent* eve
         if(app->help_md.target_scroll_px == old_target) {
             if(event->key == InputKeyDown && app->help_md.scroll_px >= max_scroll &&
                old_target >= max_scroll &&
-               app->help_page + 1U < morse_flipper_help_card_count(app->help_topic)) {
+               app->help_page + 1U < morse_flipper_help_card_count(app)) {
                 view_dispatcher_send_custom_event(
                     app->view_dispatcher, MorseFlipperCustomHelpNext);
             }

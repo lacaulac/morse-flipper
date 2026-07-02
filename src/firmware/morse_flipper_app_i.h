@@ -244,9 +244,9 @@ typedef enum {
     MorseFlipperHelpContact,
     MorseFlipperHelpContesting,
     MorseFlipperHelpUsbLive,
-    MorseFlipperHelpMovingForward,
     MorseFlipperHelpHamUsage,
     MorseFlipperHelpTroubleshooting,
+    MorseFlipperHelpMovingForward,
     MorseFlipperHelpCount,
 } MorseFlipperHelpTopic;
 
@@ -393,6 +393,7 @@ typedef struct MorseFlipperApp {
     uint8_t trainer_row;
     uint8_t help_topic;
     uint8_t help_page;
+    uint8_t help_card_count;
     uint8_t about_mode;
     uint8_t about_ok_count;
     uint8_t about_social_idx;
@@ -839,7 +840,7 @@ void morse_flipper_settings_usb_paddle_changed(VariableItem* item);
 void morse_flipper_settings_usb_straight_changed(VariableItem* item);
 void morse_flipper_settings_usb_mouse_swap_changed(VariableItem* item);
 void morse_flipper_scene_menu_pick(void* ctx, uint32_t idx);
-uint8_t morse_flipper_help_card_count(uint8_t t);
+uint8_t morse_flipper_help_card_count(const MorseFlipperApp* app);
 void morse_flipper_scene_home_on_enter(void* context);
 bool morse_flipper_scene_home_on_event(void* context, SceneManagerEvent event);
 void morse_flipper_scene_home_on_exit(void* context);

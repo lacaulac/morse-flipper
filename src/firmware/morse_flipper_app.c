@@ -76,6 +76,7 @@ MorseFlipperApp* morse_flipper_boot(void) {
         .straight_answer_timeout_s = MORSE_FLIPPER_STRAIGHT_TIMEOUT_DEFAULT_S,
         .straight_next_delay_s = MORSE_FLIPPER_STRAIGHT_NEXT_DEFAULT_S,
         .trainer_row = 0U,
+        .help_card_count = 1U,
         .trainer_char_idx = 0U,
         .trainer_mark_idx = 0U,
         .session_wait_draw_s = 0xFFU,

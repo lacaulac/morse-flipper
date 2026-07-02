@@ -723,7 +723,7 @@ static bool morse_flipper_scene_help_on_event(void* context, SceneManagerEvent e
     }
 
     if(event.type != SceneManagerEventTypeCustom) return false;
-    n = morse_flipper_help_card_count(app->help_topic);
+    n = morse_flipper_help_card_count(app);
     if(event.event == MorseFlipperCustomHelpPrev) {
         if(app->help_page > 0U) {
             app->help_page--;
