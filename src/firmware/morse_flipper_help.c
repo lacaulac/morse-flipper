@@ -65,8 +65,8 @@ static const CwmdIcon morse_help_icons[] = {
         .width = 7U,
         .height = 5U,
         .y_offset = 0,
-        .left_bearing = 1U,
-        .right_bearing = 1U,
+        .left_bearing = 0U,
+        .right_bearing = 0U,
         .xbm = morse_help_arrow_right_xbm,
     },
     {
@@ -111,7 +111,7 @@ static const CwmdIcon morse_help_icons[] = {
         .height = 7U,
         .y_offset = 0,
         .left_bearing = 1U,
-        .right_bearing = 1U,
+        .right_bearing = 0U,
         .xbm = morse_help_slash_xbm,
     },
 };
@@ -126,7 +126,7 @@ typedef struct {
 } MorseFlipperHelpAsset;
 
 static const MorseFlipperHelpAsset morse_help_assets[MorseFlipperHelpCount] = {
-    [MorseFlipperHelpFirstSteps] = {APP_ASSETS_PATH("help/01-first-steps"), 11U},
+    [MorseFlipperHelpFirstSteps] = {APP_ASSETS_PATH("help/01-first-steps"), 12U},
     [MorseFlipperHelpInputKeys] = {APP_ASSETS_PATH("help/02-input-and-keys"), 16U},
     [MorseFlipperHelpConnectingPaddle] = {APP_ASSETS_PATH("help/03-connecting-the-paddle"), 10U},
     [MorseFlipperHelpPractice] = {APP_ASSETS_PATH("help/04-how-to-practice"), 16U},

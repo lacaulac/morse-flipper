@@ -1,4 +1,4 @@
-If keying doesn't work, start simple: joystick OK is a straight key. Then try OK + Back as button paddles. Then plug in a real key.
+If keying does not work, start simple: use the Flipper joystick OK as a straight key. Then try OK + Back as button paddles. Then plug in a real key.
 
 Settings x1 Keying is always source plus mode: where the signal comes from, and how the app turns it into Morse.
 ---
@@ -17,7 +17,7 @@ A GPIO short warning means the jack wiring looks wrong for the chosen input. Unp
 
 A mono straight key in the paddle jack will be treated as a straight key.
 ---
-For USB output, choose Keyboard, Mouse, or MIDI, then wait a bit for the computer to reconnect with the new settings.
+For USB output, choose Key~board, Mouse, or MIDI, then wait a bit for the computer to reconnect with the new settings.
 
 Custom character sets and ham logs live on the SD card under x6extx6ham.
 ---
