@@ -1,6 +1,6 @@
 # Listening Practice
 
-`Listening` is the main listening trainer. It plays short groups from the current lesson pool, waits for your answer, scores the copied letters, and repeats until the session is done. This is where most of the early work belongs. Sending practice is useful later; listening is the skill that decides whether the rest means anything.
+`Listening` plays short groups from the current lesson pool, waits for your answer, checks the letters you heard, and repeats until the session is done. This is where most of the early work belongs. Sending practice is useful later; first you need to hear the letters without reaching for a chart.
 
 This is worth repeating: __if you want to learn CW, learn to decode early on__. You can hone your transmitting skills, but do not use a CW table or notes to read the message you want to transmit; keep it in your head. If you need to look up a letter before sending it, you are not ready to send that letter.
 
