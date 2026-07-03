@@ -89,11 +89,8 @@ MorseFlipperGpioRule morse_flipper_gpio_validate(uint8_t dit, uint8_t dah, uint8
     return MorseFlipperGpioRuleOk;
 }
 
-MorseFlipperGpioRule morse_flipper_gpio_validate_with_ptt(
-    uint8_t dit,
-    uint8_t dah,
-    uint8_t ground,
-    uint8_t ptt) {
+MorseFlipperGpioRule
+    morse_flipper_gpio_validate_with_ptt(uint8_t dit, uint8_t dah, uint8_t ground, uint8_t ptt) {
     MorseFlipperGpioRule rule = morse_flipper_gpio_validate(dit, dah, ground);
 
     if(rule != MorseFlipperGpioRuleOk) return rule;

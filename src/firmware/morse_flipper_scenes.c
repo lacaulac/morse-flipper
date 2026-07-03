@@ -74,11 +74,7 @@ static void morse_flipper_scene_menu_training_on_enter(void* context) {
     morse_flipper_scene_enter_now(app, MorseFlipperSceneMenuTraining);
     submenu_set_header(app->submenu, "Training");
     submenu_add_item(
-        app->submenu,
-        "Listening",
-        MorseFlipperSceneSession,
-        morse_flipper_scene_menu_pick,
-        app);
+        app->submenu, "Listening", MorseFlipperSceneSession, morse_flipper_scene_menu_pick, app);
     submenu_add_item(
         app->submenu,
         "Straight trainer",

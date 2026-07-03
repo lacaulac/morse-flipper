@@ -10,24 +10,24 @@
 #include <stddef.h>
 #include <string.h>
 
-#define CWMD_SCREEN_W           128U
-#define CWMD_SCREEN_H           64U
-#define CWMD_CHROME_H           13U
-#define CWMD_SCROLL_W           1U
-#define CWMD_SCROLL_GAP         2U
-#define CWMD_MAX_ITEMS          24U
-#define CWMD_ITEM_TEXT          24U
-#define CWMD_SOFT_BREAKS_MAX    8U
-#define CWMD_BULLET_INDENT      8U
-#define CWMD_BULLET_SIZE        4U
-#define CWMD_JUSTIFY_MIN_NUM    4U
-#define CWMD_JUSTIFY_MIN_DEN    5U
-#define CWMD_JUSTIFY_MIN_GAPS   2U
-#define CWMD_WORD_GAP_MIN       3U
-#define CWMD_JUSTIFY_MAX_GAP    12U
-#define CWMD_MICROFIT_GAP_MIN   2U
+#define CWMD_SCREEN_W            128U
+#define CWMD_SCREEN_H            64U
+#define CWMD_CHROME_H            13U
+#define CWMD_SCROLL_W            1U
+#define CWMD_SCROLL_GAP          2U
+#define CWMD_MAX_ITEMS           24U
+#define CWMD_ITEM_TEXT           24U
+#define CWMD_SOFT_BREAKS_MAX     8U
+#define CWMD_BULLET_INDENT       8U
+#define CWMD_BULLET_SIZE         4U
+#define CWMD_JUSTIFY_MIN_NUM     4U
+#define CWMD_JUSTIFY_MIN_DEN     5U
+#define CWMD_JUSTIFY_MIN_GAPS    2U
+#define CWMD_WORD_GAP_MIN        3U
+#define CWMD_JUSTIFY_MAX_GAP     12U
+#define CWMD_MICROFIT_GAP_MIN    2U
 #define CWMD_MICROFIT_MAX_SHRINK 2U
-#define CWMD_SCROLL_PX_PER_TICK 1U
+#define CWMD_SCROLL_PX_PER_TICK  1U
 
 typedef enum {
     CwmdItemText = 0,
@@ -365,8 +365,7 @@ static bool
         item->text[n++] = ch;
     }
     item->text[n] = '\0';
-    while(item->soft_break_count > 0U &&
-          item->soft_breaks[item->soft_break_count - 1U] >= n) {
+    while(item->soft_break_count > 0U && item->soft_breaks[item->soft_break_count - 1U] >= n) {
         item->soft_break_count--;
     }
     item->width = cwmd_text_width(canvas, style, item->text);
@@ -436,7 +435,8 @@ static bool cwmd_microfit_collect_plan(const CwmdLine* line, uint8_t needed, uin
     return count == needed;
 }
 
-static bool cwmd_microfit_line_for_item(CwmdLine* line, const CwmdItem* item, uint16_t line_width) {
+static bool
+    cwmd_microfit_line_for_item(CwmdLine* line, const CwmdItem* item, uint16_t line_width) {
     uint16_t prospective;
     uint16_t overflow_full;
     uint8_t overflow;
@@ -564,7 +564,8 @@ static bool cwmd_build_line(
 
         split_line = false;
         if((uint16_t)(line->width + item.width) > line_width) {
-            bool fits_after_microfit = have_item && cwmd_microfit_line_for_item(line, &item, line_width);
+            bool fits_after_microfit = have_item &&
+                                       cwmd_microfit_line_for_item(line, &item, line_width);
             if(!fits_after_microfit) {
                 if(cwmd_soft_split_item(canvas, line, &item, line_width, &prefix, &suffix)) {
                     item = prefix;
