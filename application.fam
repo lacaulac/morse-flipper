@@ -26,7 +26,7 @@ App(
     apptype=FlipperAppType.EXTERNAL,
     entry_point="morse_flipper_fap",
     requires=["gui"],
-    stack_size=16 * 1024,
+    stack_size=4 * 1024,
     cdefines=[
         "MORSE_FLIPPER_FAP=1",
         f'APP_BUILD_COMMIT=\\"{git_commit}\\"',
