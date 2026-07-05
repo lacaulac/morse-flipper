@@ -17,7 +17,6 @@
 #include <gui/modules/submenu.h>
 #include <gui/modules/text_input.h>
 #include <gui/modules/variable_item_list.h>
-#include <gui/modules/widget.h>
 #include <gui/scene_manager.h>
 #include <gui/view_dispatcher.h>
 #include <input/input.h>
@@ -157,7 +156,6 @@ typedef enum {
     MorseFlipperViewMenu = 0,
     MorseFlipperViewLive,
     MorseFlipperViewSettings,
-    MorseFlipperViewWidget,
     MorseFlipperViewTextInput,
 } MorseFlipperView;
 
@@ -329,7 +327,6 @@ typedef struct MorseFlipperApp {
     Submenu* submenu;
     TextInput* text_input;
     VariableItemList* settings_list;
-    Widget* widget;
     VariableItem* audio_cfg_items[MorseFlipperAudioSettingP2Volume + 1U];
     VariableItem* trainer_items[MorseFlipperTrainerSettingChars + 1U];
     VariableItem* straight_cfg_items[3];
@@ -879,4 +876,5 @@ bool morse_flipper_active_mode_input(MorseFlipperApp* app, InputEvent* event, ui
 
 MorseFlipperApp* morse_flipper_boot(void);
 ViewDispatcher* morse_flipper_view_dispatcher_get(MorseFlipperApp* app);
+void morse_flipper_ensure_view(MorseFlipperApp* app, uint8_t view);
 void morse_flipper_shutdown(MorseFlipperApp* app);

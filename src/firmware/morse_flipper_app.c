@@ -21,7 +21,6 @@ MorseFlipperApp* morse_flipper_boot(void) {
         .submenu = NULL,
         .text_input = NULL,
         .settings_list = NULL,
-        .widget = NULL,
         .live_view = NULL,
         .gui = furi_record_open(RECORD_GUI),
         .dialogs = furi_record_open(RECORD_DIALOGS),
@@ -249,40 +248,7 @@ MorseFlipperApp* morse_flipper_boot(void) {
     view_dispatcher_attach_to_gui(app->view_dispatcher, app->gui, ViewDispatcherTypeFullscreen);
 
     app->scene_manager = scene_manager_alloc(&morse_flipper_scene_handlers, app);
-
-    app->submenu = submenu_alloc();
-    view_dispatcher_add_view(
-        app->view_dispatcher, MorseFlipperViewMenu, submenu_get_view(app->submenu));
-
-    app->text_input = text_input_alloc();
-    view_dispatcher_add_view(
-        app->view_dispatcher, MorseFlipperViewTextInput, text_input_get_view(app->text_input));
-
-    app->settings_list = variable_item_list_alloc();
-    view_dispatcher_add_view(
-        app->view_dispatcher,
-        MorseFlipperViewSettings,
-        variable_item_list_get_view(app->settings_list));
-
-    app->widget = widget_alloc();
-    app->help_text = furi_string_alloc();
-    view_dispatcher_add_view(
-        app->view_dispatcher, MorseFlipperViewWidget, widget_get_view(app->widget));
-
-    app->live_view = view_alloc();
-    view_set_context(app->live_view, app);
-    view_allocate_model(app->live_view, ViewModelTypeLockFree, sizeof(MorseFlipperLiveModel));
-    with_view_model(
-        app->live_view,
-        MorseFlipperLiveModel * m,
-        {
-            m->app = app;
-            m->bump = 0U;
-        },
-        false);
-    view_set_draw_callback(app->live_view, morse_flipper_live_draw);
-    view_set_input_callback(app->live_view, morse_flipper_live_input);
-    view_dispatcher_add_view(app->view_dispatcher, MorseFlipperViewLive, app->live_view);
+    morse_flipper_ensure_view(app, MorseFlipperViewMenu);
 
     if(morse_flipper_gpio_probe_any_short(app->startup_gpio_probe_state)) {
         scene_manager_next_scene(app->scene_manager, MorseFlipperSceneStartupProbe);
@@ -295,6 +261,45 @@ MorseFlipperApp* morse_flipper_boot(void) {
 ViewDispatcher* morse_flipper_view_dispatcher_get(MorseFlipperApp* app) {
     if(app == NULL) return NULL;
     return app->view_dispatcher;
+}
+
+void morse_flipper_ensure_view(MorseFlipperApp* app, uint8_t view) {
+    if(app == NULL || app->view_dispatcher == NULL) return;
+
+    if(view == MorseFlipperViewMenu) {
+        if(app->submenu != NULL) return;
+        app->submenu = submenu_alloc();
+        view_dispatcher_add_view(
+            app->view_dispatcher, MorseFlipperViewMenu, submenu_get_view(app->submenu));
+    } else if(view == MorseFlipperViewTextInput) {
+        if(app->text_input != NULL) return;
+        app->text_input = text_input_alloc();
+        view_dispatcher_add_view(
+            app->view_dispatcher, MorseFlipperViewTextInput, text_input_get_view(app->text_input));
+    } else if(view == MorseFlipperViewSettings) {
+        if(app->settings_list != NULL) return;
+        app->settings_list = variable_item_list_alloc();
+        view_dispatcher_add_view(
+            app->view_dispatcher,
+            MorseFlipperViewSettings,
+            variable_item_list_get_view(app->settings_list));
+    } else if(view == MorseFlipperViewLive) {
+        if(app->live_view != NULL) return;
+        app->live_view = view_alloc();
+        view_set_context(app->live_view, app);
+        view_allocate_model(app->live_view, ViewModelTypeLockFree, sizeof(MorseFlipperLiveModel));
+        with_view_model(
+            app->live_view,
+            MorseFlipperLiveModel * m,
+            {
+                m->app = app;
+                m->bump = 0U;
+            },
+            false);
+        view_set_draw_callback(app->live_view, morse_flipper_live_draw);
+        view_set_input_callback(app->live_view, morse_flipper_live_input);
+        view_dispatcher_add_view(app->view_dispatcher, MorseFlipperViewLive, app->live_view);
+    }
 }
 
 void morse_flipper_shutdown(MorseFlipperApp* app) {
@@ -333,14 +338,14 @@ void morse_flipper_shutdown(MorseFlipperApp* app) {
 
     morse_flipper_gpio_deinit();
     if(app->view_dispatcher) {
-        view_dispatcher_remove_view(app->view_dispatcher, MorseFlipperViewWidget);
-        view_dispatcher_remove_view(app->view_dispatcher, MorseFlipperViewTextInput);
-        view_dispatcher_remove_view(app->view_dispatcher, MorseFlipperViewSettings);
-        view_dispatcher_remove_view(app->view_dispatcher, MorseFlipperViewLive);
-        view_dispatcher_remove_view(app->view_dispatcher, MorseFlipperViewMenu);
+        if(app->text_input)
+            view_dispatcher_remove_view(app->view_dispatcher, MorseFlipperViewTextInput);
+        if(app->settings_list)
+            view_dispatcher_remove_view(app->view_dispatcher, MorseFlipperViewSettings);
+        if(app->live_view) view_dispatcher_remove_view(app->view_dispatcher, MorseFlipperViewLive);
+        if(app->submenu) view_dispatcher_remove_view(app->view_dispatcher, MorseFlipperViewMenu);
     }
     if(app->help_text) furi_string_free(app->help_text);
-    if(app->widget) widget_free(app->widget);
     if(app->text_input) text_input_free(app->text_input);
     if(app->settings_list) variable_item_list_free(app->settings_list);
     if(app->live_view) view_free(app->live_view);
