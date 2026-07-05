@@ -7,9 +7,13 @@
 
 #include "morse_flipper_app_i.h"
 
+#include <stdlib.h>
+
 MorseFlipperApp* morse_flipper_boot(void) {
-    static MorseFlipperApp app;
-    app = (MorseFlipperApp){
+    MorseFlipperApp* app = malloc(sizeof(MorseFlipperApp));
+    if(app == NULL) return NULL;
+
+    *app = (MorseFlipperApp){
         .q = NULL,
         .view_port = NULL,
         .view_dispatcher = NULL,
@@ -210,84 +214,84 @@ MorseFlipperApp* morse_flipper_boot(void) {
         .straight_trainer = {0},
     };
 
-    morse_trainer_init(&app.trainer);
-    morse_flipper_audio_pwm_reset(&app.audio_pwm);
-    morse_flipper_rf_init(&app.rf);
-    morse_flipper_radio_init(&app.radio);
-    morse_flipper_ham_keyer_reset(&app.ham_keyer);
-    morse_flipper_radio_set_rx_callback(&app.radio, morse_flipper_rf_rx_edge, &app);
-    morse_flipper_cw_decoder_init(&app.rf_decoder, morse_flipper_current_dit_ms(&app));
-    morse_flipper_cw_decoder_init(&app.tx_decoder, morse_flipper_current_dit_ms(&app));
-    morse_flipper_cw_decoder_init(&app.gpio_decoder, morse_flipper_current_dit_ms(&app));
-    morse_flipper_run_history_reset(&app.run_history);
-    morse_flipper_straight_trainer_init(&app.straight_trainer);
-    morse_flipper_tx_group_init(&app.tx_group);
-    morse_trainer_set_seed(&app.trainer, furi_hal_random_get());
-    morse_flipper_straight_trainer_set_seed(&app.straight_trainer, furi_hal_random_get());
-    morse_flipper_tx_group_set_seed(&app.tx_group, furi_hal_random_get());
-    morse_trainer_load_custom_sets(&app.custom_sets);
-    morse_flipper_apply_trainer_charset_choice(&app);
-    morse_flipper_load_config(&app);
-    morse_flipper_apply_trainer_charset_choice(&app);
-    morse_flipper_cw_decoder_init(&app.rf_decoder, morse_flipper_current_dit_ms(&app));
-    morse_flipper_cw_decoder_init(&app.tx_decoder, morse_flipper_current_dit_ms(&app));
-    morse_flipper_cw_decoder_init(&app.gpio_decoder, morse_flipper_current_dit_ms(&app));
-    morse_keyer_init(&app.keyer, app.keyer_mode, morse_flipper_current_dit_ms(&app));
-    morse_flipper_gpio_init(&app);
-    app.startup_gpio_probe_state = morse_flipper_gpio_probe_sample_raw(&app);
-    morse_flipper_set_pc_mode(&app, app.pc_mode_pref);
-    app.view_dispatcher = view_dispatcher_alloc();
-    view_dispatcher_set_event_callback_context(app.view_dispatcher, &app);
+    morse_trainer_init(&app->trainer);
+    morse_flipper_audio_pwm_reset(&app->audio_pwm);
+    morse_flipper_rf_init(&app->rf);
+    morse_flipper_radio_init(&app->radio);
+    morse_flipper_ham_keyer_reset(&app->ham_keyer);
+    morse_flipper_radio_set_rx_callback(&app->radio, morse_flipper_rf_rx_edge, app);
+    morse_flipper_cw_decoder_init(&app->rf_decoder, morse_flipper_current_dit_ms(app));
+    morse_flipper_cw_decoder_init(&app->tx_decoder, morse_flipper_current_dit_ms(app));
+    morse_flipper_cw_decoder_init(&app->gpio_decoder, morse_flipper_current_dit_ms(app));
+    morse_flipper_run_history_reset(&app->run_history);
+    morse_flipper_straight_trainer_init(&app->straight_trainer);
+    morse_flipper_tx_group_init(&app->tx_group);
+    morse_trainer_set_seed(&app->trainer, furi_hal_random_get());
+    morse_flipper_straight_trainer_set_seed(&app->straight_trainer, furi_hal_random_get());
+    morse_flipper_tx_group_set_seed(&app->tx_group, furi_hal_random_get());
+    morse_trainer_load_custom_sets(&app->custom_sets);
+    morse_flipper_apply_trainer_charset_choice(app);
+    morse_flipper_load_config(app);
+    morse_flipper_apply_trainer_charset_choice(app);
+    morse_flipper_cw_decoder_init(&app->rf_decoder, morse_flipper_current_dit_ms(app));
+    morse_flipper_cw_decoder_init(&app->tx_decoder, morse_flipper_current_dit_ms(app));
+    morse_flipper_cw_decoder_init(&app->gpio_decoder, morse_flipper_current_dit_ms(app));
+    morse_keyer_init(&app->keyer, app->keyer_mode, morse_flipper_current_dit_ms(app));
+    morse_flipper_gpio_init(app);
+    app->startup_gpio_probe_state = morse_flipper_gpio_probe_sample_raw(app);
+    morse_flipper_set_pc_mode(app, app->pc_mode_pref);
+    app->view_dispatcher = view_dispatcher_alloc();
+    view_dispatcher_set_event_callback_context(app->view_dispatcher, app);
     view_dispatcher_set_custom_event_callback(
-        app.view_dispatcher, morse_flipper_custom_event_callback);
+        app->view_dispatcher, morse_flipper_custom_event_callback);
     view_dispatcher_set_navigation_event_callback(
-        app.view_dispatcher, morse_flipper_back_event_callback);
+        app->view_dispatcher, morse_flipper_back_event_callback);
     view_dispatcher_set_tick_event_callback(
-        app.view_dispatcher, morse_flipper_tick_callback, MORSE_FLIPPER_POLL_MS);
-    view_dispatcher_attach_to_gui(app.view_dispatcher, app.gui, ViewDispatcherTypeFullscreen);
+        app->view_dispatcher, morse_flipper_tick_callback, MORSE_FLIPPER_POLL_MS);
+    view_dispatcher_attach_to_gui(app->view_dispatcher, app->gui, ViewDispatcherTypeFullscreen);
 
-    app.scene_manager = scene_manager_alloc(&morse_flipper_scene_handlers, &app);
+    app->scene_manager = scene_manager_alloc(&morse_flipper_scene_handlers, app);
 
-    app.submenu = submenu_alloc();
+    app->submenu = submenu_alloc();
     view_dispatcher_add_view(
-        app.view_dispatcher, MorseFlipperViewMenu, submenu_get_view(app.submenu));
+        app->view_dispatcher, MorseFlipperViewMenu, submenu_get_view(app->submenu));
 
-    app.text_input = text_input_alloc();
+    app->text_input = text_input_alloc();
     view_dispatcher_add_view(
-        app.view_dispatcher, MorseFlipperViewTextInput, text_input_get_view(app.text_input));
+        app->view_dispatcher, MorseFlipperViewTextInput, text_input_get_view(app->text_input));
 
-    app.settings_list = variable_item_list_alloc();
+    app->settings_list = variable_item_list_alloc();
     view_dispatcher_add_view(
-        app.view_dispatcher,
+        app->view_dispatcher,
         MorseFlipperViewSettings,
-        variable_item_list_get_view(app.settings_list));
+        variable_item_list_get_view(app->settings_list));
 
-    app.widget = widget_alloc();
-    app.help_text = furi_string_alloc();
+    app->widget = widget_alloc();
+    app->help_text = furi_string_alloc();
     view_dispatcher_add_view(
-        app.view_dispatcher, MorseFlipperViewWidget, widget_get_view(app.widget));
+        app->view_dispatcher, MorseFlipperViewWidget, widget_get_view(app->widget));
 
-    app.live_view = view_alloc();
-    view_set_context(app.live_view, &app);
-    view_allocate_model(app.live_view, ViewModelTypeLockFree, sizeof(MorseFlipperLiveModel));
+    app->live_view = view_alloc();
+    view_set_context(app->live_view, app);
+    view_allocate_model(app->live_view, ViewModelTypeLockFree, sizeof(MorseFlipperLiveModel));
     with_view_model(
-        app.live_view,
+        app->live_view,
         MorseFlipperLiveModel * m,
         {
-            m->app = &app;
+            m->app = app;
             m->bump = 0U;
         },
         false);
-    view_set_draw_callback(app.live_view, morse_flipper_live_draw);
-    view_set_input_callback(app.live_view, morse_flipper_live_input);
-    view_dispatcher_add_view(app.view_dispatcher, MorseFlipperViewLive, app.live_view);
+    view_set_draw_callback(app->live_view, morse_flipper_live_draw);
+    view_set_input_callback(app->live_view, morse_flipper_live_input);
+    view_dispatcher_add_view(app->view_dispatcher, MorseFlipperViewLive, app->live_view);
 
-    if(morse_flipper_gpio_probe_any_short(app.startup_gpio_probe_state)) {
-        scene_manager_next_scene(app.scene_manager, MorseFlipperSceneStartupProbe);
+    if(morse_flipper_gpio_probe_any_short(app->startup_gpio_probe_state)) {
+        scene_manager_next_scene(app->scene_manager, MorseFlipperSceneStartupProbe);
     } else {
-        scene_manager_next_scene(app.scene_manager, MorseFlipperSceneMenuMain);
+        scene_manager_next_scene(app->scene_manager, MorseFlipperSceneMenuMain);
     }
-    return &app;
+    return app;
 }
 
 ViewDispatcher* morse_flipper_view_dispatcher_get(MorseFlipperApp* app) {
@@ -348,4 +352,5 @@ void morse_flipper_shutdown(MorseFlipperApp* app) {
     furi_record_close(RECORD_DIALOGS);
     furi_record_close(RECORD_NOTIFICATION);
     furi_record_close(RECORD_GUI);
+    free(app);
 }
