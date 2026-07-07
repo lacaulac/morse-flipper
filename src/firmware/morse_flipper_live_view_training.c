@@ -58,8 +58,7 @@ static void
     out[0] = '\0';
     if(app == NULL) return;
 
-    while(n < MORSE_FLIPPER_TX_GROUP_LEN && n + 1U < out_sz &&
-          app->tx_group.answer[n] != '\0') {
+    while(n < MORSE_FLIPPER_TX_GROUP_LEN && n + 1U < out_sz && app->tx_group.answer[n] != '\0') {
         out[n] = app->tx_group.answer[n];
         n++;
     }
@@ -68,8 +67,8 @@ static void
     if(n >= MORSE_FLIPPER_TX_GROUP_LEN || n + 1U >= out_sz) return;
     if(app->screen != MorseFlipperScreenTxGroups || !app->txg_wait_answer) return;
 
-    preview = (char)morse_flipper_live_upper_char(
-        morse_flipper_cw_decoder_preview(&app->tx_decoder));
+    preview =
+        (char)morse_flipper_live_upper_char(morse_flipper_cw_decoder_preview(&app->tx_decoder));
     if(preview == 0 || preview == ' ' || preview == '|') return;
 
     out[n++] = preview;
